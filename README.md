@@ -1,4 +1,4 @@
-# MeshCore TEAM (Flutter) — team-open
+# MeshCore TEAM
 
 Cross-platform MeshCore TEAM companion app for Android/iOS, built with Flutter.
 
