@@ -93,12 +93,31 @@ android {
 
     buildTypes {
         release {
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+        }
+        debug {
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
+}
+
+// Fail release builds at execution time (not configuration time) if signing is missing
+afterEvaluate {
+    tasks.matching { it.name.startsWith("assemble") && it.name.contains("Release") }.configureEach {
+        doFirst {
             if (!hasReleaseSigning) {
                 throw GradleException(
-                    "Release signing is not configured. Set env vars ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD or provide key.properties outside the repo and point SIGNING_PROPERTIES_FILE to it."
+                    "Release signing is not configured. Set env vars ANDROID_KEYSTORE_PATH, " +
+                    "ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD or provide " +
+                    "key.properties outside the repo and point SIGNING_PROPERTIES_FILE to it."
                 )
             }
-            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

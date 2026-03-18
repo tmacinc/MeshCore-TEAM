@@ -17,6 +17,7 @@ import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/screens/forwarding_debug_screen.dart';
+import 'package:meshcore_team/screens/debug_log_screen.dart';
 
 /// Connection Screen
 /// Provides device scanning, connection, and sync progress UI
@@ -112,6 +113,16 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
       appBar: AppBar(
         title: const Text('MeshCore TEAM'),
         actions: [
+          if (kDebugMode)
+            IconButton(
+              icon: const Icon(Icons.article_outlined),
+              tooltip: 'Debug Logs',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const DebugLogScreen(),
+                ),
+              ),
+            ),
           _buildConnectionStatusIndicator(bleManager),
         ],
       ),

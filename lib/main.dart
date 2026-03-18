@@ -38,12 +38,17 @@ import 'screens/permissions_screen.dart';
 import 'utils/notification_payload.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'widgets/deep_link_listener.dart';
+import 'services/debug_log_service.dart';
 
 // Global navigator key for deep linking
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (kDebugMode) {
+    installDebugLogInterceptor();
+  }
 
   if (!kDebugMode) {
     debugPrint = (String? message, {int? wrapWidth}) {};
