@@ -646,12 +646,11 @@ class MessageRepository {
         final key =
             'tel:$senderName:${response.channelIndex}:${messageContent.hashCode}';
         if (_shouldSuppressTelemetryKey(key)) {
-          debugPrint(
-              '[Telemetry] 🔁 Duplicate telemetry suppressed (recent key)');
+          debugPrint('[TELREC] 🔁 Duplicate telemetry suppressed (recent key)');
           return;
         }
         debugPrint(
-            '[Telemetry] 🛰️ Telemetry message intercepted (not saved to chat)');
+            '[TELREC] 📥 #TEL: message from $senderName on ch=${response.channelIndex} pathLen=${response.pathLength} payload=${messageContent}');
         await _handleTelemetryChannelMessage(
           senderName: senderName,
           content: messageContent,
@@ -1054,12 +1053,12 @@ class MessageRepository {
 
     final telemetry = TelemetryMessage.parse(content);
     if (telemetry == null) {
-      debugPrint('[Telemetry] ⚠️ Failed to parse telemetry payload');
+      debugPrint('[TELREC] ⚠️ Failed to parse telemetry payload: $content');
       return;
     }
 
     debugPrint(
-        '[Telemetry] ✅ Parsed lat=${telemetry.latitude}, lon=${telemetry.longitude}, compBatt=${telemetry.companionBatteryMilliVolts}mV, phoneBatt=${telemetry.phoneBatteryMilliVolts}mV, needsForwarding=${telemetry.needsForwarding}, maxPathObserved=${telemetry.maxPathObserved}');
+        '[TELREC] ✅ Parsed from=$senderName lat=${telemetry.latitude}, lon=${telemetry.longitude}, compBatt=${telemetry.companionBatteryMilliVolts}mV, phoneBatt=${telemetry.phoneBatteryMilliVolts}mV, needsFwd=${telemetry.needsForwarding}, maxPath=${telemetry.maxPathObserved}, autonomous=${telemetry.isAutonomousDevice}');
 
     // Emit to forwarding strategies before any async DB work.
     _telemetryStreamController.add(TelemetryEvent(
@@ -1071,7 +1070,8 @@ class MessageRepository {
 
     final companionKey = _settingsService.settings.currentCompanionPublicKey;
     if (companionKey == null || companionKey.isEmpty) {
-      debugPrint('[Telemetry] ⚠️ No companion context; ignoring telemetry');
+      debugPrint(
+          '[TELREC] ⚠️ No companion context; ignoring telemetry from $senderName');
       return;
     }
 
@@ -1089,13 +1089,13 @@ class MessageRepository {
 
     if (contact == null) {
       debugPrint(
-          '[Telemetry] 📍 Unknown sender \'$senderName\' - triggering SEND_SELF_ADVERT');
+          '[TELREC] 📍 Unknown sender \'$senderName\' - triggering SEND_SELF_ADVERT');
       await _bleService.sendSelfAdvert();
       return;
     }
 
     debugPrint(
-        '[Telemetry] 👤 Matched contact name=\'${contact.name}\' hops=$pathLen channelIdx=$receivedChannelIdx');
+        '[TELREC] 👤 Matched contact name=\'${contact.name}\' hops=$pathLen channelIdx=$receivedChannelIdx');
 
     // Track as direct neighbor for outbound #T: bitmap.
     if (pathLen == 0) {
@@ -1136,7 +1136,7 @@ class MessageRepository {
 
     await _contactsDao.upsertContact(updated);
 
-    debugPrint('[Telemetry] 💾 Contact updated (telemetry freshness + fields)');
+    debugPrint('[TELREC] 💾 Contact updated (telemetry freshness + fields)');
 
     if (telemetry.latitude != null && telemetry.longitude != null) {
       final publicKeyHex = _bytesToHex(contact.publicKey).toUpperCase();
@@ -1162,7 +1162,7 @@ class MessageRepository {
         pathLen: pathLen,
       );
 
-      debugPrint('[Telemetry] 🗺️ Display state + history persisted');
+      debugPrint('[TELREC] 🗺️ Display state + history persisted');
     }
   }
 
@@ -1306,7 +1306,7 @@ class MessageRepository {
         lastRaw.longitude == longitude &&
         lastRaw.channelIdx == channelIdx &&
         lastRaw.pathLen == pathLen) {
-      debugPrint('[Telemetry] 🔁 Duplicate position point skipped');
+      debugPrint('[TELREC] 🔁 Duplicate position point skipped');
       return;
     }
 

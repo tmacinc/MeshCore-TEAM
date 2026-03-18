@@ -92,7 +92,7 @@ class TelemetryMessage {
     // Unpadded Base64 keeps payload compact and avoids transport truncation on 0x00.
     final encoded = base64.encode(payload).replaceAll('=', '');
 
-    debugPrint('[TEL SEND] lat=$latitude lon=$longitude'
+    debugPrint('[TELSEND] lat=$latitude lon=$longitude'
         ' compBatt=${companionBatteryMilliVolts}mV (enc=0x${payload[8].toRadixString(16)})'
         ' phoneBatt=${phoneBatteryMilliVolts}mV (enc=0x${payload[9].toRadixString(16)})'
         ' fwdStatus=0x${payload[10].toRadixString(16)}'
@@ -123,13 +123,13 @@ class TelemetryMessage {
       final needsForwarding = decoded.$1;
       final maxPathObserved = decoded.$2;
 
-      debugPrint(
-          '[TEL RECV] raw bytes: compBatt=0x${compBatt.toRadixString(16)}'
+      debugPrint('[TELREC] raw bytes: compBatt=0x${compBatt.toRadixString(16)}'
           ' phoneBatt=0x${phoneBatt.toRadixString(16)}'
           ' fwdStatus=0x${fwdStatusRaw.toRadixString(16)}'
           ' isAutonomous=$isAutonomous'
           ' compBattDecoded=${_decodeBatteryVoltage(compBatt)}mV'
-          ' phoneBattDecoded=${isAutonomous ? "N/A" : "${_decodeBatteryVoltage(phoneBatt)}mV"}');
+          ' phoneBattDecoded=${isAutonomous ? "N/A" : "${_decodeBatteryVoltage(phoneBatt)}mV"}'
+          ' lat=${latInt / 1e7} lon=${lonInt / 1e7}');
 
       return TelemetryMessage(
         latitude: latInt / 1e7,

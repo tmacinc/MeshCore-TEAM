@@ -104,6 +104,10 @@ class MeshBleService : Service() {
         logW(message, extra)
     }
 
+    private fun frameToHex(frame: ByteArray): String {
+        return frame.joinToString(" ") { String.format("%02X", it) }
+    }
+
     companion object {
         private const val channelId = "mesh_ble_channel"
         private const val notificationId = 1001
@@ -942,7 +946,7 @@ class MeshBleService : Service() {
         if (writeQueue.isEmpty()) return
 
         val frame = writeQueue.removeFirst()
-        logI("drainWriteQueue", mapOf("reason" to reason, "len" to frame.size, "q" to writeQueue.size))
+        logI("drainWriteQueue", mapOf("reason" to reason, "len" to frame.size, "q" to writeQueue.size, "hex" to frameToHex(frame)))
 
         try {
             rx.value = frame
@@ -1238,6 +1242,9 @@ class MeshBleService : Service() {
                 writeInFlight = false
 
                 val frame = inFlightFrame
+                if (frame != null) {
+                    logI("[BLE TX] wrote", mapOf("len" to frame.size, "hex" to frameToHex(frame)))
+                }
                 inFlightFrame = null
 
                 if (status != BluetoothGatt.GATT_SUCCESS) {
@@ -1280,7 +1287,7 @@ class MeshBleService : Service() {
             value: ByteArray
         ) {
             if (characteristic.uuid != txCharUuid) return
-            logI("notify frame", mapOf("len" to value.size))
+            logI("notify frame", mapOf("len" to value.size, "hex" to frameToHex(value)))
             MeshBleEventBus.send(
                 mapOf(
                     "type" to "frame",
@@ -1591,27 +1598,38 @@ class MeshBleService : Service() {
     }
 
     private fun sendNativeTelemetry(location: Location, reason: String): Boolean {
-        val frame = buildTelemetryFrame(
-            channelIndex = nativeTelemetryChannelIndex,
-            latitude = location.latitude,
-            longitude = location.longitude,
-            companionBatteryMilliVolts = nativeTelemetryCompanionBatteryMilliVolts,
-            phoneBatteryMilliVolts = readPhoneBatteryMilliVolts(),
-            needsForwarding = nativeTelemetryNeedsForwarding,
-            maxPathObserved = nativeTelemetryMaxPathObserved,
-        )
-
-        enqueueFrameInternal(frame)
+        val phoneBatteryMv = readPhoneBatteryMilliVolts()
         telemetryLogI(
-            "native telemetry queued",
+            "[TELSEND] building",
             mapOf(
                 "reason" to reason,
                 "lat" to location.latitude,
                 "lon" to location.longitude,
                 "channelIndex" to nativeTelemetryChannelIndex,
                 "companionBatteryMilliVolts" to nativeTelemetryCompanionBatteryMilliVolts,
+                "phoneBatteryMilliVolts" to phoneBatteryMv,
                 "needsForwarding" to nativeTelemetryNeedsForwarding,
                 "maxPathObserved" to nativeTelemetryMaxPathObserved,
+            )
+        )
+
+        val frame = buildTelemetryFrame(
+            channelIndex = nativeTelemetryChannelIndex,
+            latitude = location.latitude,
+            longitude = location.longitude,
+            companionBatteryMilliVolts = nativeTelemetryCompanionBatteryMilliVolts,
+            phoneBatteryMilliVolts = phoneBatteryMv,
+            needsForwarding = nativeTelemetryNeedsForwarding,
+            maxPathObserved = nativeTelemetryMaxPathObserved,
+        )
+
+        enqueueFrameInternal(frame)
+        telemetryLogI(
+            "[TELSEND] queued",
+            mapOf(
+                "reason" to reason,
+                "frameLen" to frame.size,
+                "frameHex" to frameToHex(frame),
             )
         )
         return true
@@ -1646,6 +1664,16 @@ class MeshBleService : Service() {
         writer.put(channelIndex.toByte())
         writer.putInt((System.currentTimeMillis() / 1000L).toInt())
         writer.put(telemetryBytes)
+
+        telemetryLogI(
+            "[TELSEND] frame built",
+            mapOf(
+                "telemetryText" to telemetryText,
+                "payloadHex" to payload.joinToString("") { String.format("%02X", it) },
+                "frameLen" to frame.size,
+                "channelIndex" to channelIndex,
+            )
+        )
         return frame
     }
 

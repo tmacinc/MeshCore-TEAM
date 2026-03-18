@@ -111,7 +111,7 @@ class TopologyMessage {
     bytes[10] = nodeCount & 0xFF;
     bytes.setRange(11, payloadSize, neighborBitmap);
 
-    debugPrint('[TEL SEND #T:] lat=$latitude lon=$longitude'
+    debugPrint('[TELSEND #T:] lat=$latitude lon=$longitude'
         ' compBatt=${companionBatteryMilliVolts}mV (enc=0x${bytes[8].toRadixString(16)})'
         ' phoneBatt=${phoneBatteryMilliVolts}mV (enc=0x${bytes[9].toRadixString(16)})'
         ' nodeCount=$nodeCount bitmapLen=${neighborBitmap.length}');
