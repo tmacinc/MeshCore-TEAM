@@ -14,15 +14,15 @@ import 'package:meshcore_team/services/forwarding/forwarding_strategy.dart';
 /// Algorithm:
 ///   • Only contacts that have sent at least one #TEL are tracked.
 ///     Contacts without a TEL entry are ignored entirely.
-///   • Forwarding ACTIVATES when any tracked contact:
+///   • Forwarding ACTIVATES (from off) when any tracked contact:
 ///       - reports [needsForwarding]=true in its last #TEL, OR
 ///       - has not been heard for longer than [_staleThreshold].
-///     maxHops = max(maxPathObserved across triggering contacts) + 1,
+///     maxHops = max(observedPathLen across tracked contacts) + 1,
 ///     clamped to [1.._maxHopsCeiling].
-///   • Hold-down STARTS when ALL tracked contacts report
-///     [maxPathObserved]=0 — meaning every node is directly reachable
-///     and no multi-hop relaying is needed.  maxHops is held at its
-///     current value during the hold to let the network fully converge.
+///   • Hold-down STARTS when forwarding is on AND ALL tracked contacts
+///     report [maxPathObserved]=0 in their TEL — meaning the entire
+///     network agrees it is in a zero-hop condition.  maxHops is held
+///     at its current value during the hold to let the network converge.
 ///   • If forwarding is re-triggered during the hold, the hold is cancelled
 ///     and forwarding resumes immediately.
 ///   • After the hold expires without a re-trigger: SET_MAX_HOPS = 0.
@@ -57,6 +57,7 @@ class ForwardingV1Strategy implements ForwardingStrategy {
   void onTelemetry(TelemetryEvent event) {
     _contactStates[event.senderName] = _V1ContactState(
       needsForwarding: event.telemetry.needsForwarding,
+      remoteMaxPathObserved: event.telemetry.maxPathObserved,
       // Store the path length WE observed when receiving this packet.
       // This is our direct measurement of network connectivity, not what
       // the remote contact reported.
@@ -83,10 +84,12 @@ class ForwardingV1Strategy implements ForwardingStrategy {
     final staleMs = _staleThreshold.inMilliseconds;
 
     int maxObserved = 0;
-    bool anyNeedsForwarding = false;
-    // True when every tracked contact's last TEL arrived directly (pathLen=0).
-    // This is OUR observation that the whole network is directly reachable.
-    bool allFullyConnected = _contactStates.isNotEmpty;
+    bool anyRemoteNeedsForwarding = false;
+    bool anyStale = false;
+    // True when every tracked contact's last TEL reports maxPathObserved=0,
+    // meaning the whole network agrees it is in a zero-hop condition.
+    bool allRemoteMaxPathZero = true;
+    bool hasTracked = false;
 
     for (final contact in input.contacts) {
       final name = contact.name ?? '';
@@ -94,49 +97,56 @@ class ForwardingV1Strategy implements ForwardingStrategy {
 
       // Only track contacts that have sent at least one #TEL.
       if (telState == null) continue;
+      hasTracked = true;
 
       final isStale =
           (nowMs - telState.lastReceived.millisecondsSinceEpoch) > staleMs;
+      if (isStale) anyStale = true;
+      if (telState.needsForwarding) anyRemoteNeedsForwarding = true;
 
-      if (isStale || telState.needsForwarding) {
-        anyNeedsForwarding = true;
-        if (telState.observedPathLen > maxObserved) {
-          maxObserved = telState.observedPathLen;
-        }
+      if (telState.observedPathLen > maxObserved) {
+        maxObserved = telState.observedPathLen;
       }
-
-      if (telState.observedPathLen > 0) {
-        allFullyConnected = false;
+      if (telState.remoteMaxPathObserved > 0) {
+        allRemoteMaxPathZero = false;
       }
     }
 
-    // Update our advertised forwarding state for outgoing #TEL.
-    // We signal needsForwarding=true while actively forwarding.
-    // When all contacts are direct (allFullyConnected), we drop it to false
-    // so the rest of the network can start their hold-down timers too.
-    _advertiseNeedsForwarding = anyNeedsForwarding;
+    if (!hasTracked) allRemoteMaxPathZero = false;
+
     _advertiseMaxPathObserved = maxObserved;
 
-    if (anyNeedsForwarding) {
+    if (_currentMaxHops == 0) {
+      // --- FORWARDING IS OFF ---
+      // Activate when any remote reports needsForwarding=true OR any
+      // contact is stale (lost contact — assume they may need relaying).
+      if (anyRemoteNeedsForwarding || anyStale) {
+        _cancelHold();
+        _currentMaxHops = (maxObserved + 1).clamp(1, _maxHopsCeiling);
+        _advertiseNeedsForwarding = true;
+        return _decision(
+            'Forwarding active: maxObserved=$maxObserved → maxHops=$_currentMaxHops');
+      }
+      _advertiseNeedsForwarding = false;
+      return _decision('No forwarding needed; engine at baseline');
+    } else {
+      // --- FORWARDING IS ON ---
+      // Once ALL contacts report remoteMaxPathObserved=0 the network is in
+      // a zero-hop condition.  Start the hold-down timer and advertise
+      // needsForwarding=false so peers can begin their own hold-downs.
+      if (allRemoteMaxPathZero) {
+        _advertiseNeedsForwarding = false;
+        if (!_holdActive) _startHold();
+        return _decision(
+            'Hold-down active; maintaining maxHops=$_currentMaxHops until hold expires');
+      }
+      // Still multi-hop activity — cancel any hold, update maxHops.
       _cancelHold();
       _currentMaxHops = (maxObserved + 1).clamp(1, _maxHopsCeiling);
+      _advertiseNeedsForwarding = true;
       return _decision(
           'Forwarding active: maxObserved=$maxObserved → maxHops=$_currentMaxHops');
     }
-
-    // No forwarding trigger active.
-    if (_currentMaxHops == 0) {
-      return _decision('No forwarding needed; engine at baseline');
-    }
-
-    // We were forwarding — start hold-down once all contacts are directly
-    // reachable (observedPathLen=0), and clear our needsForwarding flag so
-    // the network knows we consider routing solved.
-    if (allFullyConnected && !_holdActive) {
-      _startHold();
-    }
-    return _decision(
-        'Hold-down active; maintaining maxHops=$_currentMaxHops until hold expires');
   }
 
   void _startHold() {
@@ -180,12 +190,15 @@ class ForwardingV1Strategy implements ForwardingStrategy {
 
 class _V1ContactState {
   final bool needsForwarding;
+  // The maxPathObserved value the remote contact reported in its TEL.
+  final int remoteMaxPathObserved;
   // The path length WE observed when receiving this contact's last #TEL.
   final int observedPathLen;
   final DateTime lastReceived;
 
   const _V1ContactState({
     required this.needsForwarding,
+    required this.remoteMaxPathObserved,
     required this.observedPathLen,
     required this.lastReceived,
   });
