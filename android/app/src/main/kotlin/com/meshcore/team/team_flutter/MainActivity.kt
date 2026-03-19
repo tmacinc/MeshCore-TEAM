@@ -27,6 +27,7 @@ class MainActivity : FlutterActivity() {
 						val companionBatteryMilliVolts = call.argument<Number>("companionBatteryMilliVolts")?.toInt()
 						val needsForwarding = call.argument<Boolean>("needsForwarding") ?: false
 						val maxPathObserved = call.argument<Number>("maxPathObserved")?.toInt() ?: 0
+						val locationSource = call.argument<String>("locationSource") ?: "phone"
 						MeshBleService.configureNativeTelemetry(
 							this,
 							enabled,
@@ -36,12 +37,23 @@ class MainActivity : FlutterActivity() {
 							companionBatteryMilliVolts,
 							needsForwarding,
 							maxPathObserved,
+							locationSource,
 						)
 						result.success(true)
 					}
 					"stopNativeTelemetry" -> {
 						MeshBleService.stopNativeTelemetry(this)
 						result.success(true)
+					}
+					"updateCompanionLocation" -> {
+						val latitude = call.argument<Double>("latitude")
+						val longitude = call.argument<Double>("longitude")
+						if (latitude != null && longitude != null) {
+							MeshBleService.updateCompanionLocation(this, latitude, longitude)
+							result.success(true)
+						} else {
+							result.error("bad_args", "Missing latitude/longitude", null)
+						}
 					}
 					"startScan" -> {
 						val timeoutMs = (call.argument<Number>("timeoutMs")?.toLong() ?: 10_000L)

@@ -14,6 +14,7 @@ import 'package:meshcore_team/models/topology_message.dart';
 import 'package:meshcore_team/models/network_topology.dart';
 import 'package:meshcore_team/services/neighbor_tracker.dart';
 import 'package:meshcore_team/services/phone_battery_service.dart';
+import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/services/forwarding_policy_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
@@ -96,15 +97,42 @@ class TelemetrySendService extends ChangeNotifier {
 
   void _onBatteryChanged() {
     final voltage = _connectionViewModel.companionBatteryVoltage;
-    if (voltage == null) return;
+    if (voltage != null) {
+      final mv = (voltage * 1000).round();
+      if (_lastCompanionBatteryMv != mv) {
+        _lastCompanionBatteryMv = mv;
 
-    final mv = (voltage * 1000).round();
-    if (_lastCompanionBatteryMv == mv) return;
-    _lastCompanionBatteryMv = mv;
+        if (!kIsWeb && Platform.isAndroid) {
+          _applyConfigAndMaybeStart();
+        }
+      }
+    }
 
     if (!kIsWeb && Platform.isAndroid) {
-      _applyConfigAndMaybeStart();
+      _pushCompanionLocationIfNeeded();
     }
+  }
+
+  /// Push companion GPS coordinates to the Android native telemetry layer so
+  /// it can send telemetry using the companion's position when the user has
+  /// selected "companion" as their location source.
+  ///
+  /// Always pushes (even when coordinates haven't changed) so the native
+  /// timestamp stays fresh and the staleness guard doesn't discard the fix.
+  void _pushCompanionLocationIfNeeded() {
+    if (kIsWeb || !Platform.isAndroid) return;
+    if (_settings.settings.locationSource != LocationSource.companion) return;
+
+    final lat = _connectionViewModel.companionLatitude;
+    final lon = _connectionViewModel.companionLongitude;
+    if (lat == null || lon == null) return;
+
+    unawaited(_nativeTelemetryChannel.invokeMethod('updateCompanionLocation', {
+      'latitude': lat,
+      'longitude': lon,
+    }).catchError((Object e) {
+      debugPrint('[TelemetrySend] ⚠️ updateCompanionLocation failed: $e');
+    }));
   }
 
   bool get _isEnabledInSettings {
@@ -182,6 +210,7 @@ class TelemetrySendService extends ChangeNotifier {
         'companionBatteryMilliVolts': _lastCompanionBatteryMv,
         'needsForwarding': _forwardingPolicy?.currentNeedsForwarding ?? false,
         'maxPathObserved': _forwardingPolicy?.currentMaxPathObserved ?? 0,
+        'locationSource': _settings.settings.locationSource,
       });
       debugPrint(
           '[TelemetrySend] ✅ Native telemetry configured (channelIndex=${channel.channelIndex})');

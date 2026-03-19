@@ -133,6 +133,7 @@ class MeshBleService : Service() {
         private const val actionSendFrame = "com.meshcore.team.mesh.SEND_FRAME"
         private const val actionConfigureNativeTelemetry = "com.meshcore.team.mesh.CONFIGURE_NATIVE_TELEMETRY"
         private const val actionStopNativeTelemetry = "com.meshcore.team.mesh.STOP_NATIVE_TELEMETRY"
+        private const val actionUpdateCompanionLocation = "com.meshcore.team.mesh.UPDATE_COMPANION_LOCATION"
 
         private const val extraTimeoutMs = "timeoutMs"
         private const val extraAddress = "address"
@@ -144,6 +145,9 @@ class MeshBleService : Service() {
         private const val extraTelemetryCompanionBatteryMilliVolts = "telemetryCompanionBatteryMilliVolts"
         private const val extraTelemetryNeedsForwarding = "telemetryNeedsForwarding"
         private const val extraTelemetryMaxPathObserved = "telemetryMaxPathObserved"
+        private const val extraTelemetryLocationSource = "telemetryLocationSource"
+        private const val extraCompanionLatitude = "companionLatitude"
+        private const val extraCompanionLongitude = "companionLongitude"
 
         private val nusServiceUuid: UUID = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
         private val rxCharUuid: UUID = UUID.fromString("6E400002-B5A3-F393-E0A9-E50E24DCCA9E")
@@ -210,6 +214,7 @@ class MeshBleService : Service() {
             companionBatteryMilliVolts: Int?,
             needsForwarding: Boolean,
             maxPathObserved: Int,
+            locationSource: String,
         ) {
             val intent = Intent(context, MeshBleService::class.java)
                 .setAction(actionConfigureNativeTelemetry)
@@ -219,9 +224,18 @@ class MeshBleService : Service() {
                 .putExtra(extraTelemetryMinDistanceMeters, minDistanceMeters)
                 .putExtra(extraTelemetryNeedsForwarding, needsForwarding)
                 .putExtra(extraTelemetryMaxPathObserved, maxPathObserved)
+                .putExtra(extraTelemetryLocationSource, locationSource)
             if (companionBatteryMilliVolts != null) {
                 intent.putExtra(extraTelemetryCompanionBatteryMilliVolts, companionBatteryMilliVolts)
             }
+            context.startService(intent)
+        }
+
+        fun updateCompanionLocation(context: Context, latitude: Double, longitude: Double) {
+            val intent = Intent(context, MeshBleService::class.java)
+                .setAction(actionUpdateCompanionLocation)
+                .putExtra(extraCompanionLatitude, latitude)
+                .putExtra(extraCompanionLongitude, longitude)
             context.startService(intent)
         }
 
@@ -339,6 +353,10 @@ class MeshBleService : Service() {
     private var nativeTelemetryIntervalSeconds = 60
     private var nativeTelemetryMinDistanceMeters = 100
     private var nativeTelemetryCompanionBatteryMilliVolts: Int? = null
+    private var nativeTelemetryLocationSource = "phone"
+    private var nativeTelemetryCompanionLat: Double? = null
+    private var nativeTelemetryCompanionLon: Double? = null
+    private var nativeTelemetryCompanionLocationAtMs = 0L
     private var nativeTelemetryNeedsForwarding = false
     private var nativeTelemetryMaxPathObserved = 0
     private var nativeTelemetryLastSendMs = 0L
@@ -529,6 +547,7 @@ class MeshBleService : Service() {
                     }
                 nativeTelemetryNeedsForwarding = intent.getBooleanExtra(extraTelemetryNeedsForwarding, false)
                 nativeTelemetryMaxPathObserved = intent.getIntExtra(extraTelemetryMaxPathObserved, 0).coerceIn(0, 127)
+                nativeTelemetryLocationSource = intent.getStringExtra(extraTelemetryLocationSource) ?: "phone"
 
                 val shouldResetSchedule = nativeTelemetryEnabled && (
                     !previousEnabled ||
@@ -553,12 +572,23 @@ class MeshBleService : Service() {
                         "companionBatteryMilliVolts" to nativeTelemetryCompanionBatteryMilliVolts,
                         "needsForwarding" to nativeTelemetryNeedsForwarding,
                         "maxPathObserved" to nativeTelemetryMaxPathObserved,
+                        "locationSource" to nativeTelemetryLocationSource,
                         "scheduleReset" to shouldResetSchedule,
                     )
                 )
                 refreshNativeTelemetryLoop(reason = "configure")
                 if (isForegroundActive) {
                     refreshForegroundNotification(force = true)
+                }
+            }
+            actionUpdateCompanionLocation -> {
+                val lat = intent.getDoubleExtra(extraCompanionLatitude, Double.NaN)
+                val lon = intent.getDoubleExtra(extraCompanionLongitude, Double.NaN)
+                if (!lat.isNaN() && !lon.isNaN()) {
+                    nativeTelemetryCompanionLat = lat
+                    nativeTelemetryCompanionLon = lon
+                    nativeTelemetryCompanionLocationAtMs = System.currentTimeMillis()
+                    telemetryLogI("updateCompanionLocation", mapOf("lat" to lat, "lon" to lon))
                 }
             }
             actionStopNativeTelemetry -> {
@@ -1441,6 +1471,14 @@ class MeshBleService : Service() {
         val connected = MeshBleState.state == "connected" && rxChar != null
         if (nativeTelemetryEnabled && connected) {
             startNativeTelemetryLoop(reason)
+            // Manage phone location updates based on source. This runs on every
+            // config change (not just initial start) so switching between phone
+            // and companion correctly starts/stops the FusedLocationProviderClient.
+            if (nativeTelemetryLocationSource == "companion") {
+                stopNativeLocationUpdates("companion_source")
+            } else {
+                startNativeLocationUpdates(reason)
+            }
         } else {
             stopNativeTelemetryLoop(reason)
         }
@@ -1461,7 +1499,9 @@ class MeshBleService : Service() {
             nativeTelemetryNextPeriodicDueMs = System.currentTimeMillis() + (nativeTelemetryIntervalSeconds * 1000L)
         }
 
-        startNativeLocationUpdates(reason)
+        if (nativeTelemetryLocationSource != "companion") {
+            startNativeLocationUpdates(reason)
+        }
 
         nativeTelemetryRunnable = object : Runnable {
             override fun run() {
@@ -1532,7 +1572,7 @@ class MeshBleService : Service() {
     }
 
     private fun evaluateAndSendTelemetryFromLatest() {
-        val location = nativeTelemetryLatestLocation
+        val location = resolveCurrentLocation()
         if (location == null) {
             maybeLogNativeTelemetrySkip(
                 reason = "no location fix yet",
@@ -1542,11 +1582,11 @@ class MeshBleService : Service() {
             return
         }
 
-        val ageMs = System.currentTimeMillis() - nativeTelemetryLatestLocationAtMs
+        val ageMs = System.currentTimeMillis() - location.time
         if (ageMs > maxTelemetryLocationAgeMs) {
             maybeLogNativeTelemetrySkip(
                 reason = "stale location",
-                extra = mapOf("ageMs" to ageMs),
+                extra = mapOf("ageMs" to ageMs, "source" to nativeTelemetryLocationSource),
                 lastLoggedAtMs = nativeTelemetryStaleWarnAtMs,
                 updateLastLogged = { nativeTelemetryStaleWarnAtMs = it },
             )
@@ -1554,6 +1594,30 @@ class MeshBleService : Service() {
         }
 
         evaluateAndSendTelemetry(location)
+    }
+
+    /**
+     * Resolves the best available location based on the configured source.
+     * When source is "companion", builds a Location from the pushed companion
+     * coordinates. Falls back to phone GPS if companion coords are unavailable.
+     */
+    private fun resolveCurrentLocation(): Location? {
+        if (nativeTelemetryLocationSource == "companion") {
+            val lat = nativeTelemetryCompanionLat
+            val lon = nativeTelemetryCompanionLon
+            val atMs = nativeTelemetryCompanionLocationAtMs
+            if (lat != null && lon != null && atMs > 0) {
+                return Location("companion").apply {
+                    latitude = lat
+                    longitude = lon
+                    time = atMs
+                }
+            }
+            // Companion coords not available yet — fall through to phone GPS
+        }
+
+        val loc = nativeTelemetryLatestLocation ?: return null
+        return Location(loc).apply { time = nativeTelemetryLatestLocationAtMs }
     }
 
     private fun maybeLogNativeTelemetrySkip(
@@ -1603,6 +1667,7 @@ class MeshBleService : Service() {
             "[TELSEND] building",
             mapOf(
                 "reason" to reason,
+                "gpsSource" to location.provider,
                 "lat" to location.latitude,
                 "lon" to location.longitude,
                 "channelIndex" to nativeTelemetryChannelIndex,
