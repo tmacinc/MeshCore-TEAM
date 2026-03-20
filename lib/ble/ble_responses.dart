@@ -498,7 +498,7 @@ class BleResponseParser {
     reader.readByte(); // reserved1
     reader.readByte(); // reserved2
     final senderPubKeyPrefix = reader.readBytes(6); // 6-byte prefix
-    final pathLength = reader.readByte();
+    final pathLength = reader.readByte() & 0x3F; // bits 5–0 are hop count
     final txtType = reader.readByte(); // txt_type (ignored for now)
     final timestamp = reader.readUInt32LE();
 
@@ -528,7 +528,7 @@ class BleResponseParser {
     reader.readByte(); // reserved1
     reader.readByte(); // reserved2
     final channelIndex = reader.readByte();
-    final pathLength = reader.readByte();
+    final pathLength = reader.readByte() & 0x3F; // bits 5–0 are hop count
     final txtType = reader.readByte(); // txt_type (ignored for now)
     final timestamp = reader.readUInt32LE();
 
