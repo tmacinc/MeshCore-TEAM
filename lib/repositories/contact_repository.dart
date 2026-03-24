@@ -14,6 +14,7 @@ import 'package:meshcore_team/database/daos/contacts_dao.dart';
 import 'package:meshcore_team/models/sync_status.dart';
 import 'package:meshcore_team/models/unread_models.dart';
 import 'package:meshcore_team/services/settings_service.dart';
+import 'package:meshcore_team/utils/sync_trace.dart';
 import 'package:drift/drift.dart' as drift;
 
 /// Result returned by [ContactRepository.syncContactsComplete].
@@ -35,6 +36,8 @@ class ContactSyncResult {
 /// Manages contact sync and database operations
 /// Matches Android ContactRepository.kt implementation
 class ContactRepository {
+  static const String _syncTraceTag = '[SYNCTRACE][CONTACT]';
+
   final BleConnectionManager _bleManager;
   final ContactsDao _contactsDao;
   final SettingsService _settingsService;
@@ -92,6 +95,7 @@ class ContactRepository {
       {required int since}) async {
     final label = since > 0 ? 'incremental (since=$since)' : 'full';
     debugPrint('[ContactSync] 🔄 Starting $label contact sync...');
+    syncTrace('$_syncTraceTag begin mode=$label since=$since');
 
     // Reset progress tracking
     _updateProgress(const ContactSyncProgress(
@@ -102,11 +106,13 @@ class ContactRepository {
     final success = await _bleManager.sendFrame(frame);
     if (!success) {
       debugPrint('[ContactSync] ❌ Failed to send CMD_GET_CONTACTS');
+      syncTrace('$_syncTraceTag send_failed cmd=GET_CONTACTS since=$since');
       _updateProgress(const ContactSyncProgress(isComplete: true));
       return const ContactSyncResult(success: false, mostRecentLastmod: 0);
     }
 
     debugPrint('[ContactSync] CMD_GET_CONTACTS sent, collecting responses...');
+    syncTrace('$_syncTraceTag cmd_sent cmd=GET_CONTACTS since=$since');
 
     try {
       return await _collectContacts(
@@ -115,6 +121,7 @@ class ContactRepository {
       );
     } catch (e) {
       debugPrint('[ContactSync] ❌ Contact sync failed: $e');
+      syncTrace('$_syncTraceTag collect_failed error=$e');
       _updateProgress(const ContactSyncProgress(isComplete: true));
       return const ContactSyncResult(success: false, mostRecentLastmod: 0);
     }
@@ -130,16 +137,19 @@ class ContactRepository {
     required int maxTotalTimeMs,
     required int noResponseTimeoutMs,
   }) async {
+    const countReachedGraceTimeoutMs = 1500;
+    final syncStopwatch = Stopwatch()..start();
+    final responseStopwatch = Stopwatch()..start();
+
     int contactCount = 0;
     // Total expected, parsed from CONTACTS_START frame. 0 = unknown (old firmware).
     int expectedTotal = 0;
     // Absolute deadline — extended once we know the true total.
     int effectiveMaxTotalMs = maxTotalTimeMs;
-    int lastResponseTime = DateTime.now().millisecondsSinceEpoch;
-    final startTime = DateTime.now().millisecondsSinceEpoch;
     bool endOfContactsReceived = false;
     bool contactsStartReceived = false;
     int mostRecentLastmod = 0;
+    String completionReason = 'pending';
 
     final Completer<bool> completer = Completer<bool>();
 
@@ -151,7 +161,9 @@ class ContactRepository {
       if (frame.isEmpty) return;
 
       final responseCode = frame[0];
-      lastResponseTime = DateTime.now().millisecondsSinceEpoch;
+      responseStopwatch
+        ..reset()
+        ..start();
 
       // Check for control codes
       if (responseCode == BleConstants.respContactsStart) {
@@ -166,6 +178,8 @@ class ContactRepository {
           debugPrint(
               '[ContactSync] CONTACTS_START: expecting $expectedTotal contacts, '
               'timeout set to ${effectiveMaxTotalMs}ms');
+          syncTrace(
+              '$_syncTraceTag contacts_start expected=$expectedTotal timeoutMs=$effectiveMaxTotalMs');
           _updateProgress(ContactSyncProgress(
             currentCount: 0,
             totalCount: expectedTotal,
@@ -173,14 +187,18 @@ class ContactRepository {
           ));
         } else {
           debugPrint('[ContactSync] CONTACTS_START signal received (no count)');
+          syncTrace('$_syncTraceTag contacts_start expected=unknown');
         }
         return;
       }
 
       if (responseCode == BleConstants.respEndOfContacts) {
         debugPrint('[ContactSync] ✅ END_OF_CONTACTS signal received');
+        syncTrace(
+            '$_syncTraceTag end_of_contacts receivedCount=$contactCount expected=${expectedTotal > 0 ? expectedTotal : 'unknown'}');
         endOfContactsReceived = true;
         if (!completer.isCompleted) {
+          completionReason = 'end_of_contacts';
           completer.complete(true);
         }
         return;
@@ -200,6 +218,11 @@ class ContactRepository {
             mostRecentLastmod = response.lastmod;
           }
 
+          final publicKeyPrefix = response.publicKey
+              .take(6)
+              .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+              .join();
+
           // Update progress — show accurate total when known.
           _updateProgress(ContactSyncProgress(
             currentCount: contactCount,
@@ -207,17 +230,27 @@ class ContactRepository {
             isComplete: false,
           ));
 
-          debugPrint('[ContactSync] Contact $contactCount received'
-              '${expectedTotal > 0 ? ' ($contactCount/$expectedTotal)' : ''}');
+          syncTrace(
+              '$_syncTraceTag contact_received index=$contactCount expected=${expectedTotal > 0 ? expectedTotal : 'unknown'} '
+              'name="${response.name}" keyPrefix=$publicKeyPrefix lastmod=${response.lastmod} '
+              'endSeen=$endOfContactsReceived');
 
-          // Complete immediately once all expected contacts have arrived;
-          // don't wait for END_OF_CONTACTS or a silence gap.
+          if (expectedTotal > 0 && contactCount > expectedTotal) {
+            syncTrace(
+                '$_syncTraceTag overrun index=$contactCount expected=$expectedTotal name="${response.name}" keyPrefix=$publicKeyPrefix');
+          }
+
+          // Reaching the advertised count is not authoritative enough to end
+          // the phase immediately. Some firmware/build combinations deliver
+          // END_OF_CONTACTS slightly later, and moving on early lets channel
+          // sync start while the radio is still flushing contact frames.
           if (expectedTotal > 0 &&
               contactCount >= expectedTotal &&
               !completer.isCompleted) {
             debugPrint(
                 '[ContactSync] ✅ All $expectedTotal expected contacts received');
-            completer.complete(true);
+            syncTrace(
+                '$_syncTraceTag expected_count_reached index=$contactCount expected=$expectedTotal endSeen=$endOfContactsReceived');
           }
         }
       }
@@ -226,33 +259,54 @@ class ContactRepository {
     // Monitor for timeouts
     Timer? timeoutTimer;
     timeoutTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final totalElapsed = now - startTime;
-      final timeSinceLastResponse = now - lastResponseTime;
+      final totalElapsed = syncStopwatch.elapsedMilliseconds;
+      final timeSinceLastResponse = responseStopwatch.elapsedMilliseconds;
 
       // Absolute timeout
       if (totalElapsed > effectiveMaxTotalMs) {
         debugPrint('[ContactSync] ⏱️ Absolute timeout after ${totalElapsed}ms '
             '($contactCount/${expectedTotal > 0 ? expectedTotal : "?"} contacts)');
+        syncTrace(
+            '$_syncTraceTag timeout_absolute elapsedMs=$totalElapsed received=$contactCount expected=${expectedTotal > 0 ? expectedTotal : 'unknown'} '
+            'contactsStart=$contactsStartReceived endSeen=$endOfContactsReceived');
         timer.cancel();
         if (!completer.isCompleted) {
+          completionReason = 'absolute_timeout';
           completer.complete(contactCount > 0);
+        }
+        return;
+      }
+
+      // Once we have received the advertised count, wait briefly for the
+      // END_OF_CONTACTS marker. If it never arrives, assume the stream is done
+      // after a short quiet period instead of holding the UI for the full
+      // absolute timeout.
+      if (expectedTotal > 0 &&
+          contactCount >= expectedTotal &&
+          timeSinceLastResponse > countReachedGraceTimeoutMs) {
+        syncTrace(
+            '$_syncTraceTag timeout_count_grace quietMs=$timeSinceLastResponse received=$contactCount expected=$expectedTotal endSeen=$endOfContactsReceived');
+        timer.cancel();
+        if (!completer.isCompleted) {
+          completionReason = 'count_reached_grace_timeout';
+          completer.complete(true);
         }
         return;
       }
 
       // No-response timeout: only use as a fallback when the total is unknown
       // (e.g. very old firmware that omits the count in CONTACTS_START).
-      // When we know the total, trust END_OF_CONTACTS or the count-match above
-      // instead — a LoRa radio event can pause delivery for several seconds.
       if (expectedTotal == 0 &&
           contactCount > 0 &&
           timeSinceLastResponse > noResponseTimeoutMs) {
         debugPrint(
             '[ContactSync] ⏱️ No new contacts for ${timeSinceLastResponse}ms, '
             'assuming complete (unknown total)');
+        syncTrace(
+            '$_syncTraceTag timeout_quiet quietMs=$timeSinceLastResponse received=$contactCount expected=unknown');
         timer.cancel();
         if (!completer.isCompleted) {
+          completionReason = 'quiet_timeout';
           completer.complete(true);
         }
         return;
@@ -269,12 +323,18 @@ class ContactRepository {
 
     // Cleanup BLE subscription before touching the DB.
     timeoutTimer?.cancel();
-    await _frameSubscription?.cancel();
+    final frameSubscription = _frameSubscription;
+    if (frameSubscription != null) {
+      await frameSubscription.cancel();
+    }
     _frameSubscription = null;
 
-    final receiveTime = DateTime.now().millisecondsSinceEpoch - startTime;
+    final receiveTime = syncStopwatch.elapsedMilliseconds;
     debugPrint(
         '[ContactSync] 📥 Received $contactCount contacts in ${receiveTime}ms — writing to DB...');
+    syncTrace(
+        '$_syncTraceTag receive_complete reason=$completionReason received=$contactCount expected=${expectedTotal > 0 ? expectedTotal : 'unknown'} '
+        'contactsStart=$contactsStartReceived endSeen=$endOfContactsReceived receiveMs=$receiveTime mostRecentLastmod=$mostRecentLastmod');
 
     // Phase 2: bulk-write all buffered contacts in a single transaction.
     if (receivedContacts.isNotEmpty) {
@@ -308,9 +368,12 @@ class ContactRepository {
       }
     }
 
-    final totalTime = DateTime.now().millisecondsSinceEpoch - startTime;
+    final totalTime = syncStopwatch.elapsedMilliseconds;
     debugPrint(
         '[ContactSync] ✅ Contact sync complete: $contactCount contacts in ${totalTime}ms');
+    syncTrace(
+        '$_syncTraceTag sync_complete success=$success received=$contactCount expected=${expectedTotal > 0 ? expectedTotal : 'unknown'} '
+        'reason=$completionReason totalMs=$totalTime endSeen=$endOfContactsReceived');
 
     // Mark sync as complete
     _updateProgress(ContactSyncProgress(

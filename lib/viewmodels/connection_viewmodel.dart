@@ -16,11 +16,14 @@ import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/repositories/message_repository.dart';
 import 'package:meshcore_team/services/mesh_connection_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
+import 'package:meshcore_team/utils/sync_trace.dart';
 
 /// Connection View Model
 /// Manages BLE connection lifecycle and orchestrates sequential sync
 /// Matches Android ConnectionViewModel.kt implementation
 class ConnectionViewModel extends ChangeNotifier {
+  static const String _syncTraceTag = '[SYNCTRACE][VM]';
+
   final BleConnectionManager _bleManager;
   final ContactRepository _contactRepository;
   final ChannelRepository _channelRepository;
@@ -716,7 +719,9 @@ class ConnectionViewModel extends ChangeNotifier {
   /// Run FULL sequential sync phases (contacts → channels → messages)
   Future<void> _runFullSyncPhases() async {
     // Phase 1: Contact Sync
+    final contactsPhaseStopwatch = Stopwatch()..start();
     debugPrint('[ConnectionVM] 📋 Phase 1: Syncing contacts...');
+    syncTrace('$_syncTraceTag phase=contacts action=start');
     _updateSyncStatus(const SyncStatus(phase: SyncPhase.syncingContacts));
 
     // Listen to contact sync progress
@@ -731,6 +736,8 @@ class ConnectionViewModel extends ChangeNotifier {
 
     final contactsResult = await _contactRepository.syncContactsComplete();
     _contactProgressSub?.cancel();
+    syncTrace(
+        '$_syncTraceTag phase=contacts action=finish success=${contactsResult.success} current=${_syncStatus.currentItem} total=${_syncStatus.totalItems} lastmod=${contactsResult.mostRecentLastmod} elapsedMs=${contactsPhaseStopwatch.elapsedMilliseconds}');
 
     if (!contactsResult.success) {
       debugPrint('[ConnectionVM] ⚠️ Contact sync failed, continuing anyway...');
@@ -745,8 +752,11 @@ class ConnectionViewModel extends ChangeNotifier {
     }
 
     debugPrint('[ConnectionVM] ✅ Phase 1 complete');
+    syncTrace(
+        '$_syncTraceTag phase=channels action=about_to_start after=contacts');
 
     // Phase 2: Channel Sync
+    final channelsPhaseStopwatch = Stopwatch()..start();
     debugPrint('[ConnectionVM] 📺 Phase 2: Syncing channels...');
     _updateSyncStatus(const SyncStatus(phase: SyncPhase.syncingChannels));
 
@@ -777,6 +787,8 @@ class ConnectionViewModel extends ChangeNotifier {
     final channelsSuccess = await _channelRepository.fetchChannelsFromFirmware(
         maxChannels: channelCapacity);
     _channelProgressSub?.cancel();
+    syncTrace(
+        '$_syncTraceTag phase=channels action=finish success=$channelsSuccess current=${_syncStatus.currentItem} total=${_syncStatus.totalItems} elapsedMs=${channelsPhaseStopwatch.elapsedMilliseconds}');
 
     if (!channelsSuccess) {
       debugPrint('[ConnectionVM] ⚠️ Channel sync failed, continuing anyway...');

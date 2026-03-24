@@ -17,6 +17,7 @@ import 'package:meshcore_team/database/daos/channels_dao.dart';
 import 'package:meshcore_team/models/sync_status.dart';
 import 'package:meshcore_team/models/unread_models.dart';
 import 'package:meshcore_team/services/settings_service.dart';
+import 'package:meshcore_team/utils/sync_trace.dart';
 import 'package:drift/drift.dart' as drift;
 
 /// Channel fetch result
@@ -64,6 +65,13 @@ class _OkOrError {
 /// Manages channel sync and database operations
 /// Matches Android ChannelRepository.kt implementation
 class ChannelRepository {
+  static const String _syncTraceTag = '[SYNCTRACE][CHANNEL]';
+  static const int _channelFetchRetryAttempts = 3;
+  static const Duration _channelFetchPipelineIdleWindow =
+      Duration(milliseconds: 150);
+  static const Duration _channelFetchPipelineMaxWait =
+      Duration(milliseconds: 1200);
+
   final BleConnectionManager _bleManager;
   final ChannelsDao _channelsDao;
   final SettingsService _settingsService;
@@ -116,19 +124,16 @@ class ChannelRepository {
       throw StateError('No companion selected');
     }
 
-    // Generate random 16-byte PSK
     final rnd = Random.secure();
     final psk =
         Uint8List.fromList(List<int>.generate(16, (_) => rnd.nextInt(256)));
     final hash = _calculateHash(psk);
 
-    // Check if channel already exists
     final existing = await _channelsDao.getChannelByHash(hash);
     if (existing != null) {
       return existing;
     }
 
-    // Find next available channel index for this companion
     final existingChannels =
         await _channelsDao.getChannelsByCompanion(companionKey);
     final usedIndices = existingChannels.map((c) => c.channelIndex).toSet();
@@ -150,7 +155,6 @@ class ChannelRepository {
       companionDeviceKey: drift.Value(companionKey),
     );
 
-    // Firmware is source of truth: register first when connected
     if (_bleManager.isConnected) {
       final result = await _registerChannelWithFirmware(
         channelIndex: nextIndex,
@@ -168,7 +172,7 @@ class ChannelRepository {
       await Future.delayed(const Duration(milliseconds: 300));
     } else {
       debugPrint(
-          '[Channel] ⚠️ Not connected - channel created in local DB only, will sync on reconnect');
+          '[Channel] Not connected - channel created in local DB only, will sync on reconnect');
     }
 
     await _channelsDao.upsertChannel(channelCompanion);
@@ -209,11 +213,9 @@ class ChannelRepository {
       if (psk.length != 16) return null;
       final hash = _calculateHash(psk);
 
-      // If channel already exists, return it
       final existing = await _channelsDao.getChannelByHash(hash);
       if (existing != null) return existing;
 
-      // Find next available channel index for this companion
       final existingChannels =
           await _channelsDao.getChannelsByCompanion(companionKey);
       final usedIndices = existingChannels.map((c) => c.channelIndex).toSet();
@@ -232,7 +234,6 @@ class ChannelRepository {
         companionDeviceKey: drift.Value(companionKey),
       );
 
-      // Firmware is source of truth: register first when connected
       if (_bleManager.isConnected) {
         final result = await _registerChannelWithFirmware(
           channelIndex: nextIndex,
@@ -245,7 +246,7 @@ class ChannelRepository {
         await Future.delayed(const Duration(milliseconds: 300));
       } else {
         debugPrint(
-            '[Channel] ⚠️ Not connected - channel imported to local DB only, will sync on reconnect');
+            '[Channel] Not connected - channel imported to local DB only, will sync on reconnect');
       }
 
       await _channelsDao.upsertChannel(channelCompanion);
@@ -460,6 +461,7 @@ class ChannelRepository {
   Future<bool> fetchChannelsFromFirmware({int maxChannels = 8}) async {
     debugPrint(
         '[ChannelSync] 🔄 Starting channel FETCH from firmware (max capacity: $maxChannels)...');
+    syncTrace('$_syncTraceTag begin maxChannels=$maxChannels');
 
     // Reset progress tracking
     _updateProgress(ChannelSyncProgress(
@@ -478,111 +480,128 @@ class ChannelRepository {
         _routeResponse(frame);
       });
 
-      // Probe each channel index
+      final initialResults =
+          await _collectPipelinedChannelResults(maxChannels: maxChannels);
+
       for (int index = 0; index < maxChannels; index++) {
         if (reachedEndOfTable) break;
 
-        bool channelFetched = false;
+        _ChannelFetchResult? result = initialResults[index];
+        int resolvedAttempt = result != null ? 1 : 0;
 
-        // Retry up to 3 times per channel index
-        for (int attempt = 1; attempt <= 3; attempt++) {
+        if (result == null) {
+          syncTrace('$_syncTraceTag probe index=$index phase=retry');
+        }
+
+        for (int attempt = 2;
+            attempt <= _channelFetchRetryAttempts && result == null;
+            attempt++) {
           debugPrint(
-              '[ChannelSync] Fetching channel index $index - attempt $attempt/3');
+              '[ChannelSync] Fetching channel index $index - attempt $attempt/$_channelFetchRetryAttempts');
+          syncTrace('$_syncTraceTag request index=$index attempt=$attempt');
 
-          // Send CMD_GET_CHANNEL
           final cmd = BleCommands.buildGetChannel(index);
           final sendSuccess = await _bleManager.sendFrame(cmd);
 
           if (!sendSuccess) {
             debugPrint(
                 '[ChannelSync] Failed to send CMD_GET_CHANNEL for index $index');
-            await Future.delayed(const Duration(milliseconds: 300));
+            syncTrace(
+                '$_syncTraceTag send_failed index=$index attempt=$attempt');
+            if (attempt < _channelFetchRetryAttempts) {
+              await Future.delayed(const Duration(milliseconds: 300));
+            }
             continue;
           }
 
-          // Wait for CHANNEL_INFO or ERROR response
-          final result = await _waitForChannelOrError(index, timeoutMs: 2000);
+          syncTrace(
+              '$_syncTraceTag request_sent index=$index attempt=$attempt');
 
-          if (result.isChannel) {
-            final channelInfo = result.channel!;
-            if (channelInfo.name.isNotEmpty) {
-              // Channel exists in firmware - add to our list
-              final pskBytes = _base64ToBytes(channelInfo.psk);
-              final hash = _calculateHash(pskBytes);
-              final companionKey =
-                  _settingsService.settings.currentCompanionPublicKey;
-
-              // Warn if companion key is not set
-              if (companionKey == null || companionKey.isEmpty) {
-                debugPrint(
-                    '[ChannelSync] ⚠️ WARNING: Companion key not set! Channel will not be tagged properly.');
-              }
-
-              final channelEntity = ChannelsCompanion.insert(
-                hash: drift.Value(hash),
-                name: channelInfo.name,
-                sharedKey: pskBytes,
-                isPublic: index == 0,
-                shareLocation: const drift.Value(false), // Default to false
-                channelIndex: index,
-                createdAt: DateTime.now().millisecondsSinceEpoch,
-                companionDeviceKey: drift.Value(companionKey),
-              );
-              fetchedChannels.add(channelEntity);
-              debugPrint(
-                  '[ChannelSync] ✅ Channel $index \'${channelInfo.name}\' fetched (hash=$hash, companion=${companionKey?.substring(0, 8)})');
-            } else {
-              debugPrint(
-                  '[ChannelSync] Channel index $index is empty (no channel registered)');
-            }
-            channelFetched = true;
+          final retryResult =
+              await _waitForChannelOrError(index, timeoutMs: 2000);
+          if (retryResult.isChannel || retryResult.isError) {
+            result = retryResult;
+            resolvedAttempt = attempt;
             break;
-          } else if (result.isError) {
-            // Check if it's ERR_CODE_NOT_FOUND (0x01)
-            if (result.errorCode == 0x01) {
-              debugPrint(
-                  '[ChannelSync] Reached end of channel table at index $index (ERR_CODE_NOT_FOUND)');
-              reachedEndOfTable = true;
-              channelFetched = true;
-              break;
-            }
-            debugPrint(
-                '[ChannelSync] ⚠️ Firmware ERR while fetching channel $index: code=${result.errorCode}');
-            if (attempt < 3) {
-              await Future.delayed(const Duration(milliseconds: 300));
-            }
-          } else {
-            // Timeout
-            debugPrint(
-                '[ChannelSync] ⚠️ Timeout waiting for channel $index response, attempt $attempt/3');
-            if (attempt < 3) {
-              await Future.delayed(const Duration(milliseconds: 300));
-            }
+          }
+
+          debugPrint(
+              '[ChannelSync] ⚠️ Timeout waiting for channel $index response, attempt $attempt/$_channelFetchRetryAttempts');
+          syncTrace(
+              '$_syncTraceTag response_timeout index=$index attempt=$attempt');
+          if (attempt < _channelFetchRetryAttempts) {
+            await Future.delayed(const Duration(milliseconds: 300));
           }
         }
 
-        if (!channelFetched) {
+        if (result?.isChannel == true) {
+          final channelInfo = result!.channel!;
+          syncTrace(
+              '$_syncTraceTag response_channel index=$index attempt=$resolvedAttempt name="${channelInfo.name}"');
+
+          if (channelInfo.name.isNotEmpty) {
+            final pskBytes = _base64ToBytes(channelInfo.psk);
+            final hash = _calculateHash(pskBytes);
+            final companionKey =
+                _settingsService.settings.currentCompanionPublicKey;
+
+            if (companionKey == null || companionKey.isEmpty) {
+              debugPrint(
+                  '[ChannelSync] ⚠️ WARNING: Companion key not set! Channel will not be tagged properly.');
+            }
+
+            final channelEntity = ChannelsCompanion.insert(
+              hash: drift.Value(hash),
+              name: channelInfo.name,
+              sharedKey: pskBytes,
+              isPublic: index == 0,
+              shareLocation: const drift.Value(false),
+              channelIndex: index,
+              createdAt: DateTime.now().millisecondsSinceEpoch,
+              companionDeviceKey: drift.Value(companionKey),
+            );
+            fetchedChannels.add(channelEntity);
+            debugPrint(
+                '[ChannelSync] ✅ Channel $index \'${channelInfo.name}\' fetched (hash=$hash, companion=${companionKey?.substring(0, 8)})');
+            syncTrace(
+                '$_syncTraceTag stored index=$index hash=$hash isPublic=${index == 0}');
+          } else {
+            debugPrint(
+                '[ChannelSync] Channel index $index is empty (no channel registered)');
+            syncTrace('$_syncTraceTag response_empty index=$index');
+          }
+        } else if (result?.isError == true) {
+          if (result!.errorCode == 0x01) {
+            debugPrint(
+                '[ChannelSync] Reached end of channel table at index $index (ERR_CODE_NOT_FOUND)');
+            syncTrace('$_syncTraceTag end_of_table index=$index code=1');
+            reachedEndOfTable = true;
+          } else {
+            debugPrint(
+                '[ChannelSync] ⚠️ Firmware ERR while fetching channel $index: code=${result.errorCode}');
+            syncTrace(
+                '$_syncTraceTag response_error index=$index attempt=${resolvedAttempt == 0 ? 1 : resolvedAttempt} code=${result.errorCode}');
+          }
+        } else {
           debugPrint(
-              '[ChannelSync] ⚠️ Could not fetch channel index $index after 3 attempts, continuing...');
+              '[ChannelSync] ⚠️ Could not fetch channel index $index after $_channelFetchRetryAttempts attempts, continuing...');
+          syncTrace('$_syncTraceTag probe_failed index=$index');
         }
 
-        // Update progress
         _updateProgress(ChannelSyncProgress(
           currentCount: index + 1,
           totalCount: maxChannels,
           isComplete: false,
         ));
-
-        // Small delay between channel requests
-        await Future.delayed(const Duration(milliseconds: 200));
       }
-
       // Cleanup frame subscription
       await _frameSubscription?.cancel();
       _frameSubscription = null;
 
       debugPrint(
           '[ChannelSync] ✅ Fetch complete: ${fetchedChannels.length} channels retrieved from firmware');
+      syncTrace(
+          '$_syncTraceTag fetch_complete fetched=${fetchedChannels.length} reachedEndOfTable=$reachedEndOfTable');
       debugPrint(
           '[COMPANION-SYNC] [ChannelSync] Tagging channels with companion: ${_settingsService.settings.currentCompanionPublicKey?.substring(0, 16)}...');
 
@@ -612,10 +631,14 @@ class ChannelRepository {
 
       debugPrint(
           '[ChannelSync] ✅ Database updated with ${fetchedChannels.length} channels from firmware (SOURCE OF TRUTH)');
+      syncTrace(
+          '$_syncTraceTag sync_complete success=true saved=${fetchedChannels.length} maxChannels=$maxChannels');
       return true;
     } catch (e) {
       debugPrint('[ChannelSync] ❌ Channel fetch failed with exception: $e');
-      _updateProgress(ChannelSyncProgress(totalCount: maxChannels, isComplete: true));
+      syncTrace('$_syncTraceTag sync_complete success=false error=$e');
+      _updateProgress(
+          ChannelSyncProgress(totalCount: maxChannels, isComplete: true));
       return false;
     }
   }
@@ -630,6 +653,8 @@ class ChannelRepository {
     if (responseCode == BleConstants.respChannelInfo) {
       final response = BleResponseParser.parse(frame);
       if (response is ChannelInfoResponse) {
+        syncTrace(
+            '$_syncTraceTag raw_channel_info index=${response.channelIndex} name="${response.name}"');
         _channelResponseController.add(response);
       }
       return;
@@ -639,6 +664,7 @@ class ChannelRepository {
     if (responseCode == BleConstants.respErr) {
       if (frame.length >= 2) {
         final errorCode = frame[1];
+        syncTrace('$_syncTraceTag raw_err code=$errorCode');
         _errorResponseController.add(errorCode);
       }
       return;
@@ -674,6 +700,8 @@ class ChannelRepository {
     // Timeout
     Timer(Duration(milliseconds: timeoutMs), () {
       if (!completer.isCompleted) {
+        syncTrace(
+            '$_syncTraceTag wait_timeout index=$expectedIndex timeoutMs=$timeoutMs');
         completer.complete(_ChannelFetchResult.error(null));
       }
       channelSub?.cancel();
@@ -681,6 +709,97 @@ class ChannelRepository {
     });
 
     return completer.future;
+  }
+
+  Future<Map<int, _ChannelFetchResult>> _collectPipelinedChannelResults(
+      {required int maxChannels}) async {
+    final results = <int, _ChannelFetchResult>{};
+    final pendingIndices = <int>[];
+    final completion = Completer<void>();
+
+    StreamSubscription<ChannelInfoResponse>? channelSub;
+    StreamSubscription<int>? errorSub;
+    Timer? idleTimer;
+    Timer? maxWaitTimer;
+
+    void completeIfPending(String reason) {
+      if (!completion.isCompleted) {
+        syncTrace(
+            '$_syncTraceTag pipeline_wait_complete reason=$reason pending=${pendingIndices.length} received=${results.length}');
+        completion.complete();
+      }
+    }
+
+    void scheduleIdleTimer() {
+      idleTimer?.cancel();
+      idleTimer = Timer(_channelFetchPipelineIdleWindow, () {
+        completeIfPending('idle');
+      });
+    }
+
+    void storeResult(int index, _ChannelFetchResult result) {
+      if (results.containsKey(index)) {
+        return;
+      }
+      results[index] = result;
+      pendingIndices.remove(index);
+      if (pendingIndices.isEmpty) {
+        completeIfPending('all_received');
+        return;
+      }
+      scheduleIdleTimer();
+    }
+
+    channelSub = _channelResponseController.stream.listen((response) {
+      storeResult(response.channelIndex, _ChannelFetchResult.channel(response));
+    });
+
+    errorSub = _errorResponseController.stream.listen((errorCode) {
+      if (pendingIndices.isEmpty) {
+        syncTrace('$_syncTraceTag raw_err_unmatched code=$errorCode');
+        return;
+      }
+
+      final index = pendingIndices.removeAt(0);
+      syncTrace('$_syncTraceTag raw_err_assigned index=$index code=$errorCode');
+      results[index] = _ChannelFetchResult.error(errorCode);
+    });
+
+    try {
+      for (int index = 0; index < maxChannels; index++) {
+        syncTrace('$_syncTraceTag probe index=$index phase=start');
+        syncTrace('$_syncTraceTag request index=$index attempt=1');
+
+        final cmd = BleCommands.buildGetChannel(index);
+        final sendSuccess = await _bleManager.sendFrame(cmd);
+
+        if (!sendSuccess) {
+          syncTrace('$_syncTraceTag send_failed index=$index attempt=1');
+          continue;
+        }
+
+        pendingIndices.add(index);
+        syncTrace('$_syncTraceTag request_sent index=$index attempt=1');
+      }
+
+      if (pendingIndices.isEmpty) {
+        completeIfPending('no_pending');
+      } else {
+        scheduleIdleTimer();
+        maxWaitTimer = Timer(_channelFetchPipelineMaxWait, () {
+          completeIfPending('max_wait');
+        });
+      }
+
+      await completion.future;
+    } finally {
+      idleTimer?.cancel();
+      maxWaitTimer?.cancel();
+      await channelSub?.cancel();
+      await errorSub?.cancel();
+    }
+
+    return results;
   }
 
   /// Convert base64 PSK to bytes

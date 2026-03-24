@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:meshcore_team/ble/ble_constants.dart';
 import 'package:meshcore_team/ble/ble_protocol.dart';
 import 'package:meshcore_team/ble/mesh_ble_device.dart';
+import 'package:meshcore_team/utils/sync_trace.dart';
 
 /// BLE Connection State
 enum BleConnectionState {
@@ -21,6 +22,9 @@ enum BleConnectionState {
 /// BLE Connection Manager
 /// Handles scanning, connecting, and communicating with MeshCore companion radios
 class BleConnectionManager extends ChangeNotifier {
+  static const String _syncTraceTag = '[SYNCTRACE][BLE]';
+  static const bool _logRawBleFrames = false;
+
   static const MethodChannel _methodChannel =
       MethodChannel('com.meshcore.team/mesh_ble');
   static const EventChannel _eventChannel =
@@ -49,6 +53,11 @@ class BleConnectionManager extends ChangeNotifier {
   // Pending connect/disconnect
   Completer<bool>? _pendingConnect;
   Completer<void>? _pendingDisconnect;
+
+  // Contact stream trace state for correlating raw BLE frames with sync logic.
+  int _traceExpectedContacts = 0;
+  int _traceReceivedContacts = 0;
+  bool _traceContactStreamActive = false;
 
   // Getters
   BleConnectionState get state => _state;
@@ -288,8 +297,10 @@ class BleConnectionManager extends ChangeNotifier {
       }
 
       try {
-        debugPrint(
-            '📤 Sending ${frame.length} bytes: ${BleFrameUtils.bytesToHex(frame)}');
+        if (_logRawBleFrames) {
+          debugPrint(
+              '📤 Sending ${frame.length} bytes: ${BleFrameUtils.bytesToHex(frame)}');
+        }
 
         if (_isAndroid) {
           await _methodChannel.invokeMethod('sendFrame', {
@@ -313,13 +324,43 @@ class BleConnectionManager extends ChangeNotifier {
 
   /// Handle received frame
   void _handleReceivedFrame(Uint8List frame) {
-    debugPrint(
-        '📥 Received ${frame.length} bytes: ${BleFrameUtils.bytesToHex(frame)}');
+    if (_logRawBleFrames) {
+      debugPrint(
+          '📥 Received ${frame.length} bytes: ${BleFrameUtils.bytesToHex(frame)}');
+    }
 
     if (frame.isNotEmpty) {
       final responseCode = frame[0];
-      final responseName = BleFrameUtils.getResponseName(responseCode);
-      debugPrint('   Response: $responseName');
+      if (_logRawBleFrames) {
+        final responseName = BleFrameUtils.getResponseName(responseCode);
+        debugPrint('   Response: $responseName');
+      }
+
+      if (responseCode == BleConstants.respContactsStart) {
+        _traceContactStreamActive = true;
+        _traceReceivedContacts = 0;
+        _traceExpectedContacts = frame.length >= 5
+            ? frame[1] | (frame[2] << 8) | (frame[3] << 16) | (frame[4] << 24)
+            : 0;
+        syncTrace(
+            '$_syncTraceTag contacts_start expected=${_traceExpectedContacts > 0 ? _traceExpectedContacts : 'unknown'} frameLen=${frame.length}');
+      } else if (responseCode == BleConstants.respContact) {
+        if (!_traceContactStreamActive) {
+          _traceContactStreamActive = true;
+        }
+        _traceReceivedContacts += 1;
+        final overrun = _traceExpectedContacts > 0 &&
+            _traceReceivedContacts > _traceExpectedContacts;
+        syncTrace(
+            '$_syncTraceTag contact_frame index=$_traceReceivedContacts expected=${_traceExpectedContacts > 0 ? _traceExpectedContacts : 'unknown'} '
+            'frameLen=${frame.length} overrun=$overrun');
+      } else if (responseCode == BleConstants.respEndOfContacts) {
+        syncTrace(
+            '$_syncTraceTag end_of_contacts received=$_traceReceivedContacts expected=${_traceExpectedContacts > 0 ? _traceExpectedContacts : 'unknown'} frameLen=${frame.length}');
+        _traceContactStreamActive = false;
+        _traceExpectedContacts = 0;
+        _traceReceivedContacts = 0;
+      }
     }
 
     _receivedFramesController.add(frame);

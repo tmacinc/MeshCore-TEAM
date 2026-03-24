@@ -1,6 +1,7 @@
 // Copyright (c) 2026 tmacinc
 // Licensed under CC BY-NC-SA 4.0
 
+import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
@@ -39,6 +40,7 @@ class LogEntry {
 
 class DebugLogService extends ChangeNotifier {
   static const int _maxEntries = 2000;
+  static const Duration _notifyBatchWindow = Duration(milliseconds: 50);
 
   static DebugLogService? _instance;
   static DebugLogService get instance => _instance ??= DebugLogService._();
@@ -46,6 +48,7 @@ class DebugLogService extends ChangeNotifier {
   DebugLogService._();
 
   final Queue<LogEntry> _entries = Queue<LogEntry>();
+  Timer? _notifyTimer;
 
   List<LogEntry> get entries => _entries.toList(growable: false);
 
@@ -60,12 +63,22 @@ class DebugLogService extends ChangeNotifier {
     if (_entries.length > _maxEntries) {
       _entries.removeFirst();
     }
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void clear() {
+    _notifyTimer?.cancel();
+    _notifyTimer = null;
     _entries.clear();
     notifyListeners();
+  }
+
+  void _scheduleNotify() {
+    if (_notifyTimer != null) return;
+    _notifyTimer = Timer(_notifyBatchWindow, () {
+      _notifyTimer = null;
+      notifyListeners();
+    });
   }
 
   List<LogEntry> filtered(Set<LogCategory> categories) {
@@ -81,7 +94,9 @@ class DebugLogService extends ChangeNotifier {
   }
 
   static LogCategory categorize(String message) {
-    if (message.contains('❌') || message.contains('⚠️') || message.contains('ERROR')) {
+    if (message.contains('❌') ||
+        message.contains('⚠️') ||
+        message.contains('ERROR')) {
       return LogCategory.error;
     }
     if (message.startsWith('[ForwardingPolicy]') ||
