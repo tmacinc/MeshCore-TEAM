@@ -25,6 +25,8 @@ class SettingsService extends ChangeNotifier {
   static const String _keyMapProvider = 'map_provider';
   static const String _keyMapTrackUpMode = 'map_track_up_mode';
   static const String _keyMapZoomLevel = 'map_zoom_level';
+  static const String _keyMapShowTrackedUserNames =
+      'map_show_tracked_user_names';
   static const String _keyDistanceRingsEnabled = 'distance_rings_enabled';
   static const String _keyDistanceRingInterval = 'distance_ring_interval';
   static const String _keyLastConnectedDevice = 'last_connected_device';
@@ -137,6 +139,8 @@ class SettingsService extends ChangeNotifier {
       mapProvider: _prefs.getString(_keyMapProvider) ?? MapProvider.mapnik,
       mapTrackUpMode: _prefs.getBool(_keyMapTrackUpMode) ?? false,
       mapZoomLevel: _prefs.getDouble(_keyMapZoomLevel) ?? 15.0,
+      mapShowTrackedUserNames:
+          _prefs.getBool(_keyMapShowTrackedUserNames) ?? false,
       distanceRingsEnabled: _prefs.getBool(_keyDistanceRingsEnabled) ?? false,
       distanceRingInterval:
           _prefs.getString(_keyDistanceRingInterval) ?? '500m',
@@ -281,6 +285,13 @@ class SettingsService extends ChangeNotifier {
   Future<void> setMapZoomLevel(double zoom) async {
     await _prefs.setDouble(_keyMapZoomLevel, zoom);
     _settings = _settings.copyWith(mapZoomLevel: zoom);
+    notifyListeners();
+  }
+
+  /// Set tracked-user labels on the map.
+  Future<void> setMapShowTrackedUserNames(bool enabled) async {
+    await _prefs.setBool(_keyMapShowTrackedUserNames, enabled);
+    _settings = _settings.copyWith(mapShowTrackedUserNames: enabled);
     notifyListeners();
   }
 

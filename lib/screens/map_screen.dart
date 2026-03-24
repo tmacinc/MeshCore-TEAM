@@ -981,6 +981,8 @@ class _MapScreenState extends State<MapScreen> {
     final currentProviderId = normalizeMapProviderId(
       settingsService.settings.mapProvider,
     );
+    final showTrackedUserNames =
+        settingsService.settings.mapShowTrackedUserNames;
 
     final telemetryConfigured = settingsService.settings.telemetryEnabled &&
         (settingsService.settings.telemetryChannelHash?.isNotEmpty ?? false);
@@ -1155,6 +1157,10 @@ class _MapScreenState extends State<MapScreen> {
             icon: const Icon(Icons.settings),
             onSelected: (value) async {
               switch (value) {
+                case 'toggle_tracked_user_names':
+                  await settingsService
+                      .setMapShowTrackedUserNames(!showTrackedUserNames);
+                  break;
                 case 'download_map_area':
                   _openDownloadMapAreaDialog(provider: tileConfig);
                   break;
@@ -1179,7 +1185,7 @@ class _MapScreenState extends State<MapScreen> {
               }
             },
             itemBuilder: (context) {
-              return const [
+              return [
                 PopupMenuItem<String>(
                   value: 'download_map_area',
                   child: Text('Download Map Area'),
@@ -1191,6 +1197,23 @@ class _MapScreenState extends State<MapScreen> {
                 PopupMenuItem<String>(
                   value: 'manage_waypoints',
                   child: Text('Manage Waypoints'),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem<String>(
+                  value: 'toggle_tracked_user_names',
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Show Tracked User Names'),
+                      ),
+                      Icon(
+                        showTrackedUserNames
+                            ? Icons.check
+                            : Icons.check_box_outline_blank,
+                        size: 18,
+                      ),
+                    ],
+                  ),
                 ),
               ];
             },
@@ -1327,10 +1350,11 @@ class _MapScreenState extends State<MapScreen> {
                           for (final s in visible)
                             Marker(
                               point: LatLng(s.lastLatitude!, s.lastLongitude!),
-                              width: 44,
-                              height: 44,
+                              width: showTrackedUserNames ? 108 : 44,
+                              height: showTrackedUserNames ? 68 : 44,
                               child: _ContactMarker(
                                 name: s.name,
+                                showName: showTrackedUserNames,
                                 pathLen: s.lastPathLen,
                                 lastSeenMs: s.lastSeen,
                                 isAutonomous: s.isAutonomousDevice,
@@ -1850,6 +1874,7 @@ Color _contactStatusColor(int lastSeenMs, int pathLen) {
 
 class _ContactMarker extends StatelessWidget {
   final String? name;
+  final bool showName;
   final int pathLen;
   final int lastSeenMs;
   final bool isAutonomous;
@@ -1858,6 +1883,7 @@ class _ContactMarker extends StatelessWidget {
 
   const _ContactMarker({
     required this.name,
+    required this.showName,
     required this.pathLen,
     required this.lastSeenMs,
     this.isAutonomous = false,
@@ -1871,6 +1897,8 @@ class _ContactMarker extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final color = _borderColorForStatus();
+    final displayName = name?.trim();
+    final hasDisplayName = displayName != null && displayName.isNotEmpty;
 
     // Markers are rendered in map space and rotate with the map. We want these
     // contact icons to always face "up" on the screen, so we counter-rotate
@@ -1880,26 +1908,52 @@ class _ContactMarker extends StatelessWidget {
 
     final marker = Transform.rotate(
       angle: counterRotationRad,
-      child: Center(
-        child: Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: color,
-              width: 2,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: color,
+                width: 2,
+              ),
+            ),
+            child: Center(
+              child: Icon(
+                isAutonomous ? Icons.gps_fixed : Icons.person,
+                color: color,
+                size: 20,
+              ),
             ),
           ),
-          child: Center(
-            child: Icon(
-              isAutonomous ? Icons.gps_fixed : Icons.person,
-              color: color,
-              size: 20,
+          if (showName && hasDisplayName) ...[
+            const SizedBox(height: 4),
+            Container(
+              constraints: const BoxConstraints(maxWidth: 96),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 10,
+                  height: 1.1,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
             ),
-          ),
-        ),
+          ],
+        ],
       ),
     );
 
