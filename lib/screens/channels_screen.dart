@@ -205,7 +205,9 @@ class ChannelsScreen extends StatelessWidget {
         },
       );
     } finally {
-      controller.dispose();
+      // Defer disposal to the next frame so the dialog widget tree
+      // finishes tearing down before the controller is invalidated.
+      Future.microtask(() => controller.dispose());
     }
   }
 
