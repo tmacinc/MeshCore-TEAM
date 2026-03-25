@@ -56,6 +56,7 @@ class _MapScreenState extends State<MapScreen> {
   StreamSubscription<CompassXEvent>? _compassSub;
   Timer? _companionTelemetryTimer;
   Timer? _contactMarkerRefreshTimer;
+  Timer? _phoneLocationPollingTimer;
 
   bool _isFollowingUser = false;
   bool _isHeadingUp = false;
@@ -714,18 +715,21 @@ class _MapScreenState extends State<MapScreen> {
     _companionTelemetryTimer = null;
     _contactMarkerRefreshTimer?.cancel();
     _contactMarkerRefreshTimer = null;
+    _phoneLocationPollingTimer?.cancel();
+    _phoneLocationPollingTimer = null;
     super.dispose();
   }
 
   void _startPhoneLocationTracking() {
     _positionSub?.cancel();
+    _phoneLocationPollingTimer?.cancel();
 
     // Seed with one current position ASAP.
     _getCurrentLocation();
 
     const settings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 5,
+      distanceFilter: 0,
     );
 
     _positionSub = Geolocator.getPositionStream(locationSettings: settings)
@@ -743,11 +747,38 @@ class _MapScreenState extends State<MapScreen> {
         _locationError = 'Location stream error: $error';
       });
     });
+
+    // Periodic polling as a safety net: guarantees at least one update every
+    // 2 seconds even when the OS throttles the position stream (e.g. Android
+    // Fused Location Provider batching with the native telemetry service).
+    _phoneLocationPollingTimer =
+        Timer.periodic(const Duration(seconds: 2), (_) async {
+      if (!mounted) return;
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 3),
+        );
+        if (!mounted) return;
+        _handleNewLocation(
+          LatLng(position.latitude, position.longitude),
+          timestamp: DateTime.now(),
+          speedMps: position.speed.isFinite ? position.speed : null,
+          headingDegrees: (position.heading.isFinite && position.heading >= 0)
+              ? position.heading
+              : null,
+        );
+      } catch (_) {
+        // Polling is best-effort; stream is primary.
+      }
+    });
   }
 
   void _stopPhoneLocationTracking() {
     _positionSub?.cancel();
     _positionSub = null;
+    _phoneLocationPollingTimer?.cancel();
+    _phoneLocationPollingTimer = null;
   }
 
   void _startCompassTracking() {
