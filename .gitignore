@@ -47,7 +47,15 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+# Compiled build output
+/compiled/
+
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local/generated
+ios/Podfile.lock
+.claude/
+macos/Podfile

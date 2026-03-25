@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:meshcore_team/ble/ble_constants.dart';
 import 'package:meshcore_team/ble/ble_protocol.dart';
 import 'package:meshcore_team/ble/mesh_ble_device.dart';
@@ -59,6 +60,14 @@ class BleConnectionManager extends ChangeNotifier {
   int _traceReceivedContacts = 0;
   bool _traceContactStreamActive = false;
 
+  // iOS (flutter_blue_plus) state
+  BluetoothDevice? _fbpDevice;
+  BluetoothCharacteristic? _fbpRxChar;
+  BluetoothCharacteristic? _fbpTxChar;
+  StreamSubscription<BluetoothConnectionState>? _fbpConnectionSub;
+  StreamSubscription<List<int>>? _fbpNotifySub;
+  StreamSubscription<List<ScanResult>>? _fbpScanSub;
+
   // Getters
   BleConnectionState get state => _state;
   String? get errorMessage => _errorMessage;
@@ -70,6 +79,7 @@ class BleConnectionManager extends ChangeNotifier {
   Stream<Uint8List> get receivedFrames => _receivedFramesController.stream;
 
   bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
+  bool get _isIOS => defaultTargetPlatform == TargetPlatform.iOS;
 
   BleConnectionManager() {
     if (_isAndroid) {
@@ -119,30 +129,67 @@ class BleConnectionManager extends ChangeNotifier {
   /// Returns a stream of discovered devices
   Stream<MeshBleDevice> startScan(
       {Duration timeout = const Duration(seconds: 10)}) {
-    if (!_isAndroid) {
-      _setError('Native BLE service is only supported on Android');
+    if (_isAndroid) {
+      debugPrint('🔍 Starting native BLE scan for MeshCore devices...');
+      _scanResultsController?.close();
+      _scanResultsController = StreamController<MeshBleDevice>.broadcast();
+
+      _setState(BleConnectionState.scanning);
+
+      _scanTimeoutTimer?.cancel();
+      _scanTimeoutTimer = Timer(timeout, () {
+        stopScan();
+      });
+
+      unawaited(_methodChannel.invokeMethod('startScan', {
+        'timeoutMs': timeout.inMilliseconds,
+      }));
+
+      debugPrint(
+          '[BleManager] -> startScan timeoutMs=${timeout.inMilliseconds}');
+
+      return _scanResultsController!.stream;
+    } else if (_isIOS) {
+      debugPrint('🔍 Starting iOS BLE scan for MeshCore devices...');
+      _scanResultsController?.close();
+      _scanResultsController = StreamController<MeshBleDevice>.broadcast();
+
+      _setState(BleConnectionState.scanning);
+
+      _scanTimeoutTimer?.cancel();
+      _scanTimeoutTimer = Timer(timeout, () {
+        stopScan();
+      });
+
+      _fbpScanSub?.cancel();
+      _fbpScanSub = FlutterBluePlus.onScanResults.listen((results) {
+        for (final r in results) {
+          final name = r.device.advName.isNotEmpty
+              ? r.device.advName
+              : r.device.platformName;
+          if (name.startsWith(BleConstants.deviceNamePrefix)) {
+            final device = MeshBleDevice(
+              address: r.device.remoteId.str,
+              name: name,
+            );
+            if (_scanResultsController != null &&
+                !_scanResultsController!.isClosed) {
+              _scanResultsController!.add(device);
+            }
+          }
+        }
+      });
+
+      // Launch scan asynchronously — wait for CoreBluetooth if needed.
+      unawaited(_startIosScan(timeout));
+
+      return _scanResultsController!.stream;
+    } else {
+      _setError('BLE is not supported on this platform');
       final controller = StreamController<MeshBleDevice>();
       controller.close();
       return controller.stream;
     }
-    debugPrint('🔍 Starting native BLE scan for MeshCore devices...');
-    _scanResultsController?.close();
-    _scanResultsController = StreamController<MeshBleDevice>.broadcast();
-
-    _setState(BleConnectionState.scanning);
-
-    _scanTimeoutTimer?.cancel();
-    _scanTimeoutTimer = Timer(timeout, () {
-      stopScan();
-    });
-
-    unawaited(_methodChannel.invokeMethod('startScan', {
-      'timeoutMs': timeout.inMilliseconds,
-    }));
-
-    debugPrint('[BleManager] -> startScan timeoutMs=${timeout.inMilliseconds}');
-
-    return _scanResultsController!.stream;
   }
 
   /// Stop scanning
@@ -155,6 +202,10 @@ class BleConnectionManager extends ChangeNotifier {
       if (_isAndroid) {
         debugPrint('[BleManager] -> stopScan');
         await _methodChannel.invokeMethod('stopScan');
+      } else if (_isIOS) {
+        await FlutterBluePlus.stopScan();
+        _fbpScanSub?.cancel();
+        _fbpScanSub = null;
       }
     } catch (e) {
       debugPrint('[BleManager] stopScan error: $e');
@@ -169,12 +220,18 @@ class BleConnectionManager extends ChangeNotifier {
   }
 
   /// Connect to a MeshCore device
-  /// Handles bonding/pairing during GATT connection (simplified for FlutterBluePlus)
   Future<bool> connect(MeshBleDevice device) async {
-    if (!_isAndroid) {
-      _setError('Native BLE service is only supported on Android');
+    if (_isAndroid) {
+      return _connectAndroid(device);
+    } else if (_isIOS) {
+      return _connectIOS(device);
+    } else {
+      _setError('BLE is not supported on this platform');
       return false;
     }
+  }
+
+  Future<bool> _connectAndroid(MeshBleDevice device) async {
     debugPrint(
         '🔗 Connecting (native) to ${device.name} (${device.address})...');
 
@@ -186,10 +243,6 @@ class BleConnectionManager extends ChangeNotifier {
     _setState(BleConnectionState.connecting);
 
     try {
-      // Don't invoke native stopScan here: it can emit a transient native
-      // "disconnected" status while we are mid-connect (scan -> connect).
-      // We'll stop scan locally and let the native connect path stop scanning
-      // without emitting a disconnect transition.
       _scanTimeoutTimer?.cancel();
       _scanTimeoutTimer = null;
       try {
@@ -205,8 +258,6 @@ class BleConnectionManager extends ChangeNotifier {
         'address': device.address,
       });
 
-      // Pairing/bonding may require user interaction and can exceed short timeouts.
-      // Keep this in sync with the native service's connect timeout.
       const connectTimeout = Duration(seconds: 120);
 
       final result = await _pendingConnect!.future.timeout(
@@ -216,13 +267,9 @@ class BleConnectionManager extends ChangeNotifier {
               '❌ Connection timeout after ${connectTimeout.inSeconds} seconds');
           _setError('Connection timeout');
 
-          // Ensure the pending connect completes, so callers don't observe a
-          // connect() returning while a later native status event completes the
-          // old completer.
           _pendingConnect?.complete(false);
           _pendingConnect = null;
 
-          // Force disconnect to clean up
           debugPrint(
               '[BleManager] connect timeout -> disconnect()\n${StackTrace.current}');
           disconnect();
@@ -234,7 +281,6 @@ class BleConnectionManager extends ChangeNotifier {
     } catch (e) {
       debugPrint('❌ Connection error: $e');
       _setError('Connection failed: $e');
-      // Ensure state is reset
       if (_state == BleConnectionState.connecting) {
         _setState(BleConnectionState.disconnected);
       }
@@ -244,9 +290,100 @@ class BleConnectionManager extends ChangeNotifier {
     }
   }
 
+  Future<bool> _connectIOS(MeshBleDevice device) async {
+    debugPrint(
+        '🔗 Connecting (iOS) to ${device.name} (${device.address})...');
+
+    _deviceName = device.name;
+    _deviceAddress = device.address;
+    _setState(BleConnectionState.connecting);
+
+    // Stop scan
+    _scanTimeoutTimer?.cancel();
+    _scanTimeoutTimer = null;
+    _fbpScanSub?.cancel();
+    _fbpScanSub = null;
+    try {
+      await _scanResultsController?.close();
+    } catch (_) {}
+    _scanResultsController = null;
+
+    try {
+      final fbpDevice = BluetoothDevice.fromId(device.address);
+      _fbpDevice = fbpDevice;
+
+      // Monitor connection state for unexpected disconnections
+      _fbpConnectionSub?.cancel();
+      _fbpConnectionSub = fbpDevice.connectionState.listen((state) {
+        if (state == BluetoothConnectionState.disconnected) {
+          debugPrint('[BleManager] iOS: device disconnected');
+          _cleanupIosConnection();
+          _deviceName = null;
+          _deviceAddress = null;
+          _setState(BleConnectionState.disconnected);
+        }
+      });
+
+      await fbpDevice.connect(
+        license: License.free,
+        timeout: const Duration(seconds: 120),
+      );
+
+      // Discover services
+      final services = await fbpDevice.discoverServices();
+      BluetoothService? nusService;
+      for (final s in services) {
+        if (s.uuid == Guid(BleConstants.serviceUuid)) {
+          nusService = s;
+          break;
+        }
+      }
+      if (nusService == null) {
+        throw Exception('NUS service not found');
+      }
+
+      // Find characteristics
+      BluetoothCharacteristic? rxChar;
+      BluetoothCharacteristic? txChar;
+      for (final c in nusService.characteristics) {
+        if (c.uuid == Guid(BleConstants.rxCharacteristicUuid)) {
+          rxChar = c;
+        } else if (c.uuid == Guid(BleConstants.txCharacteristicUuid)) {
+          txChar = c;
+        }
+      }
+      if (rxChar == null) throw Exception('RX characteristic not found');
+      if (txChar == null) throw Exception('TX characteristic not found');
+
+      _fbpRxChar = rxChar;
+      _fbpTxChar = txChar;
+
+      // Enable notifications on TX characteristic
+      await txChar.setNotifyValue(true);
+
+      // Listen for incoming data
+      _fbpNotifySub?.cancel();
+      _fbpNotifySub = txChar.onValueReceived.listen((value) {
+        _handleReceivedFrame(Uint8List.fromList(value));
+      });
+
+      debugPrint('✅ iOS BLE connected to ${device.name}');
+      _setState(BleConnectionState.connected);
+      return true;
+    } catch (e) {
+      debugPrint('❌ iOS connection error: $e');
+      _setError('Connection failed: $e');
+      _cleanupIosConnection();
+      if (_state == BleConnectionState.connecting) {
+        _setState(BleConnectionState.disconnected);
+      }
+      return false;
+    }
+  }
+
   /// Disconnect from device
   Future<void> disconnect() async {
-    debugPrint('🔌 Disconnecting (native)...');
+    debugPrint('🔌 Disconnecting...');
     debugPrint('[BleManager] disconnect() callsite\n${StackTrace.current}');
     _pendingDisconnect?.complete();
     _pendingDisconnect = Completer<void>();
@@ -256,9 +393,14 @@ class BleConnectionManager extends ChangeNotifier {
       if (_isAndroid) {
         debugPrint('[BleManager] -> disconnect');
         await _methodChannel.invokeMethod('disconnect');
+        await _pendingDisconnect!.future
+            .timeout(const Duration(seconds: 10), onTimeout: () {});
+      } else if (_isIOS) {
+        if (_fbpDevice != null) {
+          await _fbpDevice!.disconnect();
+        }
+        _cleanupIosConnection();
       }
-      await _pendingDisconnect!.future
-          .timeout(const Duration(seconds: 10), onTimeout: () {});
     } catch (e) {
       debugPrint('❌ Disconnect error: $e');
     } finally {
@@ -306,6 +448,11 @@ class BleConnectionManager extends ChangeNotifier {
           await _methodChannel.invokeMethod('sendFrame', {
             'data': frame,
           });
+        } else if (_isIOS) {
+          if (_fbpRxChar == null) {
+            throw Exception('RX characteristic not available');
+          }
+          await _fbpRxChar!.write(frame.toList(), withoutResponse: true);
         }
         _lastWriteTime = DateTime.now();
         return true;
@@ -497,12 +644,51 @@ class BleConnectionManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _startIosScan(Duration timeout) async {
+    try {
+      // Wait for CoreBluetooth to be ready — on first launch the adapter
+      // state may briefly be 'unknown'.
+      if (FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on) {
+        debugPrint('[BleManager] Waiting for Bluetooth adapter...');
+        final ready = await FlutterBluePlus.adapterState
+            .firstWhere((s) => s == BluetoothAdapterState.on)
+            .timeout(const Duration(seconds: 5), onTimeout: () {
+          return BluetoothAdapterState.off;
+        });
+        if (ready != BluetoothAdapterState.on) {
+          _setError('Bluetooth is not turned on');
+          return;
+        }
+      }
+      await FlutterBluePlus.startScan(
+        withServices: [Guid(BleConstants.serviceUuid)],
+        timeout: timeout,
+      );
+    } catch (e) {
+      debugPrint('[BleManager] iOS startScan error: $e');
+      _setError('Scan failed: $e');
+    }
+  }
+
+  void _cleanupIosConnection() {
+    _fbpNotifySub?.cancel();
+    _fbpNotifySub = null;
+    _fbpConnectionSub?.cancel();
+    _fbpConnectionSub = null;
+    _fbpRxChar = null;
+    _fbpTxChar = null;
+    _fbpDevice = null;
+  }
+
   @override
   void dispose() {
     _scanTimeoutTimer?.cancel();
     _platformEventsSub?.cancel();
     _scanResultsController?.close();
     _receivedFramesController.close();
+    // iOS cleanup
+    _fbpScanSub?.cancel();
+    _cleanupIosConnection();
     super.dispose();
   }
 }

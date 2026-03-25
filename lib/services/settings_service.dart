@@ -37,6 +37,8 @@ class SettingsService extends ChangeNotifier {
   static const String _keyCampModeEnabled = 'camp_mode_enabled';
   static const String _keySmartForwardingEnabled = 'smart_forwarding_enabled';
   static const String _keyForwardingAlgorithmMode = 'forwarding_algorithm_mode';
+  static const String _keyBackgroundLocationEnabled =
+      'background_location_enabled';
   static const String _keyBatteryOptimizationRequested =
       'battery_optimization_requested';
   static const String _keyServiceWasRunning = 'service_was_running';
@@ -153,6 +155,8 @@ class SettingsService extends ChangeNotifier {
           _prefs.getBool(_keySmartForwardingEnabled) ?? true,
       forwardingAlgorithmMode: _sanitizeForwardingAlgorithmMode(
           _prefs.getString(_keyForwardingAlgorithmMode)),
+      backgroundLocationEnabled:
+          _prefs.getBool(_keyBackgroundLocationEnabled) ?? false,
       batteryOptimizationRequested:
           _prefs.getBool(_keyBatteryOptimizationRequested) ?? false,
       serviceWasRunning: _prefs.getBool(_keyServiceWasRunning) ?? false,
@@ -160,6 +164,12 @@ class SettingsService extends ChangeNotifier {
   }
 
   /// Set location source ('phone' or 'companion')
+  Future<void> setBackgroundLocationEnabled(bool enabled) async {
+    await _prefs.setBool(_keyBackgroundLocationEnabled, enabled);
+    _settings = _settings.copyWith(backgroundLocationEnabled: enabled);
+    notifyListeners();
+  }
+
   Future<void> setLocationSource(String source) async {
     await _prefs.setString(_keyLocationSource, source);
     _settings = _settings.copyWith(locationSource: source);

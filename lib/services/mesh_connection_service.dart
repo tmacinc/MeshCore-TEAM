@@ -145,6 +145,12 @@ class MeshConnectionService extends ChangeNotifier {
   Future<void> stopService() async {
     if (!_isServiceRunning) {
       debugPrint('[MeshService] Service not running');
+      // On iOS there's no foreground service, but the BLE connection
+      // may still be active. Disconnect it directly.
+      if (_bleManager.isConnected) {
+        debugPrint('[MeshService] BLE still connected — disconnecting');
+        await _bleManager.disconnect();
+      }
       return;
     }
 

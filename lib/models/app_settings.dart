@@ -36,6 +36,9 @@ class AppSettings {
   final bool smartForwardingEnabled;
   final String forwardingAlgorithmMode;
 
+  // Background location
+  final bool backgroundLocationEnabled;
+
   // Battery optimization
   final bool batteryOptimizationRequested;
 
@@ -65,6 +68,7 @@ class AppSettings {
     this.campModeEnabled = false,
     this.smartForwardingEnabled = true,
     this.forwardingAlgorithmMode = ForwardingAlgorithmMode.forwardingV1,
+    this.backgroundLocationEnabled = false,
     this.batteryOptimizationRequested = false,
     this.serviceWasRunning = false,
   });
@@ -93,6 +97,7 @@ class AppSettings {
     bool? smartForwardingEnabled,
     String? forwardingAlgorithmMode,
     bool? serviceWasRunning,
+    bool? backgroundLocationEnabled,
     bool? batteryOptimizationRequested,
   }) {
     return AppSettings(
@@ -126,6 +131,8 @@ class AppSettings {
           smartForwardingEnabled ?? this.smartForwardingEnabled,
       forwardingAlgorithmMode:
           forwardingAlgorithmMode ?? this.forwardingAlgorithmMode,
+      backgroundLocationEnabled:
+          backgroundLocationEnabled ?? this.backgroundLocationEnabled,
       batteryOptimizationRequested:
           batteryOptimizationRequested ?? this.batteryOptimizationRequested,
       serviceWasRunning: serviceWasRunning ?? this.serviceWasRunning,
