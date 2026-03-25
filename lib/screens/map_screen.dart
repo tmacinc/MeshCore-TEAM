@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:compassx/compassx.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -52,7 +53,7 @@ class _MapScreenState extends State<MapScreen> {
   DateTime? _lastCourseTime;
 
   StreamSubscription<Position>? _positionSub;
-  StreamSubscription<dynamic>? _compassSub;
+  StreamSubscription<CompassXEvent>? _compassSub;
   Timer? _companionTelemetryTimer;
   Timer? _contactMarkerRefreshTimer;
 
@@ -750,8 +751,22 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _startCompassTracking() {
-    // flutter_compass removed due to broken iOS build (unmaintained plugin).
-    // GPS heading (_courseDegrees) still provides bearing when moving.
+    _compassSub?.cancel();
+    _compassSub = CompassX.events.listen((event) {
+      if (!mounted) return;
+      final heading = event.heading;
+      if (heading.isFinite) {
+        setState(() {
+          _headingDegrees = heading;
+        });
+        // When stationary, apply compass heading for track-up rotation.
+        if (_isHeadingUp && !_isMovingForTrackUp) {
+          _applyMapRotationForTrackUp();
+        }
+      }
+    }, onError: (Object error) {
+      debugPrint('[MapScreen] Compass error: $error');
+    });
   }
 
   void _applyLocationPolicy(
