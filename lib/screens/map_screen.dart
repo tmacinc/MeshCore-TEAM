@@ -8,7 +8,6 @@ import 'dart:typed_data';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -53,7 +52,7 @@ class _MapScreenState extends State<MapScreen> {
   DateTime? _lastCourseTime;
 
   StreamSubscription<Position>? _positionSub;
-  StreamSubscription<CompassEvent>? _compassSub;
+  StreamSubscription<dynamic>? _compassSub;
   Timer? _companionTelemetryTimer;
   Timer? _contactMarkerRefreshTimer;
 
@@ -751,27 +750,8 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _startCompassTracking() {
-    _compassSub?.cancel();
-    _compassSub = FlutterCompass.events?.listen((event) {
-      final rawHeading = event.heading;
-      if (rawHeading == null) return;
-      if (rawHeading.isNaN) return;
-
-      final heading = rawHeading % 360.0;
-
-      if (_headingDegrees == null ||
-          (heading - _headingDegrees!).abs() >= 1.0) {
-        setState(() {
-          _headingDegrees = heading;
-        });
-      }
-
-      // In track-up mode, only use the compass when we don't have a movement
-      // bearing.
-      if (_isHeadingUp && !_isMovingForTrackUp) {
-        _applyMapRotationForTrackUp();
-      }
-    });
+    // flutter_compass removed due to broken iOS build (unmaintained plugin).
+    // GPS heading (_courseDegrees) still provides bearing when moving.
   }
 
   void _applyLocationPolicy(
