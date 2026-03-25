@@ -2,6 +2,7 @@
 // Licensed under CC BY-NC-SA 4.0
 
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
@@ -340,36 +341,40 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
               child: _buildConnectedDeviceTile(bleManager, connectionVM),
             ),
             const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Text(
-                'App Settings',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
+            if (Platform.isIOS) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Text(
+                  'App Settings',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Column(
-                children: [
-                  _buildSettingsCard(
-                    title: 'Always On Location',
-                    subtitle: settingsService.settings.backgroundLocationEnabled
-                        ? 'Enabled — location updates continue in background'
-                        : 'Disabled',
-                    leading: settingsService.settings.backgroundLocationEnabled
-                        ? Icons.my_location
-                        : Icons.location_disabled,
-                    onTap: () =>
-                        _showBackgroundLocationDialog(settingsService),
-                  ),
-                  const SizedBox(height: 8),
-                ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                child: Column(
+                  children: [
+                    _buildSettingsCard(
+                      title: 'Always On Location',
+                      subtitle: settingsService
+                              .settings.backgroundLocationEnabled
+                          ? 'Enabled — location updates continue in background'
+                          : 'Disabled',
+                      leading:
+                          settingsService.settings.backgroundLocationEnabled
+                              ? Icons.my_location
+                              : Icons.location_disabled,
+                      onTap: () =>
+                          _showBackgroundLocationDialog(settingsService),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
               ),
-            ),
-            const Divider(height: 1),
+              const Divider(height: 1),
+            ],
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Text(
