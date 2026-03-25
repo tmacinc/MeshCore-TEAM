@@ -129,86 +129,83 @@ class ChannelsScreen extends StatelessWidget {
   Future<void> _showCreateChannelDialog(
       BuildContext context, ChannelRepository channelRepository) async {
     final controller = TextEditingController();
-    try {
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) {
-          bool isCreating = false;
-          return StatefulBuilder(
-            builder: (dialogContext, setState) {
-              Future<void> create() async {
-                if (isCreating) return;
-                setState(() {
-                  isCreating = true;
-                });
-                final name = controller.text;
-                try {
-                  final created =
-                      await channelRepository.createPrivateChannel(name);
-                  if (dialogContext.mounted) {
-                    Navigator.of(dialogContext).pop();
-                  }
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Created: ${created.name}')),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(e.toString())),
-                    );
-                  }
-                  if (dialogContext.mounted) {
-                    setState(() {
-                      isCreating = false;
-                    });
-                  }
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        bool isCreating = false;
+        return StatefulBuilder(
+          builder: (dialogContext, setState) {
+            Future<void> create() async {
+              if (isCreating) return;
+              setState(() {
+                isCreating = true;
+              });
+              final name = controller.text;
+              try {
+                final created =
+                    await channelRepository.createPrivateChannel(name);
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop();
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Created: ${created.name}')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString())),
+                  );
+                }
+                if (dialogContext.mounted) {
+                  setState(() {
+                    isCreating = false;
+                  });
                 }
               }
+            }
 
-              return AlertDialog(
-                title: const Text('Create Private Channel'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: controller,
-                      autofocus: true,
-                      enabled: !isCreating,
-                      decoration: const InputDecoration(
-                        labelText: 'Channel name',
-                      ),
-                      onSubmitted: (_) => create(),
+            return AlertDialog(
+              title: const Text('Create Private Channel'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    enabled: !isCreating,
+                    decoration: const InputDecoration(
+                      labelText: 'Channel name',
                     ),
-                    if (isCreating) ...[
-                      const SizedBox(height: 16),
-                      const LinearProgressIndicator(),
-                    ],
+                    onSubmitted: (_) => create(),
+                  ),
+                  if (isCreating) ...[
+                    const SizedBox(height: 16),
+                    const LinearProgressIndicator(),
                   ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: isCreating
-                        ? null
-                        : () => Navigator.of(dialogContext).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  FilledButton(
-                    onPressed: isCreating ? null : create,
-                    child: const Text('Create'),
-                  ),
                 ],
-              );
-            },
-          );
-        },
-      );
-    } finally {
-      // Defer disposal to the next frame so the dialog widget tree
-      // finishes tearing down before the controller is invalidated.
-      Future.microtask(() => controller.dispose());
-    }
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isCreating
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: isCreating ? null : create,
+                  child: const Text('Create'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    // Controllers are method-local and will be GC'd; explicit disposal
+    // races with the dialog exit animation and causes _dependents.isEmpty
+    // assertions, so we intentionally skip it.
   }
 
   Future<void> _showImportChannelDialog(
@@ -239,107 +236,105 @@ class ChannelsScreen extends StatelessWidget {
       }
     }
 
-    try {
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) {
-          return StatefulBuilder(
-            builder: (dialogContext, setState) {
-              return AlertDialog(
-                title: const Text('Add Channel'),
-                content: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: nameOrUrlController,
-                        decoration: const InputDecoration(
-                          labelText: 'Name or Link',
-                          hintText: 'meshcore://channel/add?...',
-                        ),
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogContext, setState) {
+            return AlertDialog(
+              title: const Text('Add Channel'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameOrUrlController,
+                      decoration: const InputDecoration(
+                        labelText: 'Name or Link',
+                        hintText: 'meshcore://channel/add?...',
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: keyOrUrlController,
-                        decoration: const InputDecoration(
-                          labelText: 'Secret or Link',
-                          hintText: '32 hex chars or base64',
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: keyOrUrlController,
+                      decoration: const InputDecoration(
+                        labelText: 'Secret or Link',
+                        hintText: '32 hex chars or base64',
                       ),
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: FilledButton.tonalIcon(
-                          onPressed: () async {
-                            final status = await Permission.camera.request();
-                            if (!status.isGranted) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content:
-                                          Text('Camera permission required')),
-                                );
-                              }
-                              return;
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FilledButton.tonalIcon(
+                        onPressed: () async {
+                          final status = await Permission.camera.request();
+                          if (!status.isGranted) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text('Camera permission required')),
+                              );
                             }
+                            return;
+                          }
 
-                            final scanned = await Navigator.of(context).push(
-                              MaterialPageRoute<String>(
-                                builder: (_) => const QrScanScreen(
-                                  title: 'Scan Channel QR',
-                                ),
+                          final scanned = await Navigator.of(context).push(
+                            MaterialPageRoute<String>(
+                              builder: (_) => const QrScanScreen(
+                                title: 'Scan Channel QR',
                               ),
-                            );
-                            if (scanned == null || scanned.isEmpty) return;
-
-                            // TEAM behavior: if QR is a meshcore URL, import immediately.
-                            if (scanned.startsWith('meshcore://channel/add?')) {
-                              nameOrUrlController.text = scanned;
-                              keyOrUrlController.text = '';
-                              setState(() {});
-                              await runImport(dialogContext);
-                              return;
-                            }
-
-                            nameOrUrlController.text = scanned;
-                            setState(() {});
-                          },
-                          icon: const Icon(Icons.qr_code_scanner),
-                          label: const Text('Scan QR Code'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(dialogContext).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  FilledButton(
-                    onPressed: () async {
-                      try {
-                        await runImport(dialogContext);
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(e.toString())),
+                            ),
                           );
-                        }
+                          if (scanned == null || scanned.isEmpty) return;
+
+                          // TEAM behavior: if QR is a meshcore URL, import immediately.
+                          if (scanned.startsWith('meshcore://channel/add?')) {
+                            nameOrUrlController.text = scanned;
+                            keyOrUrlController.text = '';
+                            setState(() {});
+                            await runImport(dialogContext);
+                            return;
+                          }
+
+                          nameOrUrlController.text = scanned;
+                          setState(() {});
+                        },
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('Scan QR Code'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    try {
+                      await runImport(dialogContext);
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(e.toString())),
+                        );
                       }
-                    },
-                    child: const Text('Add'),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      );
-    } finally {
-      nameOrUrlController.dispose();
-      keyOrUrlController.dispose();
-    }
+                    }
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    // Controllers are method-local and will be GC'd; explicit disposal
+    // races with the dialog exit animation and causes _dependents.isEmpty
+    // assertions, so we intentionally skip it.
   }
 }
 

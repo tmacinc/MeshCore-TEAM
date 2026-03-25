@@ -350,8 +350,10 @@ class ChannelRepository {
 
   String? _extractMeshcoreUrl(String a, String b) {
     const prefix = 'meshcore://channel/add?';
-    if (a.startsWith(prefix)) return a.trim();
-    if (b.startsWith(prefix)) return b.trim();
+    final aTrimmed = a.trim();
+    final bTrimmed = b.trim();
+    if (aTrimmed.startsWith(prefix)) return aTrimmed;
+    if (bTrimmed.startsWith(prefix)) return bTrimmed;
     return null;
   }
 
@@ -362,8 +364,8 @@ class ChannelRepository {
       final secret = uri.queryParameters['secret'];
       if (nameRaw == null || secret == null) return null;
 
-      // Team Android exports names using URLEncoder (spaces become '+'), so decode '+' -> ' '.
-      final channelName = nameRaw.replaceAll('+', ' ').trim();
+      // Uri.queryParameters already decodes '+' to space via decodeQueryComponent.
+      final channelName = nameRaw.trim();
       if (channelName.isEmpty) return null;
 
       Uint8List psk;
