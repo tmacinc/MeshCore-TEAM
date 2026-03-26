@@ -67,11 +67,15 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	
+	<!-- Local Network (triggered by compassx CLLocationManager init at startup) -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>MeshCore TEAM uses the local network to improve location accuracy for compass and GPS features.</string>
+
 	<!-- Bluetooth Permissions -->
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>TEAM Flutter needs Bluetooth to connect to your mesh radio device for communication.</string>
+	<string>MeshCore TEAM needs Bluetooth to connect to your mesh radio device for communication.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>TEAM Flutter needs Bluetooth to connect to your mesh radio device for communication.</string>
+	<string>MeshCore TEAM needs Bluetooth to connect to your mesh radio device for communication.</string>
 	
 	<!-- Location Permissions -->
 	<key>NSLocationWhenInUseUsageDescription</key>

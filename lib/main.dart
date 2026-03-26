@@ -244,16 +244,11 @@ Future<void> _runAppStartup() async {
       }
       await bleManager.refreshStatus();
     } else {
-      if (settingsService.settings.serviceWasRunning &&
-          !settingsService.settings.manualDisconnect) {
-        final lastDevice = settingsService.settings.lastConnectedDevice;
-        if (lastDevice != null && lastDevice.isNotEmpty) {
-          print(
-              '🔄 Service was running - starting auto-reconnect to $lastDevice');
-          await meshConnectionService.startService();
-          await reconnectionManager.startReconnecting(lastDevice);
-        }
-      }
+      // iOS: defer auto-reconnect until after the permission gate.
+      // Touching FlutterBluePlus here creates CBCentralManager which
+      // triggers the iOS local-network prompt before the user has
+      // granted permissions.  The permission gate calls
+      // _startDeferredReconnect() once all permissions are granted.
     }
 
     // Launch app
@@ -511,6 +506,10 @@ class _PermissionGateState extends State<_PermissionGate> {
       debugPrint(
           '🔐 Permissions check: ${allGranted ? "✅ Granted" : "❌ Not granted"}');
 
+      if (allGranted) {
+        _startDeferredReconnect();
+      }
+
       setState(() {
         _permissionsGranted = allGranted;
         _isChecking = false;
@@ -525,9 +524,28 @@ class _PermissionGateState extends State<_PermissionGate> {
   }
 
   void _onPermissionsGranted() {
+    _startDeferredReconnect();
     setState(() {
       _permissionsGranted = true;
     });
+  }
+
+  /// Start iOS auto-reconnect that was deferred until after permissions.
+  void _startDeferredReconnect() {
+    if (Platform.isAndroid) return;
+    final settings = context.read<SettingsService>();
+    if (!settings.settings.serviceWasRunning ||
+        settings.settings.manualDisconnect) {
+      return;
+    }
+    final lastDevice = settings.settings.lastConnectedDevice;
+    if (lastDevice == null || lastDevice.isEmpty) return;
+
+    debugPrint('🔄 Deferred reconnect: starting auto-reconnect to $lastDevice');
+    final meshService = context.read<MeshConnectionService>();
+    final reconnection = context.read<ReconnectionManager>();
+    meshService.startService();
+    reconnection.startReconnecting(lastDevice);
   }
 
   @override

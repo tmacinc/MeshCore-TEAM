@@ -396,14 +396,34 @@ class BleConnectionManager extends ChangeNotifier {
         await _pendingDisconnect!.future
             .timeout(const Duration(seconds: 10), onTimeout: () {});
       } else if (_isIOS) {
-        if (_fbpDevice != null) {
-          await _fbpDevice!.disconnect();
-        }
+        // Save reference before cleanup nulls it.
+        final device = _fbpDevice;
         _cleanupIosConnection();
+        if (device != null) {
+          await device.disconnect();
+          debugPrint('[BleManager] iOS disconnect returned, '
+              'isConnected=${device.isConnected}');
+        }
       }
     } catch (e) {
       debugPrint('❌ Disconnect error: $e');
     } finally {
+      // Diagnostic: check if flutter_blue_plus still holds the connection.
+      if (_isIOS) {
+        final stale = FlutterBluePlus.connectedDevices;
+        if (stale.isNotEmpty) {
+          debugPrint('[BleManager] ⚠️ Still connected after disconnect: '
+              '${stale.map((d) => d.remoteId.str).join(", ")}');
+          for (final d in stale) {
+            debugPrint('[BleManager] Force-disconnecting stale device '
+                '${d.remoteId.str}');
+            try {
+              await d.disconnect();
+            } catch (_) {}
+          }
+        }
+      }
+
       _lastWriteTime = null;
       _deviceName = null;
       _deviceAddress = null;
