@@ -7,17 +7,18 @@ import 'package:flutter/foundation.dart';
 
 /// #T: topology telemetry message (v2 format).
 ///
-/// Wire format: `#T:` + raw binary payload (ISO-8859-1 transport):
+/// Wire format: `#T:` + **unpadded Base64** of the raw binary payload:
 ///   [lat:4B int32 BE, degrees×10^7]
 ///   [lon:4B int32 BE, degrees×10^7]
-///   [companionBatt:1B, 0/1=unavailable, 2-255=(mV-2750)/6+2]
+///   [companionBatt:1B, 0/1=unavailable, 2-254=(mV-2750)/6+2, 0xFF=autonomous]
 ///   [phoneBatt:1B,     same encoding]
 ///   [nodeCount:1B,     total known network size — determines bitmap length]
-///   [neighborBitmap:ceil(nodeCount/8)B, each byte has +1 offset to avoid 0x00]
+///   [neighborBitmap:ceil(nodeCount/8)B, raw bits — no offset needed under base64]
 ///
-/// Unlike #TEL:, the payload is raw binary (not base64) and carries a
-/// variable-length neighbor bitmap instead of forwarding status bytes. The
-/// bitmap bit positions correspond to indices in the globally sorted
+/// Base64 transport avoids null-byte (0x00) truncation by C-string firmware
+/// layers, matching the approach used by #TEL: (v1).
+///
+/// The bitmap bit positions correspond to indices in the globally sorted
 /// lexicographic pub_key_prefix list maintained by [NetworkTopology].
 class TopologyMessage {
   static const String prefix = '#T:';
@@ -36,9 +37,8 @@ class TopologyMessage {
   final int nodeCount;
 
   /// Raw neighbor bitmap bytes from the wire.
-  /// Each byte has a +1 offset applied during encoding; subtract 1 before
-  /// checking individual bits. Bit i set means the node at sorted-list
-  /// position i is a direct neighbor of the sender.
+  /// Bit i set means the node at sorted-list position i is a direct neighbor
+  /// of the sender.
   final Uint8List neighborBitmap;
 
   const TopologyMessage({
@@ -57,8 +57,13 @@ class TopologyMessage {
   static TopologyMessage? parse(String text) {
     if (!text.startsWith(prefix)) return null;
     try {
-      // Payload is raw binary transported as ISO-8859-1 (latin1).
-      final raw = latin1.encode(text.substring(prefix.length));
+      // Payload is Base64-encoded (unpadded). Re-pad then decode.
+      final payloadString = text.substring(prefix.length);
+      final padded = payloadString.padRight(
+        payloadString.length + ((4 - (payloadString.length % 4)) % 4),
+        '=',
+      );
+      final raw = base64.decode(padded);
       if (raw.length < 11) return null; // min: 4+4+1+1+1
 
       final data = ByteData.sublistView(Uint8List.fromList(raw));
@@ -91,7 +96,7 @@ class TopologyMessage {
   ///
   /// [neighborBitmap] and [nodeCount] must be obtained from
   /// [NetworkTopology.buildNeighborBitmap] and [NetworkTopology.getNodeCount].
-  /// Returns an ISO-8859-1 string suitable for BLE channel message transport.
+  /// Returns a Base64-encoded string suitable for BLE channel message transport.
   static String createBinary({
     required double latitude,
     required double longitude,
@@ -111,12 +116,16 @@ class TopologyMessage {
     bytes[10] = nodeCount & 0xFF;
     bytes.setRange(11, payloadSize, neighborBitmap);
 
+    // Unpadded Base64 keeps payload compact and avoids null-byte truncation.
+    final encoded = base64.encode(bytes).replaceAll('=', '');
+
     debugPrint('[TELSEND #T:] lat=$latitude lon=$longitude'
         ' compBatt=${companionBatteryMilliVolts}mV (enc=0x${bytes[8].toRadixString(16)})'
         ' phoneBatt=${phoneBatteryMilliVolts}mV (enc=0x${bytes[9].toRadixString(16)})'
-        ' nodeCount=$nodeCount bitmapLen=${neighborBitmap.length}');
+        ' nodeCount=$nodeCount bitmapLen=${neighborBitmap.length}'
+        ' payload=$encoded');
 
-    return prefix + latin1.decode(bytes);
+    return prefix + encoded;
   }
 
   static int _encodeBattery(int? mv) {

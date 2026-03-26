@@ -91,7 +91,9 @@ class BleCommands {
     writer.writeByte(channelIndex);
     writer.writeInt32LE(ts); // 4-byte timestamp
 
-    // Telemetry payloads (#TEL: and #T:) are binary and must be transmitted with latin1.
+    // #TEL: (v1) payload is Base64 (pure ASCII).
+    // #T:   (v2) payload is Base64 (pure ASCII).
+    // Both are safe to encode as latin1 (identical to UTF-8 in ASCII range).
     if (message.startsWith('#TEL:') || message.startsWith('#T:')) {
       writer.writeBytes(Uint8List.fromList(latin1.encode(message)));
     } else {
@@ -226,9 +228,13 @@ class BleCommands {
 
   /// Build SEND_SELF_ADVERT command
   /// Broadcast telemetry/discovery message
-  static Uint8List buildSendSelfAdvert() {
+  /// [flood]: when true the advert is flood-routed (multi-hop); when false it
+  ///         is sent as a zero-hop local broadcast only.
+  /// Format: [cmd][flood_flag]
+  static Uint8List buildSendSelfAdvert({bool flood = true}) {
     final writer = BufferWriter();
     writer.writeByte(BleConstants.cmdSendSelfAdvert);
+    writer.writeByte(flood ? 1 : 0);
     return writer.toBytes();
   }
 

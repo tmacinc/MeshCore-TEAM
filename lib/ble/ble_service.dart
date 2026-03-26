@@ -139,9 +139,10 @@ class BleService extends ChangeNotifier {
   }
 
   /// Send SEND_SELF_ADVERT to trigger advertisement exchange / discovery.
-  Future<bool> sendSelfAdvert() async {
-    debugPrint('📤 Sending SEND_SELF_ADVERT');
-    final frame = BleCommands.buildSendSelfAdvert();
+  /// [flood]: when true (default) the advert is flood-routed across the mesh.
+  Future<bool> sendSelfAdvert({bool flood = true}) async {
+    debugPrint('📤 Sending SEND_SELF_ADVERT (flood=$flood)');
+    final frame = BleCommands.buildSendSelfAdvert(flood: flood);
     return await _connectionManager.sendFrame(frame);
   }
 

@@ -19,7 +19,11 @@ import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/services/forwarding_policy_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 
-/// Sends TEAM-compatible telemetry (`#TEL:`) based on user settings.
+/// Sends TEAM-compatible telemetry based on user settings.
+///
+/// The telemetry format is determined by the active forwarding strategy:
+/// - `forwardingV1` → `#TEL:` (base64 payload, no topology bitmap)
+/// - `topology`     → `#T:`   (raw binary payload with neighbor bitmap)
 ///
 /// Mirrors Android TEAM's OR logic:
 /// - TIME trigger: periodic send every N seconds (even if stationary)
@@ -362,17 +366,33 @@ class TelemetrySendService extends ChangeNotifier {
 
     final phoneBatteryMv = await _getPhoneBatteryMvCached();
 
-    final myNeighbors = _neighborTracker.getMyNeighbors();
-    final bitmap = _networkTopology.buildNeighborBitmap(myNeighbors);
-    final nodeCount = _networkTopology.getNodeCount();
-    final message = TopologyMessage.createBinary(
-      latitude: latitude,
-      longitude: longitude,
-      companionBatteryMilliVolts: _lastCompanionBatteryMv,
-      phoneBatteryMilliVolts: phoneBatteryMv,
-      neighborBitmap: bitmap,
-      nodeCount: nodeCount,
-    );
+    // Choose telemetry format based on the active forwarding strategy.
+    final useTopologyFormat = _forwardingPolicy?.lastAppliedStrategy ==
+        ForwardingAlgorithmMode.topology;
+
+    final String message;
+    if (useTopologyFormat) {
+      final myNeighbors = _neighborTracker.getMyNeighbors();
+      final bitmap = _networkTopology.buildNeighborBitmap(myNeighbors);
+      final nodeCount = _networkTopology.getNodeCount();
+      message = TopologyMessage.createBinary(
+        latitude: latitude,
+        longitude: longitude,
+        companionBatteryMilliVolts: _lastCompanionBatteryMv,
+        phoneBatteryMilliVolts: phoneBatteryMv,
+        neighborBitmap: bitmap,
+        nodeCount: nodeCount,
+      );
+    } else {
+      message = TelemetryMessage.createBinary(
+        latitude: latitude,
+        longitude: longitude,
+        companionBatteryMilliVolts: _lastCompanionBatteryMv,
+        phoneBatteryMilliVolts: phoneBatteryMv,
+        needsForwarding: _forwardingPolicy?.currentNeedsForwarding ?? false,
+        maxPathObserved: _forwardingPolicy?.currentMaxPathObserved ?? 0,
+      );
+    }
 
     final ok =
         await _bleService.sendChannelMessage(channel.channelIndex, message);
