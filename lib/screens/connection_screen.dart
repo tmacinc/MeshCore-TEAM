@@ -743,6 +743,15 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
           privateChannels.first.hash.toRadixString(16).toLowerCase();
     }
 
+    // Reset to null if the stored hash doesn't match any available private channel,
+    // otherwise the DropdownButtonFormField will fail an assertion.
+    if (selectedChannelHash != null &&
+        !privateChannels.any((c) =>
+            c.hash.toRadixString(16).toLowerCase() ==
+            selectedChannelHash!.toLowerCase())) {
+      selectedChannelHash = null;
+    }
+
     String? channelNameForHash(String? hashHex) {
       if (hashHex == null) return null;
       return _findChannelNameByHashHex(privateChannels, hashHex.toLowerCase());
