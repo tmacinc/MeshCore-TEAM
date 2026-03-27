@@ -24,6 +24,10 @@ class ForwardingPolicyService extends ChangeNotifier {
   static const Duration _periodicInterval = Duration(seconds: 60);
   static const Duration _minPushInterval = Duration(seconds: 20);
 
+  /// Forwarding requires more than 2 group members (i.e. at least 2 other
+  /// visible contacts besides yourself) to be useful.
+  static const int _minGroupMembersForForwarding = 2;
+
   final SettingsService _settings;
   final ConnectionViewModel _connectionViewModel;
   final ContactsDao _contactsDao;
@@ -83,6 +87,13 @@ class ForwardingPolicyService extends ChangeNotifier {
   String get selectedAlgorithmMode =>
       _settings.settings.forwardingAlgorithmMode;
   String get effectiveAlgorithmMode => _resolveStrategy().modeKey;
+
+  /// True when the tracking channel has too few visible members for
+  /// forwarding to be useful (≤2 total including yourself).
+  bool get insufficientGroupMembers {
+    final keys = _mapVisibleKeys;
+    return keys == null || keys.length < _minGroupMembersForForwarding;
+  }
 
   ForwardingPolicyService({
     required SettingsService settings,
@@ -326,6 +337,15 @@ class ForwardingPolicyService extends ChangeNotifier {
     final now = DateTime.now();
     final sinceLastPush = now.difference(_lastPolicyPushAt);
     if (sinceLastPush < _minPushInterval && trigger != 'periodic') {
+      return;
+    }
+
+    // Forwarding requires more than 2 group members to be useful.
+    if (insufficientGroupMembers) {
+      final keys = _mapVisibleKeys;
+      debugPrint('[ForwardingPolicy] ⏸️ Skipping: group too small'
+          ' (${keys?.length ?? 0} visible contacts,'
+          ' need $_minGroupMembersForForwarding)');
       return;
     }
 
