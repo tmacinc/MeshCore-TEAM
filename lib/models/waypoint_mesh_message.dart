@@ -1,9 +1,13 @@
 // Copyright (c) 2026 tmacinc
 // Licensed under CC BY-NC-SA 4.0
 
+import 'package:latlong2/latlong.dart';
+
+import 'package:meshcore_team/models/route_payload.dart';
+
 /// TEAM-compatible waypoint sharing message.
 ///
-/// Format (new): `#WAY:meshId|name|lat|lon|description|type`
+/// Format (new): `#WAY:meshId|name|lat|lon|description|type|routeCoords`
 /// Format (legacy): `#WAY:name|lat|lon|description|type`
 class WaypointMeshMessage {
   static const String prefix = '#WAY:';
@@ -14,6 +18,7 @@ class WaypointMeshMessage {
   final double longitude;
   final String description;
   final String type;
+  final List<LatLng> routePoints;
 
   const WaypointMeshMessage({
     required this.meshId,
@@ -22,6 +27,7 @@ class WaypointMeshMessage {
     required this.longitude,
     required this.description,
     required this.type,
+    this.routePoints = const <LatLng>[],
   });
 
   static bool isWaypointMessage(String content) => content.startsWith(prefix);
@@ -45,6 +51,9 @@ class WaypointMeshMessage {
         longitude: lon,
         description: parts[4],
         type: parts[5],
+        routePoints: decodeRouteCoordinatesFromMesh(
+          parts.length >= 7 ? parts[6] : null,
+        ),
       );
     }
 
@@ -68,6 +77,9 @@ class WaypointMeshMessage {
 
   String encode() {
     final mesh = meshId ?? '';
-    return '$prefix$mesh|$name|$latitude|$longitude|$description|$type';
+    final encodedRoute = routePoints.isEmpty
+        ? ''
+        : encodeRouteCoordinatesForMesh(routePoints);
+    return '$prefix$mesh|$name|$latitude|$longitude|$description|$type|$encodedRoute';
   }
 }

@@ -17,6 +17,7 @@ import 'package:uuid/uuid.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/models/map_tile_providers.dart';
+import 'package:meshcore_team/models/route_payload.dart';
 import 'package:meshcore_team/models/waypoint.dart' as waypoint_model;
 import 'package:meshcore_team/repositories/message_repository.dart';
 import 'package:meshcore_team/screens/direct_message_screen.dart';
@@ -62,6 +63,12 @@ class _MapScreenState extends State<MapScreen> {
   bool _isFollowingUser = false;
   bool _isHeadingUp = false;
   bool _isPickingWaypoint = false;
+
+  bool _isRouteEditMode = false;
+  String? _editingRouteId;
+  String _routeDraftName = '';
+  String _routeDraftDescription = '';
+  List<LatLng> _routeDraftPoints = <LatLng>[];
 
   bool _isWaypointMultiSelectMode = false;
   Set<String> _selectedWaypointIds = <String>{};
@@ -387,6 +394,11 @@ class _MapScreenState extends State<MapScreen> {
 
   void _startWaypointPickMode() {
     setState(() {
+      _isRouteEditMode = false;
+      _editingRouteId = null;
+      _routeDraftName = '';
+      _routeDraftDescription = '';
+      _routeDraftPoints = <LatLng>[];
       _isPickingWaypoint = true;
       _isFollowingUser = false;
     });
@@ -396,6 +408,209 @@ class _MapScreenState extends State<MapScreen> {
     setState(() {
       _isPickingWaypoint = false;
     });
+  }
+
+  void _showAddWaypointOrRouteMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.add_location_alt),
+              title: const Text('Create Waypoint'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _startWaypointPickMode();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.route),
+              title: const Text('Create Route'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _startRouteCreateMode();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _startRouteCreateMode() {
+    setState(() {
+      _isPickingWaypoint = false;
+      _isRouteEditMode = true;
+      _editingRouteId = null;
+      _routeDraftName = '';
+      _routeDraftDescription = '';
+      _routeDraftPoints = <LatLng>[];
+      _isFollowingUser = false;
+    });
+  }
+
+  void _startRouteEditMode(WaypointData routeWaypoint) {
+    final payload = decodeRoutePayload(
+      routeWaypoint.description,
+      fallbackLatitude: routeWaypoint.latitude,
+      fallbackLongitude: routeWaypoint.longitude,
+    );
+
+    setState(() {
+      _isPickingWaypoint = false;
+      _isRouteEditMode = true;
+      _editingRouteId = routeWaypoint.id;
+      _routeDraftName = routeWaypoint.name;
+      _routeDraftDescription = payload.description;
+      _routeDraftPoints = List<LatLng>.of(payload.points);
+      _isFollowingUser = false;
+    });
+  }
+
+  void _cancelRouteEditMode() {
+    setState(() {
+      _isRouteEditMode = false;
+      _editingRouteId = null;
+      _routeDraftName = '';
+      _routeDraftDescription = '';
+      _routeDraftPoints = <LatLng>[];
+    });
+  }
+
+  void _undoRoutePoint() {
+    if (_routeDraftPoints.isEmpty) return;
+    setState(() {
+      _routeDraftPoints = List<LatLng>.of(_routeDraftPoints)..removeLast();
+    });
+  }
+
+  Future<({String name, String description})?> _showRouteMetaDialog({
+    required String initialName,
+    required String initialDescription,
+    required bool isEdit,
+  }) async {
+    final nameCtrl = TextEditingController(text: initialName);
+    final descCtrl = TextEditingController(text: initialDescription);
+
+    final result = await showDialog<({String name, String description})>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setInnerState) {
+            final canSave = nameCtrl.text.trim().isNotEmpty;
+            return AlertDialog(
+              title: Text(isEdit ? 'Edit Route' : 'Save Route'),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameCtrl,
+                      decoration:
+                          const InputDecoration(labelText: 'Route Name'),
+                      onChanged: (_) => setInnerState(() {}),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: descCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Description (Optional)',
+                      ),
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: canSave
+                      ? () {
+                          Navigator.of(context).pop((
+                            name: nameCtrl.text.trim(),
+                            description: descCtrl.text.trim(),
+                          ));
+                        }
+                      : null,
+                  child: Text(isEdit ? 'Save' : 'Create'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    nameCtrl.dispose();
+    descCtrl.dispose();
+    return result;
+  }
+
+  Future<void> _saveRouteDraft() async {
+    if (_routeDraftPoints.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add at least 2 points for a route')),
+      );
+      return;
+    }
+
+    final meta = await _showRouteMetaDialog(
+      initialName: _routeDraftName,
+      initialDescription: _routeDraftDescription,
+      isEdit: _editingRouteId != null,
+    );
+    if (meta == null) return;
+
+    final db = context.read<AppDatabase>();
+    final connectionVM = context.read<ConnectionViewModel>();
+    final creatorNodeId = connectionVM.deviceName.trim().isNotEmpty
+        ? connectionVM.deviceName.trim()
+        : 'local';
+
+    final anchor = _routeDraftPoints.first;
+    final encodedDescription = encodeRoutePayload(
+      description: meta.description,
+      points: _routeDraftPoints,
+    );
+
+    if (_editingRouteId != null) {
+      await db.waypointsDao.updateWaypoint(
+        _editingRouteId!,
+        WaypointsCompanion(
+          name: Value(meta.name),
+          description: Value(encodedDescription),
+          latitude: Value(anchor.latitude),
+          longitude: Value(anchor.longitude),
+          waypointType:
+              Value(waypoint_model.WaypointType.route.name.toUpperCase()),
+        ),
+      );
+    } else {
+      await db.waypointsDao.insertWaypoint(
+        waypoint_model.Waypoint(
+          id: const Uuid().v4(),
+          meshId: null,
+          name: meta.name,
+          description: encodedDescription,
+          latitude: anchor.latitude,
+          longitude: anchor.longitude,
+          waypointType: waypoint_model.WaypointType.route,
+          creatorNodeId: creatorNodeId,
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+          isReceived: false,
+          isVisible: true,
+          isNew: false,
+        ).toCompanion(),
+      );
+    }
+
+    _cancelRouteEditMode();
   }
 
   Future<void> _confirmWaypointPickMode() async {
@@ -496,7 +711,16 @@ class _MapScreenState extends State<MapScreen> {
                   '${type.icon} ${waypoint.name}',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                if (waypoint.description.trim().isNotEmpty) ...[
+                if (type == waypoint_model.WaypointType.route) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    decodeRoutePayload(
+                      waypoint.description,
+                      fallbackLatitude: waypoint.latitude,
+                      fallbackLongitude: waypoint.longitude,
+                    ).description,
+                  ),
+                ] else if (waypoint.description.trim().isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(waypoint.description),
                 ],
@@ -547,9 +771,17 @@ class _MapScreenState extends State<MapScreen> {
                 if (!waypoint.isReceived)
                   ListTile(
                     leading: const Icon(Icons.edit),
-                    title: const Text('Edit'),
+                    title: Text(
+                      type == waypoint_model.WaypointType.route
+                          ? 'Edit Route Points'
+                          : 'Edit',
+                    ),
                     onTap: () async {
                       Navigator.of(context).pop();
+                      if (type == waypoint_model.WaypointType.route) {
+                        _startRouteEditMode(waypoint);
+                        return;
+                      }
                       final editResult =
                           await this.context.showWaypointEditDialog(
                                 initialName: waypoint.name,
@@ -1233,7 +1465,7 @@ class _MapScreenState extends State<MapScreen> {
                 ),
                 PopupMenuItem<String>(
                   value: 'manage_waypoints',
-                  child: Text('Manage Waypoints'),
+                  child: Text('Manage Waypoints & Routes'),
                 ),
                 const PopupMenuDivider(),
                 PopupMenuItem<String>(
@@ -1274,6 +1506,14 @@ class _MapScreenState extends State<MapScreen> {
                         ~InteractiveFlag.drag)
                     : (InteractiveFlag.all & ~InteractiveFlag.rotate),
               ),
+              onTap: (tapPosition, point) {
+                if (_isRouteEditMode) {
+                  setState(() {
+                    _routeDraftPoints = List<LatLng>.of(_routeDraftPoints)
+                      ..add(point);
+                  });
+                }
+              },
               onPositionChanged: (camera, hasGesture) {
                 if (!hasGesture) return;
 
@@ -1403,6 +1643,50 @@ class _MapScreenState extends State<MapScreen> {
                       );
                     },
                   );
+                },
+              ),
+              StreamBuilder<List<WaypointData>>(
+                stream: db.waypointsDao.watchVisibleWaypoints(),
+                builder: (context, snapshot) {
+                  final waypoints = snapshot.data ?? const <WaypointData>[];
+                  final routeLines = <Polyline>[];
+
+                  for (final wp in waypoints) {
+                    final type =
+                        waypoint_model.WaypointType.fromString(wp.waypointType);
+                    if (type != waypoint_model.WaypointType.route) continue;
+
+                    final payload = decodeRoutePayload(
+                      wp.description,
+                      fallbackLatitude: wp.latitude,
+                      fallbackLongitude: wp.longitude,
+                    );
+                    if (payload.points.length < 2) continue;
+
+                    routeLines.add(
+                      Polyline(
+                        points: payload.points,
+                        strokeWidth: 4,
+                        color: wp.isReceived
+                            ? Colors.deepPurple.withValues(alpha: 0.65)
+                            : Colors.deepPurple,
+                      ),
+                    );
+                  }
+
+                  if (_isRouteEditMode && _routeDraftPoints.length >= 2) {
+                    routeLines.add(
+                      Polyline(
+                        points: _routeDraftPoints,
+                        strokeWidth: 3,
+                        color: Colors.orange,
+                        pattern: const StrokePattern.dotted(spacingFactor: 1.8),
+                      ),
+                    );
+                  }
+
+                  if (routeLines.isEmpty) return const SizedBox.shrink();
+                  return PolylineLayer(polylines: routeLines);
                 },
               ),
               StreamBuilder<List<WaypointData>>(
@@ -1575,6 +1859,23 @@ class _MapScreenState extends State<MapScreen> {
                 ),
             ],
           ),
+
+          if (_isRouteEditMode)
+            Positioned(
+              left: 12,
+              right: 12,
+              top: 12,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Text(
+                    _routeDraftPoints.isEmpty
+                        ? 'Route mode: tap map to add first point'
+                        : 'Route mode: ${_routeDraftPoints.length} points',
+                  ),
+                ),
+              ),
+            ),
 
           if (_isPickingWaypoint)
             const Positioned.fill(
@@ -1752,7 +2053,25 @@ class _MapScreenState extends State<MapScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_isPickingWaypoint) ...[
+                  if (_isRouteEditMode) ...[
+                    FloatingActionButton.small(
+                      heroTag: 'map_route_cancel',
+                      onPressed: _cancelRouteEditMode,
+                      child: const Icon(Icons.close),
+                    ),
+                    const SizedBox(height: 12),
+                    FloatingActionButton.small(
+                      heroTag: 'map_route_undo',
+                      onPressed: _undoRoutePoint,
+                      child: const Icon(Icons.undo),
+                    ),
+                    const SizedBox(height: 12),
+                    FloatingActionButton.small(
+                      heroTag: 'map_route_save',
+                      onPressed: _saveRouteDraft,
+                      child: const Icon(Icons.check),
+                    ),
+                  ] else if (_isPickingWaypoint) ...[
                     FloatingActionButton.small(
                       heroTag: 'map_waypoint_cancel',
                       onPressed: _cancelWaypointPickMode,
@@ -1886,8 +2205,8 @@ class _MapScreenState extends State<MapScreen> {
                     const SizedBox(height: 12),
                     FloatingActionButton.small(
                       heroTag: 'map_add_waypoint',
-                      onPressed: _startWaypointPickMode,
-                      child: const Icon(Icons.add_location_alt),
+                      onPressed: _showAddWaypointOrRouteMenu,
+                      child: const Icon(Icons.add),
                     ),
                   ],
                 ],

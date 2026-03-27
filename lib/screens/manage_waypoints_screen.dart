@@ -13,6 +13,7 @@ import 'package:cross_file/cross_file.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:meshcore_team/database/database.dart';
+import 'package:meshcore_team/models/route_payload.dart';
 import 'package:meshcore_team/models/waypoint.dart';
 import 'package:meshcore_team/repositories/message_repository.dart';
 import 'package:meshcore_team/widgets/waypoint_edit_dialog.dart';
@@ -31,6 +32,9 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
   Set<String> _selectedWaypointIds = <String>{};
 
   static const double _duplicateWaypointLocationRadiusMeters = 20;
+
+  bool _isRoute(WaypointData waypoint) =>
+      WaypointType.fromString(waypoint.waypointType) == WaypointType.route;
 
   double _distanceMeters(LatLng a, LatLng b) {
     const d = Distance();
@@ -568,7 +572,16 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
                   '${type.icon} ${waypoint.name}',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                if (waypoint.description.trim().isNotEmpty) ...[
+                if (_isRoute(waypoint)) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    decodeRoutePayload(
+                      waypoint.description,
+                      fallbackLatitude: waypoint.latitude,
+                      fallbackLongitude: waypoint.longitude,
+                    ).description,
+                  ),
+                ] else if (waypoint.description.trim().isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(waypoint.description),
                 ],
@@ -613,7 +626,9 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
                 if (!waypoint.isReceived)
                   ListTile(
                     leading: const Icon(Icons.edit),
-                    title: const Text('Edit Waypoint'),
+                    title: Text(
+                      _isRoute(waypoint) ? 'Edit Route Info' : 'Edit Waypoint',
+                    ),
                     onTap: () async {
                       Navigator.of(context).pop();
                       await _editWaypoint(waypoint);
@@ -639,20 +654,37 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
     if (waypoint.isReceived) return;
 
     final type = WaypointType.fromString(waypoint.waypointType);
+    final initialDescription = _isRoute(waypoint)
+        ? decodeRoutePayload(
+            waypoint.description,
+            fallbackLatitude: waypoint.latitude,
+            fallbackLongitude: waypoint.longitude,
+          ).description
+        : waypoint.description;
     final result = await context.showWaypointEditDialog(
       initialName: waypoint.name,
-      initialDescription: waypoint.description,
+      initialDescription: initialDescription,
       initialType: type,
     );
 
     if (result == null) return;
 
     final db = context.read<AppDatabase>();
+    final nextDescription = _isRoute(waypoint)
+        ? encodeRoutePayload(
+            description: result.description,
+            points: decodeRoutePayload(
+              waypoint.description,
+              fallbackLatitude: waypoint.latitude,
+              fallbackLongitude: waypoint.longitude,
+            ).points,
+          )
+        : result.description;
     await db.waypointsDao.updateWaypoint(
       waypoint.id,
       WaypointsCompanion(
         name: Value(result.name),
-        description: Value(result.description),
+        description: Value(nextDescription),
         waypointType: Value(result.type.name.toUpperCase()),
       ),
     );
@@ -669,7 +701,7 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
               ? (_selectedWaypointIds.isEmpty
                   ? 'Select Waypoints'
                   : '${_selectedWaypointIds.length} selected')
-              : 'Manage Waypoints',
+              : 'Manage Waypoints & Routes',
         ),
         leading: _isMultiSelectMode
             ? IconButton(
@@ -762,6 +794,7 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
               final total = waypoints.length;
               final local = waypoints.where((w) => !w.isReceived).length;
               final received = waypoints.where((w) => w.isReceived).length;
+              final routes = waypoints.where(_isRoute).length;
 
               return ListView(
                 padding: const EdgeInsets.all(16),
@@ -780,6 +813,7 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
                           Text('Total: $total'),
                           Text('Local: $local'),
                           Text('Received: $received'),
+                          Text('Routes: $routes'),
                         ],
                       ),
                     ),
@@ -789,14 +823,21 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
                     const Center(
                       child: Padding(
                         padding: EdgeInsets.only(top: 24),
-                        child: Text('No waypoints yet.'),
+                        child: Text('No waypoints or routes yet.'),
                       ),
                     )
                   else
                     ...waypoints.map((w) {
                       final type = WaypointType.fromString(w.waypointType);
+                      final payload = _isRoute(w)
+                          ? decodeRoutePayload(
+                              w.description,
+                              fallbackLatitude: w.latitude,
+                              fallbackLongitude: w.longitude,
+                            )
+                          : null;
                       final subtitle =
-                          '${w.latitude.toStringAsFixed(6)}, ${w.longitude.toStringAsFixed(6)}\n${_formatDate(w.createdAt)}';
+                          '${w.latitude.toStringAsFixed(6)}, ${w.longitude.toStringAsFixed(6)}\n${payload != null ? 'Points: ${payload.points.length}\\n' : ''}${_formatDate(w.createdAt)}';
 
                       final isSelected = _selectedWaypointIds.contains(w.id);
 

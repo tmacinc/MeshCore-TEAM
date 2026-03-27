@@ -140,6 +140,7 @@ enum WaypointType {
   stand('Deer Stand', '🪑'),
   water('Water', '💧'),
   vehicle('Vehicle', '🚗'),
+  route('Route', '🛣️'),
   custom('Custom', '📌');
 
   final String displayName;

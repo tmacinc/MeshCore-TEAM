@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+import 'package:latlong2/latlong.dart' as latlong2;
 import 'package:rxdart/rxdart.dart';
 import 'package:uuid/uuid.dart';
 import 'package:meshcore_team/ble/ble_commands.dart';
@@ -23,6 +24,7 @@ import 'package:meshcore_team/models/capability_message.dart';
 import 'package:meshcore_team/models/telemetry_message.dart';
 import 'package:meshcore_team/models/waypoint.dart' as waypoint_model;
 import 'package:meshcore_team/models/waypoint_mesh_message.dart';
+import 'package:meshcore_team/models/route_payload.dart';
 import 'package:meshcore_team/services/contact_capability_service.dart';
 import 'package:meshcore_team/models/telemetry_event.dart';
 import 'package:meshcore_team/models/topology_event.dart';
@@ -859,15 +861,25 @@ class MessageRepository {
       }
     }
 
+    final isRouteMessage =
+        msg.type.trim().toUpperCase() == waypoint_model.WaypointType.route.name.toUpperCase();
+    final routePoints = isRouteMessage && msg.routePoints.isNotEmpty
+        ? msg.routePoints
+        : <latlong2.LatLng>[latlong2.LatLng(msg.latitude, msg.longitude)];
+    final storedDescription = isRouteMessage
+        ? encodeRoutePayload(description: msg.description, points: routePoints)
+        : msg.description;
+    final anchorPoint = routePoints.first;
+
     if (existing != null) {
       await waypointsDao.updateWaypoint(
         existing.id,
         WaypointsCompanion(
           meshId: drift.Value(finalMeshId),
           name: drift.Value(msg.name),
-          description: drift.Value(msg.description),
-          latitude: drift.Value(msg.latitude),
-          longitude: drift.Value(msg.longitude),
+          description: drift.Value(storedDescription),
+          latitude: drift.Value(anchorPoint.latitude),
+          longitude: drift.Value(anchorPoint.longitude),
           waypointType: drift.Value(msg.type.toUpperCase()),
           createdAt: drift.Value(nowMs),
           isNew: const drift.Value(true),
@@ -909,9 +921,9 @@ class MessageRepository {
           id: id,
           meshId: drift.Value(finalMeshId),
           name: msg.name,
-          description: drift.Value(msg.description),
-          latitude: msg.latitude,
-          longitude: msg.longitude,
+          description: drift.Value(storedDescription),
+          latitude: anchorPoint.latitude,
+          longitude: anchorPoint.longitude,
           waypointType: msg.type.toUpperCase(),
           creatorNodeId: senderName,
           createdAt: nowMs,
@@ -974,13 +986,31 @@ class MessageRepository {
       );
     }
 
+    final isRoute = waypoint.waypointType.toUpperCase() ==
+        waypoint_model.WaypointType.route.name.toUpperCase();
+
+    final routePayload = decodeRoutePayload(
+      waypoint.description,
+      fallbackLatitude: waypoint.latitude,
+      fallbackLongitude: waypoint.longitude,
+    );
+
+    final routePoints = isRoute
+        ? routePayload.points
+        : const <latlong2.LatLng>[];
+
+    final routeAnchor = routePoints.isNotEmpty
+        ? routePoints.first
+        : latlong2.LatLng(waypoint.latitude, waypoint.longitude);
+
     final msg = WaypointMeshMessage(
       meshId: meshId,
       name: waypoint.name,
-      latitude: waypoint.latitude,
-      longitude: waypoint.longitude,
-      description: waypoint.description,
+      latitude: routeAnchor.latitude,
+      longitude: routeAnchor.longitude,
+      description: isRoute ? routePayload.description : waypoint.description,
       type: waypoint.waypointType,
+      routePoints: routePoints,
     ).encode();
 
     debugPrint(
