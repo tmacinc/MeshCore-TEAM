@@ -99,6 +99,7 @@ class MeshConnectionService extends ChangeNotifier {
     try {
       if (Platform.isAndroid) {
         await _bleManager.startNativeService();
+        await _enableWakeLock();
         _isServiceRunning = true;
         await _settings.setServiceWasRunning(true);
         debugPrint('[MeshService] ✅ Native BLE service started (Android)');
@@ -159,6 +160,7 @@ class MeshConnectionService extends ChangeNotifier {
     try {
       if (Platform.isAndroid) {
         await _bleManager.stopNativeService();
+        await _disableWakeLock();
         _isServiceRunning = false;
         await _settings.setServiceWasRunning(false);
         debugPrint('[MeshService] ✅ Native BLE service stopped (Android)');
