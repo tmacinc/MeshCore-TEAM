@@ -88,6 +88,7 @@ class TelemetrySendService extends ChangeNotifier {
     _settings.addListener(_onSettingsChanged);
     _bleService.addListener(_onConnectionChanged);
     _connectionViewModel.addListener(_onBatteryChanged);
+    _forwardingPolicy?.addListener(_onForwardingPolicyChanged);
 
     _applyConfigAndMaybeStart();
   }
@@ -98,6 +99,13 @@ class TelemetrySendService extends ChangeNotifier {
 
   void _onConnectionChanged() {
     _applyConfigAndMaybeStart();
+  }
+
+  void _onForwardingPolicyChanged() {
+    // Push updated strategy / topology bitmap to the Android native sender.
+    if (!kIsWeb && Platform.isAndroid) {
+      _applyConfigAndMaybeStart();
+    }
   }
 
   void _onBatteryChanged() {
@@ -259,6 +267,17 @@ class TelemetrySendService extends ChangeNotifier {
       return;
     }
 
+    // Resolve topology data for current forwarding strategy.
+    final strategyMode = _forwardingPolicy?.lastAppliedStrategy ??
+        ForwardingAlgorithmMode.forwardingV1;
+    Uint8List? neighborBitmap;
+    int nodeCount = 0;
+    if (strategyMode == ForwardingAlgorithmMode.topology) {
+      final myNeighbors = _neighborTracker.getMyNeighbors();
+      neighborBitmap = _networkTopology.buildNeighborBitmap(myNeighbors);
+      nodeCount = _networkTopology.getNodeCount();
+    }
+
     try {
       await _nativeTelemetryChannel.invokeMethod('configureNativeTelemetry', {
         'enabled': true,
@@ -269,9 +288,12 @@ class TelemetrySendService extends ChangeNotifier {
         'needsForwarding': _forwardingPolicy?.currentNeedsForwarding ?? false,
         'maxPathObserved': _forwardingPolicy?.currentMaxPathObserved ?? 0,
         'locationSource': _settings.settings.locationSource,
+        'strategyMode': strategyMode,
+        'neighborBitmap': neighborBitmap,
+        'nodeCount': nodeCount,
       });
-      debugPrint(
-          '[TelemetrySend] ✅ Native telemetry configured (channelIndex=${channel.channelIndex})');
+      debugPrint('[TelemetrySend] ✅ Native telemetry configured '
+          '(channelIndex=${channel.channelIndex}, strategy=$strategyMode)');
     } catch (e) {
       debugPrint('[TelemetrySend] ❌ configureNativeTelemetry failed: $e');
     }
@@ -523,6 +545,7 @@ class TelemetrySendService extends ChangeNotifier {
       _settings.removeListener(_onSettingsChanged);
       _bleService.removeListener(_onConnectionChanged);
       _connectionViewModel.removeListener(_onBatteryChanged);
+      _forwardingPolicy?.removeListener(_onForwardingPolicyChanged);
     }
 
     super.dispose();

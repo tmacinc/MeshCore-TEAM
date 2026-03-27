@@ -28,6 +28,9 @@ class MainActivity : FlutterActivity() {
 						val needsForwarding = call.argument<Boolean>("needsForwarding") ?: false
 						val maxPathObserved = call.argument<Number>("maxPathObserved")?.toInt() ?: 0
 						val locationSource = call.argument<String>("locationSource") ?: "phone"
+						val strategyMode = call.argument<String>("strategyMode") ?: "forwardingV1"
+						val neighborBitmap = call.argument<ByteArray>("neighborBitmap")
+						val nodeCount = call.argument<Number>("nodeCount")?.toInt() ?: 0
 						MeshBleService.configureNativeTelemetry(
 							this,
 							enabled,
@@ -38,6 +41,9 @@ class MainActivity : FlutterActivity() {
 							needsForwarding,
 							maxPathObserved,
 							locationSource,
+							strategyMode,
+							neighborBitmap,
+							nodeCount,
 						)
 						result.success(true)
 					}

@@ -146,6 +146,9 @@ class MeshBleService : Service() {
         private const val extraTelemetryNeedsForwarding = "telemetryNeedsForwarding"
         private const val extraTelemetryMaxPathObserved = "telemetryMaxPathObserved"
         private const val extraTelemetryLocationSource = "telemetryLocationSource"
+        private const val extraTelemetryStrategyMode = "telemetryStrategyMode"
+        private const val extraTelemetryNeighborBitmap = "telemetryNeighborBitmap"
+        private const val extraTelemetryNodeCount = "telemetryNodeCount"
         private const val extraCompanionLatitude = "companionLatitude"
         private const val extraCompanionLongitude = "companionLongitude"
 
@@ -215,6 +218,9 @@ class MeshBleService : Service() {
             needsForwarding: Boolean,
             maxPathObserved: Int,
             locationSource: String,
+            strategyMode: String,
+            neighborBitmap: ByteArray?,
+            nodeCount: Int,
         ) {
             val intent = Intent(context, MeshBleService::class.java)
                 .setAction(actionConfigureNativeTelemetry)
@@ -225,8 +231,13 @@ class MeshBleService : Service() {
                 .putExtra(extraTelemetryNeedsForwarding, needsForwarding)
                 .putExtra(extraTelemetryMaxPathObserved, maxPathObserved)
                 .putExtra(extraTelemetryLocationSource, locationSource)
+                .putExtra(extraTelemetryStrategyMode, strategyMode)
+                .putExtra(extraTelemetryNodeCount, nodeCount)
             if (companionBatteryMilliVolts != null) {
                 intent.putExtra(extraTelemetryCompanionBatteryMilliVolts, companionBatteryMilliVolts)
+            }
+            if (neighborBitmap != null) {
+                intent.putExtra(extraTelemetryNeighborBitmap, neighborBitmap)
             }
             context.startService(intent)
         }
@@ -341,6 +352,7 @@ class MeshBleService : Service() {
 
     private val cmdSendChannelTxtMsg = 3
     private val telemetryPrefix = "#TEL:"
+    private val topologyPrefix = "#T:"
     private val telemetryPayloadSize = 11
 
     private val nativeTelemetryTickMs = 5000L
@@ -359,6 +371,9 @@ class MeshBleService : Service() {
     private var nativeTelemetryCompanionLocationAtMs = 0L
     private var nativeTelemetryNeedsForwarding = false
     private var nativeTelemetryMaxPathObserved = 0
+    private var nativeTelemetryStrategyMode = "forwardingV1"
+    private var nativeTelemetryNeighborBitmap: ByteArray? = null
+    private var nativeTelemetryNodeCount = 0
     private var nativeTelemetryLastSendMs = 0L
     private var nativeTelemetryNextPeriodicDueMs = 0L
     private var nativeTelemetryLastSentLocation: Location? = null
@@ -548,6 +563,9 @@ class MeshBleService : Service() {
                 nativeTelemetryNeedsForwarding = intent.getBooleanExtra(extraTelemetryNeedsForwarding, false)
                 nativeTelemetryMaxPathObserved = intent.getIntExtra(extraTelemetryMaxPathObserved, 0).coerceIn(0, 127)
                 nativeTelemetryLocationSource = intent.getStringExtra(extraTelemetryLocationSource) ?: "phone"
+                nativeTelemetryStrategyMode = intent.getStringExtra(extraTelemetryStrategyMode) ?: "forwardingV1"
+                nativeTelemetryNodeCount = intent.getIntExtra(extraTelemetryNodeCount, 0).coerceIn(0, 255)
+                nativeTelemetryNeighborBitmap = intent.getByteArrayExtra(extraTelemetryNeighborBitmap)
 
                 val shouldResetSchedule = nativeTelemetryEnabled && (
                     !previousEnabled ||
@@ -573,6 +591,9 @@ class MeshBleService : Service() {
                         "needsForwarding" to nativeTelemetryNeedsForwarding,
                         "maxPathObserved" to nativeTelemetryMaxPathObserved,
                         "locationSource" to nativeTelemetryLocationSource,
+                        "strategyMode" to nativeTelemetryStrategyMode,
+                        "nodeCount" to nativeTelemetryNodeCount,
+                        "hasBitmap" to (nativeTelemetryNeighborBitmap != null),
                         "scheduleReset" to shouldResetSchedule,
                     )
                 )
@@ -1663,6 +1684,7 @@ class MeshBleService : Service() {
 
     private fun sendNativeTelemetry(location: Location, reason: String): Boolean {
         val phoneBatteryMv = readPhoneBatteryMilliVolts()
+        val useTopology = nativeTelemetryStrategyMode == "topology"
         telemetryLogI(
             "[TELSEND] building",
             mapOf(
@@ -1675,24 +1697,38 @@ class MeshBleService : Service() {
                 "phoneBatteryMilliVolts" to phoneBatteryMv,
                 "needsForwarding" to nativeTelemetryNeedsForwarding,
                 "maxPathObserved" to nativeTelemetryMaxPathObserved,
+                "strategy" to nativeTelemetryStrategyMode,
             )
         )
 
-        val frame = buildTelemetryFrame(
-            channelIndex = nativeTelemetryChannelIndex,
-            latitude = location.latitude,
-            longitude = location.longitude,
-            companionBatteryMilliVolts = nativeTelemetryCompanionBatteryMilliVolts,
-            phoneBatteryMilliVolts = phoneBatteryMv,
-            needsForwarding = nativeTelemetryNeedsForwarding,
-            maxPathObserved = nativeTelemetryMaxPathObserved,
-        )
+        val frame = if (useTopology) {
+            buildTopologyFrame(
+                channelIndex = nativeTelemetryChannelIndex,
+                latitude = location.latitude,
+                longitude = location.longitude,
+                companionBatteryMilliVolts = nativeTelemetryCompanionBatteryMilliVolts,
+                phoneBatteryMilliVolts = phoneBatteryMv,
+                neighborBitmap = nativeTelemetryNeighborBitmap,
+                nodeCount = nativeTelemetryNodeCount,
+            )
+        } else {
+            buildTelemetryFrame(
+                channelIndex = nativeTelemetryChannelIndex,
+                latitude = location.latitude,
+                longitude = location.longitude,
+                companionBatteryMilliVolts = nativeTelemetryCompanionBatteryMilliVolts,
+                phoneBatteryMilliVolts = phoneBatteryMv,
+                needsForwarding = nativeTelemetryNeedsForwarding,
+                maxPathObserved = nativeTelemetryMaxPathObserved,
+            )
+        }
 
         enqueueFrameInternal(frame)
         telemetryLogI(
             "[TELSEND] queued",
             mapOf(
                 "reason" to reason,
+                "strategy" to nativeTelemetryStrategyMode,
                 "frameLen" to frame.size,
                 "frameHex" to frameToHex(frame),
             )
@@ -1756,6 +1792,55 @@ class MeshBleService : Service() {
         val flag = if (needsForwarding) 1 else 0
         val path = maxPathObserved.coerceIn(0, 127)
         return (((path shl 1) or flag) + 1) and 0xFF
+    }
+
+    private fun buildTopologyFrame(
+        channelIndex: Int,
+        latitude: Double,
+        longitude: Double,
+        companionBatteryMilliVolts: Int?,
+        phoneBatteryMilliVolts: Int?,
+        neighborBitmap: ByteArray?,
+        nodeCount: Int,
+    ): ByteArray {
+        val bitmap = neighborBitmap ?: ByteArray(0)
+        val payloadSize = 11 + bitmap.size
+        val payload = ByteArray(payloadSize)
+        val data = ByteBuffer.wrap(payload).order(ByteOrder.BIG_ENDIAN)
+
+        data.putInt((latitude * 1e7).toInt())
+        data.putInt((longitude * 1e7).toInt())
+        payload[8] = encodeBatteryVoltage(companionBatteryMilliVolts).toByte()
+        payload[9] = encodeBatteryVoltage(phoneBatteryMilliVolts).toByte()
+        payload[10] = (nodeCount and 0xFF).toByte()
+        if (bitmap.isNotEmpty()) {
+            System.arraycopy(bitmap, 0, payload, 11, bitmap.size)
+        }
+
+        val b64 = Base64.encodeToString(payload, Base64.NO_WRAP).trimEnd('=')
+        val telemetryText = topologyPrefix + b64
+        val telemetryBytes = telemetryText.toByteArray(Charsets.ISO_8859_1)
+
+        val frame = ByteArray(1 + 1 + 1 + 4 + telemetryBytes.size)
+        val writer = ByteBuffer.wrap(frame).order(ByteOrder.LITTLE_ENDIAN)
+        writer.put(cmdSendChannelTxtMsg.toByte())
+        writer.put(0)
+        writer.put(channelIndex.toByte())
+        writer.putInt((System.currentTimeMillis() / 1000L).toInt())
+        writer.put(telemetryBytes)
+
+        telemetryLogI(
+            "[TELSEND] topology frame built",
+            mapOf(
+                "telemetryText" to telemetryText,
+                "payloadHex" to payload.joinToString("") { String.format("%02X", it) },
+                "frameLen" to frame.size,
+                "channelIndex" to channelIndex,
+                "nodeCount" to nodeCount,
+                "bitmapLen" to bitmap.size,
+            )
+        )
+        return frame
     }
 
     private fun hasLocationPermission(): Boolean {
