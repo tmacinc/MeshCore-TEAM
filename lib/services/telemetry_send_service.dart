@@ -104,11 +104,23 @@ class TelemetrySendService extends ChangeNotifier {
     final voltage = _connectionViewModel.companionBatteryVoltage;
     if (voltage != null) {
       final mv = (voltage * 1000).round();
-      _lastCompanionBatteryMv = mv;
+      if (_lastCompanionBatteryMv != mv) {
+        _lastCompanionBatteryMv = mv;
+
+        // On Android, push updated battery to the native telemetry sender.
+        if (!kIsWeb && Platform.isAndroid) {
+          _applyConfigAndMaybeStart();
+        }
+      }
     }
 
-    // In companion location mode, update cached coordinates from the mesh
-    // device so the next periodic/distance send uses fresh data.
+    // Push companion GPS coordinates to Android native telemetry layer.
+    if (!kIsWeb && Platform.isAndroid) {
+      _pushCompanionLocationIfNeeded();
+      return;
+    }
+
+    // iOS/other: cache companion coordinates in Dart for the Dart sender.
     if (_currentLocationSource == LocationSource.companion) {
       final lat = _connectionViewModel.companionLatitude;
       final lon = _connectionViewModel.companionLongitude;
@@ -142,6 +154,28 @@ class TelemetrySendService extends ChangeNotifier {
     }
   }
 
+  /// Push companion GPS coordinates to the Android native telemetry layer so
+  /// it can send telemetry using the companion's position when the user has
+  /// selected "companion" as their location source.
+  ///
+  /// Always pushes (even when coordinates haven't changed) so the native
+  /// timestamp stays fresh and the staleness guard doesn't discard the fix.
+  void _pushCompanionLocationIfNeeded() {
+    if (kIsWeb || !Platform.isAndroid) return;
+    if (_settings.settings.locationSource != LocationSource.companion) return;
+
+    final lat = _connectionViewModel.companionLatitude;
+    final lon = _connectionViewModel.companionLongitude;
+    if (lat == null || lon == null) return;
+
+    unawaited(_nativeTelemetryChannel.invokeMethod('updateCompanionLocation', {
+      'latitude': lat,
+      'longitude': lon,
+    }).catchError((Object e) {
+      debugPrint('[TelemetrySend] ⚠️ updateCompanionLocation failed: $e');
+    }));
+  }
+
   bool get _isEnabledInSettings {
     final s = _settings.settings;
     return s.telemetryEnabled && (s.telemetryChannelHash?.isNotEmpty ?? false);
@@ -157,11 +191,15 @@ class TelemetrySendService extends ChangeNotifier {
         _telemetryIntervalSeconds != s.telemetryIntervalSeconds;
     _telemetryIntervalSeconds = s.telemetryIntervalSeconds;
 
-    // On Android, ensure the old native telemetry sender is stopped so only
-    // the Dart sender runs.
+    // Android: delegate telemetry to the native foreground service so it
+    // survives screen-off / Doze.  The Dart timer is only used on iOS.
     if (!kIsWeb && Platform.isAndroid) {
-      await _stopAndroidNativeTelemetry();
+      await _applyAndroidNativeTelemetryConfig();
+      _stopInternal();
+      return;
     }
+
+    // --- iOS / other: Dart-side telemetry sender ---
 
     if (!_isEnabledInSettings || !_bleService.isConnected) {
       _stopInternal();
@@ -191,19 +229,57 @@ class TelemetrySendService extends ChangeNotifier {
     }
   }
 
-  /// Tell the Android native layer to stop its built-in telemetry sender so
-  /// only the Dart sender runs.  Called once on every config apply.
-  Future<void> _stopAndroidNativeTelemetry() async {
+  /// Configure the Android native foreground service telemetry sender.
+  /// When telemetry is disabled or disconnected, tells the native side to stop.
+  Future<void> _applyAndroidNativeTelemetryConfig() async {
+    if (!_isEnabledInSettings || !_bleService.isConnected) {
+      try {
+        await _nativeTelemetryChannel.invokeMethod('stopNativeTelemetry');
+      } catch (e) {
+        debugPrint('[TelemetrySend] ⚠️ stopNativeTelemetry failed: $e');
+      }
+      return;
+    }
+
+    final channelHashHex = _settings.settings.telemetryChannelHash;
+    if (channelHashHex == null || channelHashHex.isEmpty) {
+      return;
+    }
+
+    final channelHash = _tryParseChannelHash(channelHashHex);
+    if (channelHash == null) {
+      debugPrint('[TelemetrySend] ❌ Invalid channel hash: $channelHashHex');
+      return;
+    }
+
+    final channel = await _channelsDao.getChannelByHash(channelHash);
+    if (channel == null) {
+      debugPrint(
+          '[TelemetrySend] ❌ Channel not found for hash: $channelHashHex');
+      return;
+    }
+
     try {
-      await _nativeTelemetryChannel.invokeMethod('stopNativeTelemetry');
+      await _nativeTelemetryChannel.invokeMethod('configureNativeTelemetry', {
+        'enabled': true,
+        'channelIndex': channel.channelIndex,
+        'intervalSeconds': _settings.settings.telemetryIntervalSeconds,
+        'minDistanceMeters': _settings.settings.telemetryMinDistanceMeters,
+        'companionBatteryMilliVolts': _lastCompanionBatteryMv,
+        'needsForwarding': _forwardingPolicy?.currentNeedsForwarding ?? false,
+        'maxPathObserved': _forwardingPolicy?.currentMaxPathObserved ?? 0,
+        'locationSource': _settings.settings.locationSource,
+      });
+      debugPrint(
+          '[TelemetrySend] ✅ Native telemetry configured (channelIndex=${channel.channelIndex})');
     } catch (e) {
-      debugPrint('[TelemetrySend] ⚠️ stopNativeTelemetry failed: $e');
+      debugPrint('[TelemetrySend] ❌ configureNativeTelemetry failed: $e');
     }
   }
 
   Future<void> _startInternal() async {
     debugPrint('[TelemetrySend] ▶️ Starting telemetry sender'
-        ' (locationSource=${_currentLocationSource})');
+        ' (locationSource=$_currentLocationSource)');
 
     if (_currentLocationSource == LocationSource.companion) {
       // Seed from companion's last known position.
