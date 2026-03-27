@@ -43,8 +43,9 @@ class BufferReader {
   String readString() {
     final bytes = readRemainingBytes();
 
-    // Telemetry payloads (#TEL: and #T:) are binary and transported as ISO-8859-1.
-    // Each byte maps 1:1 to a code unit.
+    // #TEL: and #T: payloads are Base64-encoded (pure ASCII). Using latin1
+    // decoding for them is harmless (ASCII range is identical in both
+    // encodings) and avoids any risk of a multi-byte UTF-8 misparse.
     // NOTE: firmware prepends "SENDER: " to channel messages,
     // so the marker may not be at byte 0.
     // #TEL: = 0x23 0x54 0x45 0x4C 0x3A

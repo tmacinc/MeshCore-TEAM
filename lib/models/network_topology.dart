@@ -80,10 +80,6 @@ class NetworkTopology {
 
   /// Decode a raw bitmap into the set of neighbor pub_key_prefixes.
   ///
-  /// Each byte in [bitmap] has a +1 encoding offset (added during
-  /// [buildNeighborBitmap] to avoid 0x00 in BLE transport). This method
-  /// subtracts 1 before reading bits.
-  ///
   /// Only resolves bit positions present in the current sorted list; unknown
   /// positions are silently skipped until convergence is reached.
   Set<String> parseNeighborBitmap(Uint8List bitmap, int nodeCount) {
@@ -93,9 +89,8 @@ class NetworkTopology {
       final byteIdx = i ~/ 8;
       final bitIdx = i % 8;
       if (byteIdx < bitmap.length) {
-        // Remove +1 encoding offset, then check the bit.
-        final byte = (bitmap[byteIdx] & 0xFF) - 1;
-        if (byte >= 0 && ((byte >> bitIdx) & 1) == 1) {
+        final byte = bitmap[byteIdx] & 0xFF;
+        if (((byte >> bitIdx) & 1) == 1) {
           result.add(_sortedPrefixes[i]);
         }
       }
@@ -109,8 +104,8 @@ class NetworkTopology {
   /// (typically from [NeighborTracker.getMyNeighbors]).
   ///
   /// Returns ceil(totalNodes/8) bytes where bit i is set when
-  /// [_sortedPrefixes[i]] is in [myNeighbors]. Each byte has +1 offset
-  /// applied to avoid 0x00 values in BLE transport.
+  /// [_sortedPrefixes[i]] is in [myNeighbors]. Base64 transport in
+  /// [TopologyMessage] handles null-byte avoidance.
   Uint8List buildNeighborBitmap(Set<String> myNeighbors) {
     // Ensure all neighbors are in the sorted list.
     var needsSort = false;
@@ -131,11 +126,6 @@ class NetworkTopology {
       if (myNeighbors.contains(_sortedPrefixes[i])) {
         bitmap[i ~/ 8] |= (1 << (i % 8));
       }
-    }
-
-    // Add +1 offset per byte to avoid 0x00 in BLE transport.
-    for (var i = 0; i < bitmap.length; i++) {
-      bitmap[i] = (bitmap[i] + 1) & 0xFF;
     }
 
     return bitmap;
