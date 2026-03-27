@@ -30,6 +30,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.ParcelUuid
+import android.os.PowerManager
 import android.util.Log
 import android.util.Base64
 import androidx.core.app.NotificationCompat
@@ -383,6 +384,7 @@ class MeshBleService : Service() {
     private var nativeTelemetryStaleWarnAtMs = 0L
     private var nativeTelemetryRunnable: Runnable? = null
     private var nativeTelemetryLocationCallback: LocationCallback? = null
+    private var telemetryWakeLock: PowerManager.WakeLock? = null
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
@@ -1516,6 +1518,19 @@ class MeshBleService : Service() {
                 "channelIndex" to nativeTelemetryChannelIndex,
             )
         )
+
+        // Acquire a partial wake lock to keep the CPU running while the
+        // telemetry loop is active. Without this, older devices suspend the
+        // CPU when the screen is off, stretching Handler.postDelayed intervals
+        // from seconds to minutes.
+        if (telemetryWakeLock == null) {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            telemetryWakeLock = pm.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "MeshCore::TelemetryLoop"
+            ).apply { acquire() }
+            telemetryLogI("telemetry wake lock acquired", emptyMap())
+        }
         if (nativeTelemetryNextPeriodicDueMs == 0L) {
             nativeTelemetryNextPeriodicDueMs = System.currentTimeMillis() + (nativeTelemetryIntervalSeconds * 1000L)
         }
@@ -1543,6 +1558,11 @@ class MeshBleService : Service() {
             mainHandler.removeCallbacks(it)
             nativeTelemetryRunnable = null
             telemetryLogI("native telemetry loop stop", mapOf("reason" to reason))
+        }
+        telemetryWakeLock?.let {
+            if (it.isHeld) it.release()
+            telemetryWakeLock = null
+            telemetryLogI("telemetry wake lock released", emptyMap())
         }
         stopNativeLocationUpdates(reason)
     }
