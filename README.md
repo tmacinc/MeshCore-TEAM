@@ -50,6 +50,7 @@ Core user-facing features that are already implemented:
 - **Autonomous mode** — firmware-side GPS tracking that operates without a phone connection
 - Capability advertisement between peers (`#CAP:` on the telemetry channel)
 - Foreground service for background BLE stability (Android)
+- iOS BLE lifecycle handling with deferred reconnect and stale connection cleanup
 
 ## Custom firmware
 
@@ -73,7 +74,7 @@ Forwarding lets companion radios relay messages on behalf of nodes that can't re
 
 The V1 strategy is driven by incoming telemetry (`#TEL`) events on the tracking channel:
 
-1. **Activation** — forwarding activates when any tracked peer either reports `needsForwarding=true` in its last telemetry, or hasn't been heard for longer than 5 minutes (stale).
+1. **Activation** — forwarding activates for groups larger than 2 members, when any tracked peer either reports `needsForwarding=true` in its last telemetry, or hasn't been heard for longer than 5 minutes (stale).
 2. **Hop calculation** — `maxHops` is set to `max(observed path length across triggering peers) + 1`, clamped to a ceiling of 4.
 3. **Hold-down** — once every tracked peer is directly reachable again (observed path length = 0), a 5-minute hold-down starts. If no peer re-triggers during the hold, `maxHops` drops back to 0 (forwarding off).
 4. **Peer signalling** — each node broadcasts its own `needsForwarding` and `maxPathObserved` values in outgoing telemetry so neighboring nodes can react cooperatively.
@@ -218,40 +219,81 @@ From the Connection tab, tap **Radio Settings** to configure:
 - **Autonomous Mode** (custom firmware + GPS) — configures the firmware to track and broadcast location independently. See [How autonomous mode works](#how-autonomous-mode-works).
 - **Preset / Custom** radio parameters — frequency, bandwidth, spreading factor, coding rate, TX power.
 
-### 7) Location tracking ("telemetry")
+### 7) Location tracking and group setup
 
-Location tracking controls whether the app sends periodic location updates to the mesh.
+Location tracking sends periodic location updates to the mesh via a **private channel**. All group members share telemetry packets on that channel.
 
-1. Go to **Connection → Companion Settings → Location Tracking**.
-2. Enable tracking.
-3. Select a **private channel** for telemetry.
-4. Choose interval and minimum-distance thresholds.
-5. Choose the location source: **phone GPS** or **companion radio GPS**.
+#### Setting up tracking for a group
 
-When tracking is enabled, the app broadcasts your position on the selected channel. Other TEAM users on the same channel will see your marker on their map.
+1. **Create a private channel** — go to the Channels tab and create a new private channel for your group.
+2. **Share the channel** — share the channel link or QR code with all group members so they can join.
+3. **Configure tracking** — each member goes to **Connection → Companion Settings → Location Tracking**, enables tracking, and selects the shared private channel.
+4. **Set preferences** — choose interval, minimum-distance thresholds, and the location source (**phone GPS** or **companion radio GPS**).
+5. **Verify** — once all members are configured, the map should begin to populate with user locations as telemetry packets are received.
 
-When tracking is disabled, contact markers are hidden from the map.
+When tracking is enabled, the app broadcasts your position on the selected channel. Other TEAM users on the same channel will see your marker on their map. When tracking is disabled, contact markers are hidden from the map.
+
+#### Requirements
+
+- All group members must be **contacts** in the companion radio.
+- Each member must have tracking **enabled** and set to the **same private channel**.
+
+#### Automatic contact discovery
+
+When a telemetry packet arrives on the private channel from an unknown user, the app forces an advert request to discover and add the new contact. This works network-wide — new members should be validated and appear on the map after a couple of telemetry intervals.
 
 ## iOS support
 
-TEAM is built with Flutter and targets both Android and iOS. The current state of iOS support:
+TEAM is built with Flutter and fully supports both Android and iOS.
 
-- **What works**: all core UI — connection, contacts, channels, map, messaging, radio settings — runs on iOS. BLE scan/connect and the full sync flow work on real iOS devices (BLE is not available in the iOS simulator).
-- **Background limitations**: Android uses a native foreground service to keep the BLE connection alive indefinitely. iOS does not allow true foreground services. The app declares `bluetooth-central`, `location`, and `processing` background modes, but iOS may suspend or terminate the BLE connection when the app is backgrounded. Reconnection on resume is handled, but gaps are expected.
-- **Permissions**: iOS uses a two-step location permission flow (When In Use → Always). The current implementation requests When In Use; upgrading to Always for background tracking is still in progress.
-- **Notifications**: local notification support is wired but needs further validation on iOS.
+### What works
 
-See `ios/TODO.md` for the detailed iOS parity checklist.
+All core features run on iOS — connection, contacts, channels, map, messaging, radio settings, and the full BLE sync flow. BLE scan/connect works on real iOS devices (BLE is not available in the iOS simulator).
+
+### BLE lifecycle
+
+iOS-specific BLE lifecycle handling has been implemented:
+
+- **Deferred reconnect** — when the app returns to the foreground, it automatically reconnects to the last connected companion radio.
+- **Stale connection cleanup** — on disconnect, lingering CoreBluetooth connections are force-cleaned to prevent ghost connections.
+- **Adapter readiness** — scanning waits for the Bluetooth adapter to report ready (CoreBluetooth can briefly report "unknown" on first launch).
+- **Reconnection manager** — exponential backoff (2 s → 30 s max) handles transient disconnects.
+
+### Permissions
+
+Permissions are requested sequentially to avoid stacking iOS system dialogs:
+
+1. Location (When In Use)
+2. Notifications
+3. Bluetooth (requested last to avoid the local-network prompt appearing before the user has context)
+
+### Background operation
+
+The app declares `bluetooth-central`, `location`, and `processing` background modes. However, iOS does not allow true foreground services like Android. The BLE connection may be suspended when the app is backgrounded for extended periods. Reconnection on resume is handled automatically, but brief gaps are expected compared to Android's always-on foreground service.
+
+### Known limitations
+
+- **Background BLE persistence** — iOS may suspend the BLE connection after several minutes in the background. The app reconnects on resume, but real-time message delivery while backgrounded is not guaranteed.
+- **Always-location upgrade** — the current permission flow requests When In Use location. Upgrading to Always (for background location tracking) is planned.
+
+See [ios/TODO.md](ios/TODO.md) for the detailed iOS parity checklist.
 
 ## Roadmap
 
 Planned features and improvements (see also the [issues tracker](../../issues)):
 
 - **Forwarding V2** — topology-aware routing using the mesh graph model (`#T:` topology events). V2 will build a real-time network graph and use it to compute targeted forward lists (`SET_FORWARD_LIST`) instead of relying solely on `maxHops`. The topology strategy skeleton is in place and currently falls back to V1; the graph model and prefix-based routing logic are next.
-- **iOS background reliability** — improve BLE connection persistence using Core Bluetooth state restoration and background location updates; implement the Always-location upgrade flow for background tracking; validate `flutter_foreground_task` behavior on iOS.
+- **iOS background reliability** — improve BLE connection persistence using Core Bluetooth state restoration; implement the Always-location upgrade flow for background tracking.
+- **Group member location history** — track and display historical location trails for group members on the map.
+- **Offline map save/load** — save downloaded offline map areas to external storage and reload them, enabling map sharing between devices.
+- **Group leader bulk setup** — allow a group leader to export/import channel configuration, waypoints, and offline maps as an external file for easy group onboarding.
 - Topology map visualization — display the mesh network graph on the map screen
-- Enhanced offline map management
 - Multi-companion device switching
+
+### Possible future features
+
+- **User alias** — allow members to use an alias on the mesh, maintaining privacy outside of their private group.
+- **Multiple group handling with tagging** — manage membership in multiple groups with tagging/filtering to keep conversations organized.
 
 ## Troubleshooting
 
