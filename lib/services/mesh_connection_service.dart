@@ -172,6 +172,11 @@ class MeshConnectionService extends ChangeNotifier {
       // Stop reconnection
       _reconnectionManager.stopReconnecting();
 
+      // Disconnect BLE
+      if (_bleManager.isConnected) {
+        await _bleManager.disconnect();
+      }
+
       // Stop foreground task
       await FlutterForegroundTask.stopService();
 

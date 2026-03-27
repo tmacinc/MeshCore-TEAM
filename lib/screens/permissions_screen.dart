@@ -48,10 +48,18 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     });
 
     try {
-      // Check which permissions we need based on platform/version
+      // Build permission list. On iOS, request Bluetooth last because it
+      // triggers the local network prompt — show familiar prompts first.
       final permissionsToRequest = <Permission>[];
 
-      // Bluetooth permissions (Android 12+)
+      // Location permission (required for BLE on Android, GPS for all platforms)
+      permissionsToRequest.add(Permission.location);
+
+      // Notification permission (Android 13+, iOS always)
+      permissionsToRequest.add(Permission.notification);
+
+      // Bluetooth permissions (requested last on iOS to avoid local network
+      // prompt appearing before the user has context)
       if (Platform.isAndroid) {
         if (await _shouldRequestBluetoothScan()) {
           permissionsToRequest.add(Permission.bluetoothScan);
@@ -63,29 +71,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         permissionsToRequest.add(Permission.bluetooth);
       }
 
-      // Location permission (required for BLE on Android, GPS for all platforms)
-      permissionsToRequest.add(Permission.location);
+      debugPrint('🔐 Requesting ${permissionsToRequest.length} permissions sequentially...');
 
-      // Notification permission (Android 13+, iOS always)
-      if (Platform.isAndroid) {
-        permissionsToRequest.add(Permission.notification);
-      } else if (Platform.isIOS) {
-        permissionsToRequest.add(Permission.notification);
-      }
-
-      debugPrint('🔐 Requesting ${permissionsToRequest.length} permissions...');
-
-      // Request all permissions
-      final statuses = await permissionsToRequest.request();
-
-      // Check if all critical permissions were granted
+      // Request permissions one at a time so iOS doesn't stack dialogs.
       bool allGranted = true;
       final deniedPermissions = <String>[];
 
-      for (final entry in statuses.entries) {
-        final permission = entry.key;
-        final status = entry.value;
-
+      for (final permission in permissionsToRequest) {
+        final status = await permission.request();
         debugPrint('🔐 ${permission.toString()}: ${status.toString()}');
 
         if (!status.isGranted) {

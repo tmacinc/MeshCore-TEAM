@@ -57,6 +57,7 @@ class _MapScreenState extends State<MapScreen> {
   Timer? _companionTelemetryTimer;
   Timer? _contactMarkerRefreshTimer;
   Timer? _phoneLocationPollingTimer;
+  bool? _lastShouldUseCompanion;
 
   bool _isFollowingUser = false;
   bool _isHeadingUp = false;
@@ -787,12 +788,18 @@ class _MapScreenState extends State<MapScreen> {
       if (!mounted) return;
       final heading = event.heading;
       if (heading.isFinite) {
-        setState(() {
-          _headingDegrees = heading;
-        });
-        // When stationary, apply compass heading for track-up rotation.
-        if (_isHeadingUp && !_isMovingForTrackUp) {
-          _applyMapRotationForTrackUp();
+        final delta = (_headingDegrees != null)
+            ? (heading - _headingDegrees!).abs()
+            : 360.0;
+        final wrappedDelta = delta > 180 ? 360 - delta : delta;
+        if (wrappedDelta >= 2.0) {
+          setState(() {
+            _headingDegrees = heading;
+          });
+          // When stationary, apply compass heading for track-up rotation.
+          if (_isHeadingUp && !_isMovingForTrackUp) {
+            _applyMapRotationForTrackUp();
+          }
         }
       }
     }, onError: (Object error) {
@@ -839,13 +846,16 @@ class _MapScreenState extends State<MapScreen> {
     final shouldUseCompanion =
         wantsCompanion && connectionVM.isConnected && hasRecentCompanionFix;
 
-    debugPrint('[MapScreen] 📍 LocationPolicy: wantsCompanion=$wantsCompanion'
-        ' connected=${connectionVM.isConnected}'
-        ' hasGpsFix=${connectionVM.hasCompanionGpsFix}'
-        ' fixAgeMs=$fixAgeMs'
-        ' hasRecentFix=$hasRecentCompanionFix'
-        ' → shouldUseCompanion=$shouldUseCompanion'
-        ' phoneSub=${_positionSub != null}');
+    if (shouldUseCompanion != _lastShouldUseCompanion) {
+      debugPrint('[MapScreen] 📍 LocationPolicy: wantsCompanion=$wantsCompanion'
+          ' connected=${connectionVM.isConnected}'
+          ' hasGpsFix=${connectionVM.hasCompanionGpsFix}'
+          ' fixAgeMs=$fixAgeMs'
+          ' hasRecentFix=$hasRecentCompanionFix'
+          ' → shouldUseCompanion=$shouldUseCompanion'
+          ' phoneSub=${_positionSub != null}');
+      _lastShouldUseCompanion = shouldUseCompanion;
+    }
 
     if (shouldUseCompanion) {
       _stopPhoneLocationTracking();

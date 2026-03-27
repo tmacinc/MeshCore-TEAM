@@ -737,6 +737,15 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
             .clamp(50, 500);
     bool isSaving = false;
 
+    // Validate saved hash still exists in current channel list.
+    final validHashes = privateChannels
+        .map((c) => c.hash.toRadixString(16).toLowerCase())
+        .toSet();
+    if (selectedChannelHash != null &&
+        !validHashes.contains(selectedChannelHash)) {
+      selectedChannelHash = null;
+    }
+
     // TEAM-like behavior: if no channel selected, pick the first available private channel.
     if (selectedChannelHash == null && privateChannels.isNotEmpty) {
       selectedChannelHash =
