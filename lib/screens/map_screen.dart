@@ -788,11 +788,12 @@ class _MapScreenState extends State<MapScreen> {
       if (!mounted) return;
       final heading = event.heading;
       if (heading.isFinite) {
-        final delta = (_headingDegrees != null)
-            ? (heading - _headingDegrees!).abs()
-            : 360.0;
+        // Accept the very first heading unconditionally; after that, only
+        // update when the change exceeds 2° to avoid excessive rebuilds.
+        final isFirst = _headingDegrees == null;
+        final delta = isFirst ? 0.0 : (heading - _headingDegrees!).abs();
         final wrappedDelta = delta > 180 ? 360 - delta : delta;
-        if (wrappedDelta >= 2.0) {
+        if (isFirst || wrappedDelta >= 2.0) {
           setState(() {
             _headingDegrees = heading;
           });
