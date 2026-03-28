@@ -24,6 +24,7 @@ class AppSettings {
   final bool mapTrackUpMode; // true = track-up, false = north-up
   final double mapZoomLevel; // 10.0-18.0
   final bool mapShowTrackedUserNames;
+  final bool mapShowWaypointNames;
   final bool distanceRingsEnabled;
   final String distanceRingInterval; // '500m', '1km', '2km'
 
@@ -58,7 +59,8 @@ class AppSettings {
     this.mapProvider = 'mapnik',
     this.mapTrackUpMode = false,
     this.mapZoomLevel = 15.0,
-    this.mapShowTrackedUserNames = false,
+    this.mapShowTrackedUserNames = true,
+    this.mapShowWaypointNames = true,
     this.distanceRingsEnabled = false,
     this.distanceRingInterval = '500m',
     this.lastConnectedDevice,
@@ -87,6 +89,7 @@ class AppSettings {
     bool? mapTrackUpMode,
     double? mapZoomLevel,
     bool? mapShowTrackedUserNames,
+    bool? mapShowWaypointNames,
     bool? distanceRingsEnabled,
     String? distanceRingInterval,
     String? lastConnectedDevice,
@@ -119,6 +122,8 @@ class AppSettings {
       mapZoomLevel: mapZoomLevel ?? this.mapZoomLevel,
       mapShowTrackedUserNames:
           mapShowTrackedUserNames ?? this.mapShowTrackedUserNames,
+      mapShowWaypointNames:
+          mapShowWaypointNames ?? this.mapShowWaypointNames,
       distanceRingsEnabled: distanceRingsEnabled ?? this.distanceRingsEnabled,
       distanceRingInterval: distanceRingInterval ?? this.distanceRingInterval,
       lastConnectedDevice: lastConnectedDevice ?? this.lastConnectedDevice,

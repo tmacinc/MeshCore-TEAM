@@ -73,6 +73,8 @@ class _MapScreenState extends State<MapScreen> {
   bool _isWaypointMultiSelectMode = false;
   Set<String> _selectedWaypointIds = <String>{};
 
+  int? _draggingPointIndex;
+
   bool _isGroupStatusOpen = false;
 
   LatLng? _navTarget;
@@ -476,6 +478,7 @@ class _MapScreenState extends State<MapScreen> {
       _routeDraftName = '';
       _routeDraftDescription = '';
       _routeDraftPoints = <LatLng>[];
+      _draggingPointIndex = null;
     });
   }
 
@@ -483,6 +486,11 @@ class _MapScreenState extends State<MapScreen> {
     if (_routeDraftPoints.isEmpty) return;
     setState(() {
       _routeDraftPoints = List<LatLng>.of(_routeDraftPoints)..removeLast();
+      // Clear selection if the removed point was selected or index is now out of range.
+      if (_draggingPointIndex != null &&
+          _draggingPointIndex! >= _routeDraftPoints.length) {
+        _draggingPointIndex = null;
+      }
     });
   }
 
@@ -560,15 +568,17 @@ class _MapScreenState extends State<MapScreen> {
       return;
     }
 
+    // Capture providers before the async dialog to avoid
+    // BuildContext use after an async gap (dependents.isEmpty).
+    final db = context.read<AppDatabase>();
+    final connectionVM = context.read<ConnectionViewModel>();
+
     final meta = await _showRouteMetaDialog(
       initialName: _routeDraftName,
       initialDescription: _routeDraftDescription,
       isEdit: _editingRouteId != null,
     );
     if (meta == null) return;
-
-    final db = context.read<AppDatabase>();
-    final connectionVM = context.read<ConnectionViewModel>();
     final creatorNodeId = connectionVM.deviceName.trim().isNotEmpty
         ? connectionVM.deviceName.trim()
         : 'local';
@@ -725,93 +735,102 @@ class _MapScreenState extends State<MapScreen> {
                   Text(waypoint.description),
                 ],
                 const SizedBox(height: 12),
-                ListTile(
-                  leading: const Icon(Icons.navigation),
-                  title: const Text('Navigate to'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _startNavigation(
-                      LatLng(waypoint.latitude, waypoint.longitude),
-                      waypoint.name,
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.share),
-                  title: const Text('Share via Mesh'),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-
-                    final repo = this.context.read<MessageRepository>();
-                    final ok = await repo.sendWaypointToMesh(waypoint);
-                    if (!mounted) return;
-
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          ok
-                              ? 'Waypoint shared to mesh'
-                              : 'Failed to share waypoint',
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.navigation),
+                          title: const Text('Navigate to'),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            _startNavigation(
+                              LatLng(waypoint.latitude, waypoint.longitude),
+                              waypoint.name,
+                            );
+                          },
                         ),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.check_circle),
-                  title: const Text('Select Multiple'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    setState(() {
-                      _isWaypointMultiSelectMode = true;
-                      _selectedWaypointIds = <String>{waypoint.id};
-                    });
-                  },
-                ),
-                if (!waypoint.isReceived)
-                  ListTile(
-                    leading: const Icon(Icons.edit),
-                    title: Text(
-                      type == waypoint_model.WaypointType.route
-                          ? 'Edit Route Points'
-                          : 'Edit',
-                    ),
-                    onTap: () async {
-                      Navigator.of(context).pop();
-                      if (type == waypoint_model.WaypointType.route) {
-                        _startRouteEditMode(waypoint);
-                        return;
-                      }
-                      final editResult =
-                          await this.context.showWaypointEditDialog(
-                                initialName: waypoint.name,
-                                initialDescription: waypoint.description,
-                                initialType: type,
+                        ListTile(
+                          leading: const Icon(Icons.share),
+                          title: const Text('Share via Mesh'),
+                          onTap: () async {
+                            Navigator.of(context).pop();
+
+                            final repo = this.context.read<MessageRepository>();
+                            final ok = await repo.sendWaypointToMesh(waypoint);
+                            if (!mounted) return;
+
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  ok
+                                      ? 'Waypoint shared to mesh'
+                                      : 'Failed to share waypoint',
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.check_circle),
+                          title: const Text('Select Multiple'),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            setState(() {
+                              _isWaypointMultiSelectMode = true;
+                              _selectedWaypointIds = <String>{waypoint.id};
+                            });
+                          },
+                        ),
+                        if (!waypoint.isReceived)
+                          ListTile(
+                            leading: const Icon(Icons.edit),
+                            title: Text(
+                              type == waypoint_model.WaypointType.route
+                                  ? 'Edit Route Points'
+                                  : 'Edit',
+                            ),
+                            onTap: () async {
+                              Navigator.of(context).pop();
+                              if (type == waypoint_model.WaypointType.route) {
+                                _startRouteEditMode(waypoint);
+                                return;
+                              }
+                              final editResult =
+                                  await this.context.showWaypointEditDialog(
+                                        initialName: waypoint.name,
+                                        initialDescription: waypoint.description,
+                                        initialType: type,
+                                      );
+                              if (editResult == null) return;
+                              await db.waypointsDao.updateWaypoint(
+                                waypoint.id,
+                                WaypointsCompanion(
+                                  name: Value(editResult.name),
+                                  description: Value(editResult.description),
+                                  waypointType:
+                                      Value(editResult.type.name.toUpperCase()),
+                                ),
                               );
-                      if (editResult == null) return;
-                      await db.waypointsDao.updateWaypoint(
-                        waypoint.id,
-                        WaypointsCompanion(
-                          name: Value(editResult.name),
-                          description: Value(editResult.description),
-                          waypointType:
-                              Value(editResult.type.name.toUpperCase()),
+                            },
+                          ),
+                        ListTile(
+                          leading: const Icon(Icons.delete),
+                          title: const Text('Delete'),
+                          onTap: () async {
+                            Navigator.of(context).pop();
+                            final ok = await _confirm(
+                              'Delete waypoint?',
+                              'This will delete "${waypoint.name}".',
+                            );
+                            if (!ok) return;
+                            await db.waypointsDao.deleteWaypoint(waypoint.id);
+                          },
                         ),
-                      );
-                    },
+                      ],
+                    ),
                   ),
-                ListTile(
-                  leading: const Icon(Icons.delete),
-                  title: const Text('Delete'),
-                  onTap: () async {
-                    Navigator.of(context).pop();
-                    final ok = await _confirm(
-                      'Delete waypoint?',
-                      'This will delete "${waypoint.name}".',
-                    );
-                    if (!ok) return;
-                    await db.waypointsDao.deleteWaypoint(waypoint.id);
-                  },
                 ),
               ],
             ),
@@ -1252,6 +1271,8 @@ class _MapScreenState extends State<MapScreen> {
     );
     final showTrackedUserNames =
         settingsService.settings.mapShowTrackedUserNames;
+    final showWaypointNames =
+        settingsService.settings.mapShowWaypointNames;
 
     final telemetryConfigured = settingsService.settings.telemetryEnabled &&
         (settingsService.settings.telemetryChannelHash?.isNotEmpty ?? false);
@@ -1430,6 +1451,10 @@ class _MapScreenState extends State<MapScreen> {
                   await settingsService
                       .setMapShowTrackedUserNames(!showTrackedUserNames);
                   break;
+                case 'toggle_waypoint_names':
+                  await settingsService
+                      .setMapShowWaypointNames(!showWaypointNames);
+                  break;
                 case 'download_map_area':
                   _openDownloadMapAreaDialog(provider: tileConfig);
                   break;
@@ -1484,6 +1509,22 @@ class _MapScreenState extends State<MapScreen> {
                     ],
                   ),
                 ),
+                PopupMenuItem<String>(
+                  value: 'toggle_waypoint_names',
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Show Waypoint & Route Names'),
+                      ),
+                      Icon(
+                        showWaypointNames
+                            ? Icons.check
+                            : Icons.check_box_outline_blank,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
               ];
             },
           ),
@@ -1508,10 +1549,21 @@ class _MapScreenState extends State<MapScreen> {
               ),
               onTap: (tapPosition, point) {
                 if (_isRouteEditMode) {
-                  setState(() {
-                    _routeDraftPoints = List<LatLng>.of(_routeDraftPoints)
-                      ..add(point);
-                  });
+                  if (_draggingPointIndex != null) {
+                    // Place the selected point at the tapped location.
+                    setState(() {
+                      _routeDraftPoints =
+                          List<LatLng>.of(_routeDraftPoints)
+                            ..[_draggingPointIndex!] = point;
+                      _draggingPointIndex = null;
+                    });
+                  } else {
+                    // Add a new point.
+                    setState(() {
+                      _routeDraftPoints = List<LatLng>.of(_routeDraftPoints)
+                        ..add(point);
+                    });
+                  }
                 }
               },
               onPositionChanged: (camera, hasGesture) {
@@ -1685,8 +1737,65 @@ class _MapScreenState extends State<MapScreen> {
                     );
                   }
 
-                  if (routeLines.isEmpty) return const SizedBox.shrink();
-                  return PolylineLayer(polylines: routeLines);
+                  if (routeLines.isEmpty && !(_isRouteEditMode && _routeDraftPoints.isNotEmpty)) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Stack(
+                    children: [
+                      if (routeLines.isNotEmpty)
+                        PolylineLayer(polylines: routeLines),
+                      if (_isRouteEditMode && _routeDraftPoints.isNotEmpty)
+                        MarkerLayer(
+                          markers: [
+                            for (int i = 0; i < _routeDraftPoints.length; i++)
+                              Marker(
+                                point: _routeDraftPoints[i],
+                                width: 36,
+                                height: 36,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      if (_draggingPointIndex == i) {
+                                        // Deselect if tapping same point.
+                                        _draggingPointIndex = null;
+                                      } else {
+                                        // Select this point for moving.
+                                        _draggingPointIndex = i;
+                                      }
+                                    });
+                                  },
+                                  child: Center(
+                                    child: Container(
+                                      width: _draggingPointIndex == i ? 26 : 20,
+                                      height: _draggingPointIndex == i ? 26 : 20,
+                                      decoration: BoxDecoration(
+                                        color: _draggingPointIndex == i
+                                            ? Colors.blue
+                                            : i == 0
+                                                ? Colors.green
+                                                : i ==
+                                                        _routeDraftPoints
+                                                                .length -
+                                                            1
+                                                    ? Colors.red
+                                                    : Colors.orange,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: _draggingPointIndex == i
+                                              ? 3
+                                              : 2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                    ],
+                  );
                 },
               ),
               StreamBuilder<List<WaypointData>>(
@@ -1700,8 +1809,8 @@ class _MapScreenState extends State<MapScreen> {
                       for (final wp in waypoints)
                         Marker(
                           point: LatLng(wp.latitude, wp.longitude),
-                          width: 40,
-                          height: 40,
+                          width: showWaypointNames ? 120 : 40,
+                          height: showWaypointNames ? 60 : 40,
                           child: GestureDetector(
                             onTap: () {
                               if (_isWaypointMultiSelectMode) {
@@ -1727,66 +1836,108 @@ class _MapScreenState extends State<MapScreen> {
 
                                 return Transform.rotate(
                                   angle: counterRotationRad,
-                                  child: Stack(
-                                    alignment: Alignment.center,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      if (_isWaypointMultiSelectMode)
-                                        Container(
-                                          width: 34,
-                                          height: 34,
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? Theme.of(context)
+                                      Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          if (_isWaypointMultiSelectMode)
+                                            Container(
+                                              width: 34,
+                                              height: 34,
+                                              decoration: BoxDecoration(
+                                                color: isSelected
+                                                    ? Theme.of(context)
+                                                        .colorScheme
+                                                        .primary
+                                                    : Colors.transparent,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: isSelected
+                                                      ? Theme.of(context)
+                                                          .colorScheme
+                                                          .primary
+                                                      : Theme.of(context)
+                                                          .colorScheme
+                                                          .outline,
+                                                  width: 2,
+                                                ),
+                                              ),
+                                            ),
+                                          if (showReceivedBadge)
+                                            Container(
+                                              width: 34,
+                                              height: 34,
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context)
                                                     .colorScheme
-                                                    .primary
-                                                : Colors.transparent,
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: isSelected
-                                                  ? Theme.of(context)
+                                                    .surface,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Theme.of(context)
                                                       .colorScheme
-                                                      .primary
-                                                  : Theme.of(context)
-                                                      .colorScheme
-                                                      .outline,
-                                              width: 2,
+                                                      .primary,
+                                                  width: 2,
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      if (showReceivedBadge)
-                                        Container(
-                                          width: 34,
-                                          height: 34,
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .surface,
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary,
-                                              width: 2,
+                                          if (waypoint_model.WaypointType.fromString(
+                                                wp.waypointType) ==
+                                              waypoint_model.WaypointType.route)
+                                            Container(
+                                              width: 10,
+                                              height: 10,
+                                              decoration: BoxDecoration(
+                                                color: Colors.deepPurple,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                            )
+                                          else
+                                            Text(
+                                              waypoint_model.WaypointType.fromString(
+                                                wp.waypointType,
+                                              ).icon,
+                                              style: const TextStyle(fontSize: 18),
                                             ),
-                                          ),
-                                        ),
-                                      Text(
-                                        waypoint_model.WaypointType.fromString(
-                                          wp.waypointType,
-                                        ).icon,
-                                        style: const TextStyle(fontSize: 18),
+                                          if (wp.isNew)
+                                            Positioned(
+                                              top: 6,
+                                              right: 6,
+                                              child: Container(
+                                                width: 8,
+                                                height: 8,
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.red,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                      if (wp.isNew)
-                                        Positioned(
-                                          top: 6,
-                                          right: 6,
-                                          child: Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: const BoxDecoration(
-                                              color: Colors.red,
-                                              shape: BoxShape.circle,
+                                      if (showWaypointNames)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 1,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black87,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            wp.name,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              height: 1.1,
                                             ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                     ],
@@ -1869,9 +2020,11 @@ class _MapScreenState extends State<MapScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(10),
                   child: Text(
-                    _routeDraftPoints.isEmpty
-                        ? 'Route mode: tap map to add first point'
-                        : 'Route mode: ${_routeDraftPoints.length} points',
+                    _draggingPointIndex != null
+                        ? 'Tap map to move point ${_draggingPointIndex! + 1} (tap point again to cancel)'
+                        : _routeDraftPoints.isEmpty
+                            ? 'Route mode: tap map to add first point'
+                            : 'Route mode: ${_routeDraftPoints.length} points (tap a point to move it)',
                   ),
                 ),
               ),

@@ -27,6 +27,8 @@ class SettingsService extends ChangeNotifier {
   static const String _keyMapZoomLevel = 'map_zoom_level';
   static const String _keyMapShowTrackedUserNames =
       'map_show_tracked_user_names';
+  static const String _keyMapShowWaypointNames =
+      'map_show_waypoint_names';
   static const String _keyDistanceRingsEnabled = 'distance_rings_enabled';
   static const String _keyDistanceRingInterval = 'distance_ring_interval';
   static const String _keyLastConnectedDevice = 'last_connected_device';
@@ -142,7 +144,9 @@ class SettingsService extends ChangeNotifier {
       mapTrackUpMode: _prefs.getBool(_keyMapTrackUpMode) ?? false,
       mapZoomLevel: _prefs.getDouble(_keyMapZoomLevel) ?? 15.0,
       mapShowTrackedUserNames:
-          _prefs.getBool(_keyMapShowTrackedUserNames) ?? false,
+          _prefs.getBool(_keyMapShowTrackedUserNames) ?? true,
+      mapShowWaypointNames:
+          _prefs.getBool(_keyMapShowWaypointNames) ?? true,
       distanceRingsEnabled: _prefs.getBool(_keyDistanceRingsEnabled) ?? false,
       distanceRingInterval:
           _prefs.getString(_keyDistanceRingInterval) ?? '500m',
@@ -302,6 +306,13 @@ class SettingsService extends ChangeNotifier {
   Future<void> setMapShowTrackedUserNames(bool enabled) async {
     await _prefs.setBool(_keyMapShowTrackedUserNames, enabled);
     _settings = _settings.copyWith(mapShowTrackedUserNames: enabled);
+    notifyListeners();
+  }
+
+  /// Set waypoint/route name labels on the map.
+  Future<void> setMapShowWaypointNames(bool enabled) async {
+    await _prefs.setBool(_keyMapShowWaypointNames, enabled);
+    _settings = _settings.copyWith(mapShowWaypointNames: enabled);
     notifyListeners();
   }
 

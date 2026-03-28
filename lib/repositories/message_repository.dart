@@ -2,6 +2,7 @@
 // Licensed under CC BY-NC-SA 4.0
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
@@ -36,7 +37,14 @@ import 'package:drift/drift.dart' as drift;
 /// Message Repository
 /// Handles message sync, sending, and database operations
 /// Matches Android MessageRepository.kt implementation
+///
+/// MeshCore limits channel messages to 172 bytes at the BLE frame level,
+/// but the firmware adds routing/encryption overhead that reduces the
+/// effective text payload. Empirically the receiver truncates around 148
+/// characters, so we use 140 as a safe ceiling.
 class MessageRepository {
+  static const int maxMeshMessageBytes = 140;
+
   final BleConnectionManager _bleManager;
   final BleService _bleService;
   final AppDatabase _database;
@@ -68,6 +76,11 @@ class MessageRepository {
   // then again via sync. Also protects against concurrent handling races.
   static const Duration _recentWaypointTtl = Duration(seconds: 10);
   final Map<String, int> _recentWaypointKeysMs = <String, int>{};
+
+  // Multi-part waypoint route reassembly buffer.
+  // Key: "senderName:meshId", Value: map of partNum -> routeChunk.
+  final Map<String, _WaypointPartBuffer> _waypointPartBuffers =
+      <String, _WaypointPartBuffer>{};
 
   // Telemetry de-dupe guard: #TEL messages may also be delivered via PUSH and
   // then again via sync. Duplicates are mostly harmless but can cause extra
@@ -675,6 +688,18 @@ class MessageRepository {
         return;
       }
 
+      // Multi-part route continuation messages.
+      if (WaypointRouteContinuation.isContinuationMessage(messageContent)) {
+        debugPrint(
+            '[Waypoints] 📍 Route continuation message intercepted');
+        await _handleWaypointRouteContinuation(
+          senderName: senderName,
+          content: messageContent,
+          isFromSelf: response.isFromSelf,
+        );
+        return;
+      }
+
       // Look up channel by index to get actual channel hash
       final channel =
           await _channelsDao.getChannelByIndex(response.channelIndex);
@@ -804,27 +829,141 @@ class MessageRepository {
     required String content,
     required bool isFromSelf,
   }) async {
+    debugPrint('[WaypointRX] 📥 Raw content (${content.length} chars): $content');
     final msg = WaypointMeshMessage.parse(content);
     if (msg == null) {
-      debugPrint('[Waypoints] ⚠️ Failed to parse waypoint payload');
+      debugPrint('[WaypointRX] ⚠️ Failed to parse waypoint payload');
       return;
     }
-
-    // Suppress duplicates ASAP (before awaits) to avoid races.
-    final meshIdKey = (msg.meshId ?? '').trim();
-    final key = meshIdKey.isNotEmpty
-        ? 'meshId:$senderName:$meshIdKey'
-        : 'content:$senderName:${content.hashCode}';
-    if (_shouldSuppressWaypointKey(key)) {
-      debugPrint('[Waypoints] 🔁 Duplicate waypoint suppressed (recent key)');
-      return;
-    }
+    debugPrint('[WaypointRX] ✅ Parsed: name=${msg.name}, type=${msg.type}, lat=${msg.latitude}, lon=${msg.longitude}, meshId=${msg.meshId}, routePoints=${msg.routePoints.length}, desc=${msg.description}');
 
     // If we sent this waypoint message ourselves, do not store it as a received
     // waypoint. We already have (or should have) a local copy and storing the
     // echo can create duplicates (especially when creator IDs differ).
     if (isFromSelf) {
       debugPrint('[Waypoints] ↩️ Ignoring self-sent waypoint message');
+      return;
+    }
+
+    // Check for multi-part indicator (8th field like "1/3").
+    final partInfo = WaypointMeshMessage.parsePartInfo(content);
+    debugPrint('[WaypointRX] 🔍 partInfo=$partInfo');
+    if (partInfo != null && partInfo.isMultiPart) {
+      // This is part 1 of a multi-part route. Buffer it and wait for the rest.
+      final meshId = (msg.meshId ?? '').trim();
+      final bufferKey = '$senderName:$meshId';
+      _waypointPartBuffers[bufferKey] = _WaypointPartBuffer(
+        msg: msg,
+        senderName: senderName,
+        totalParts: partInfo.totalParts,
+        receivedAt: DateTime.now(),
+      );
+      // Store part 1's raw route chunk text directly from the message
+      // to preserve trailing '~' separators for correct reassembly.
+      final contentParts =
+          content.substring(WaypointMeshMessage.prefix.length).split('|');
+      final rawRouteChunk = contentParts.length >= 7 ? contentParts[6] : '';
+      _waypointPartBuffers[bufferKey]!.chunks[1] = rawRouteChunk;
+      debugPrint(
+          '[WaypointRX] 📦 Buffered part 1/${partInfo.totalParts} for meshId=$meshId, chunk="$rawRouteChunk"');
+      _cleanupStalePartBuffers();
+      return;
+    }
+
+    // Single-message waypoint (no multi-part). Process immediately.
+    await _processReceivedWaypoint(msg: msg, senderName: senderName);
+  }
+
+  Future<void> _handleWaypointRouteContinuation({
+    required String senderName,
+    required String content,
+    required bool isFromSelf,
+  }) async {
+    debugPrint('[WaypointRX] 📥 #WRC raw content (${content.length} chars): $content');
+    if (isFromSelf) return;
+
+    final cont = WaypointRouteContinuation.parse(content);
+    if (cont == null) {
+      debugPrint('[Waypoints] ⚠️ Failed to parse #WRC payload');
+      return;
+    }
+
+    final bufferKey = '$senderName:${cont.meshId}';
+    final buffer = _waypointPartBuffers[bufferKey];
+    if (buffer == null) {
+      debugPrint(
+          '[Waypoints] ⚠️ No buffer for continuation (meshId=${cont.meshId})');
+      return;
+    }
+
+    buffer.chunks[cont.partNum] = cont.routeChunk;
+    debugPrint(
+        '[WaypointRX] 📦 Received part ${cont.partNum}/${cont.totalParts} for meshId=${cont.meshId}, chunk="${cont.routeChunk}"');
+    debugPrint(
+        '[WaypointRX] 📊 Buffer has ${buffer.chunks.length}/${buffer.totalParts} parts: keys=${buffer.chunks.keys.toList()}');
+
+    // Check if all parts arrived.
+    if (buffer.chunks.length >= buffer.totalParts) {
+      _waypointPartBuffers.remove(bufferKey);
+
+      // Reassemble route coordinates in order.
+      final sortedKeys = buffer.chunks.keys.toList()..sort();
+      final fullCoords =
+          sortedKeys.map((k) => buffer.chunks[k]!).join();
+      debugPrint('[WaypointRX] 🔗 Joined coords (${fullCoords.length} chars): $fullCoords');
+      // Remove trailing '~' if present from chunk boundaries.
+      final trimmedCoords =
+          fullCoords.endsWith('~') ? fullCoords.substring(0, fullCoords.length - 1) : fullCoords;
+      debugPrint('[WaypointRX] ✂️ Trimmed coords: $trimmedCoords');
+      final allPoints = decodeRouteCoordinatesFromMesh(trimmedCoords);
+      debugPrint('[WaypointRX] 📍 Decoded ${allPoints.length} points');
+
+      final reassembled = WaypointMeshMessage(
+        meshId: buffer.msg.meshId,
+        name: buffer.msg.name,
+        latitude: buffer.msg.latitude,
+        longitude: buffer.msg.longitude,
+        description: buffer.msg.description,
+        type: buffer.msg.type,
+        routePoints: allPoints,
+      );
+
+      debugPrint(
+          '[WaypointRX] ✅ Reassembled ${allPoints.length} route points from ${buffer.totalParts} parts');
+      debugPrint(
+          '[WaypointRX] 📍 Reassembled msg: name=${reassembled.name}, type=${reassembled.type}, meshId=${reassembled.meshId}, points=${reassembled.routePoints.length}');
+      await _processReceivedWaypoint(
+        msg: reassembled,
+        senderName: senderName,
+      );
+    }
+  }
+
+  /// Remove stale part buffers older than 60 seconds.
+  void _cleanupStalePartBuffers() {
+    final now = DateTime.now();
+    _waypointPartBuffers.removeWhere(
+      (_, buf) => now.difference(buf.receivedAt).inSeconds > 60,
+    );
+  }
+
+  /// Core waypoint processing shared by single-message and reassembled
+  /// multi-part waypoints.
+  Future<void> _processReceivedWaypoint({
+    required WaypointMeshMessage msg,
+    required String senderName,
+  }) async {
+    debugPrint('[WaypointRX] 🔧 _processReceivedWaypoint: name=${msg.name}, type=${msg.type}, meshId=${msg.meshId}, lat=${msg.latitude}, lon=${msg.longitude}, routePoints=${msg.routePoints.length}, desc="${msg.description}"');
+    for (var i = 0; i < msg.routePoints.length; i++) {
+      debugPrint('[WaypointRX]   point[$i]: ${msg.routePoints[i].latitude}, ${msg.routePoints[i].longitude}');
+    }
+    // Suppress duplicates ASAP (before awaits) to avoid races.
+    final meshIdKey = (msg.meshId ?? '').trim();
+    final key = meshIdKey.isNotEmpty
+        ? 'meshId:$senderName:$meshIdKey'
+        : 'name:$senderName:${msg.name.hashCode}';
+    if (_shouldSuppressWaypointKey(key)) {
+      debugPrint('[Waypoints] 🔁 Duplicate waypoint suppressed (recent key)');
       return;
     }
 
@@ -937,14 +1076,13 @@ class MessageRepository {
           '[Waypoints] ✅ Inserted received waypoint: ${msg.name} (meshId=$finalMeshId)');
     }
 
-    if (!isFromSelf) {
-      final type = waypoint_model.WaypointType.fromString(msg.type);
-      await _notificationService.showWaypointNotification(
-        waypointName: msg.name,
-        waypointType: type.displayName,
-        creatorName: senderName,
-      );
-    }
+    // _processReceivedWaypoint is only called for non-self messages.
+    final type = waypoint_model.WaypointType.fromString(msg.type);
+    await _notificationService.showWaypointNotification(
+      waypointName: msg.name,
+      waypointType: type.displayName,
+      creatorName: senderName,
+    );
   }
 
   /// Send a TEAM-compatible waypoint share message (`#WAY:`) on the selected
@@ -1003,7 +1141,7 @@ class MessageRepository {
         ? routePoints.first
         : latlong2.LatLng(waypoint.latitude, waypoint.longitude);
 
-    final msg = WaypointMeshMessage(
+    final waypointMsg = WaypointMeshMessage(
       meshId: meshId,
       name: waypoint.name,
       latitude: routeAnchor.latitude,
@@ -1011,11 +1149,26 @@ class MessageRepository {
       description: isRoute ? routePayload.description : waypoint.description,
       type: waypoint.waypointType,
       routePoints: routePoints,
-    ).encode();
+    );
+
+    final parts = waypointMsg.splitForMesh(maxMeshMessageBytes);
 
     debugPrint(
-        '[Waypoints] 📤 Sending waypoint on channelIndex=${channel.channelIndex}: $msg');
-    return _bleService.sendChannelMessage(channel.channelIndex, msg);
+        '[Waypoints] 📤 Sending waypoint on channelIndex=${channel.channelIndex} (${parts.length} part(s))');
+
+    for (var i = 0; i < parts.length; i++) {
+      if (i > 0) {
+        // Small delay between parts so the mesh can process each frame.
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+      final ok =
+          await _bleService.sendChannelMessage(channel.channelIndex, parts[i]);
+      if (!ok) {
+        debugPrint('[Waypoints] ❌ Failed to send part ${i + 1}/${parts.length}');
+        return false;
+      }
+    }
+    return true;
   }
 
   /// Send multiple waypoints sequentially.
@@ -1816,4 +1969,20 @@ class MessageRepository {
     _telemetryStreamController.close();
     _topologyStreamController.close();
   }
+}
+
+/// Buffer for reassembling multi-part waypoint route messages.
+class _WaypointPartBuffer {
+  final WaypointMeshMessage msg;
+  final String senderName;
+  final int totalParts;
+  final DateTime receivedAt;
+  final Map<int, String> chunks = <int, String>{};
+
+  _WaypointPartBuffer({
+    required this.msg,
+    required this.senderName,
+    required this.totalParts,
+    required this.receivedAt,
+  });
 }
