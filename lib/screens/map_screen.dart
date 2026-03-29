@@ -504,9 +504,9 @@ class _MapScreenState extends State<MapScreen> {
 
     final result = await showDialog<({String name, String description})>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setInnerState) {
+          builder: (dialogContext, setInnerState) {
             final canSave = nameCtrl.text.trim().isNotEmpty;
             return AlertDialog(
               title: Text(isEdit ? 'Edit Route' : 'Save Route'),
@@ -534,16 +534,17 @@ class _MapScreenState extends State<MapScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
                   child: const Text('Cancel'),
                 ),
                 TextButton(
                   onPressed: canSave
                       ? () {
-                          Navigator.of(context).pop((
+                          final res = (
                             name: nameCtrl.text.trim(),
                             description: descCtrl.text.trim(),
-                          ));
+                          );
+                          Navigator.of(dialogContext).pop(res);
                         }
                       : null,
                   child: Text(isEdit ? 'Save' : 'Create'),
@@ -555,8 +556,13 @@ class _MapScreenState extends State<MapScreen> {
       },
     );
 
-    nameCtrl.dispose();
-    descCtrl.dispose();
+    // Defer disposal until the dialog's exit animation completes,
+    // otherwise the TextField widgets still reference the controllers
+    // during the transition and trigger "used after being disposed".
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      nameCtrl.dispose();
+      descCtrl.dispose();
+    });
     return result;
   }
 
