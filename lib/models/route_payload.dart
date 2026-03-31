@@ -91,7 +91,8 @@ RoutePayload decodeRoutePayload(
       points.add(LatLng(fallbackLatitude, fallbackLongitude));
     }
 
-    return RoutePayload(description: desc, points: points, colorValue: colorValue);
+    return RoutePayload(
+        description: desc, points: points, colorValue: colorValue);
   } catch (_) {
     return RoutePayload(
       description: rawDescription,
@@ -102,7 +103,8 @@ RoutePayload decodeRoutePayload(
 
 String encodeRouteCoordinatesForMesh(List<LatLng> points) {
   return points
-      .map((p) => '${p.latitude.toStringAsFixed(6)},${p.longitude.toStringAsFixed(6)}')
+      .map((p) =>
+          '${p.latitude.toStringAsFixed(6)},${p.longitude.toStringAsFixed(6)}')
       .join('~');
 }
 

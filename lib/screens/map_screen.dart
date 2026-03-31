@@ -498,7 +498,8 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  Future<({String name, String description, int? colorValue})?> _showRouteMetaDialog({
+  Future<({String name, String description, int? colorValue})?>
+      _showRouteMetaDialog({
     required String initialName,
     required String initialDescription,
     required int? initialColorValue,
@@ -508,7 +509,8 @@ class _MapScreenState extends State<MapScreen> {
     final descCtrl = TextEditingController(text: initialDescription);
     int? selectedColor = initialColorValue ?? kRouteColorPresets.first;
 
-    final result = await showDialog<({String name, String description, int? colorValue})>(
+    final result =
+        await showDialog<({String name, String description, int? colorValue})>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
@@ -551,7 +553,8 @@ class _MapScreenState extends State<MapScreen> {
                       children: [
                         for (final preset in kRouteColorPresets)
                           GestureDetector(
-                            onTap: () => setInnerState(() => selectedColor = preset),
+                            onTap: () =>
+                                setInnerState(() => selectedColor = preset),
                             child: Container(
                               width: 32,
                               height: 32,
@@ -567,7 +570,8 @@ class _MapScreenState extends State<MapScreen> {
                                 boxShadow: selectedColor == preset
                                     ? [
                                         BoxShadow(
-                                          color: Color(preset).withValues(alpha: 0.6),
+                                          color: Color(preset)
+                                              .withValues(alpha: 0.6),
                                           blurRadius: 6,
                                           spreadRadius: 1,
                                         ),
@@ -855,12 +859,13 @@ class _MapScreenState extends State<MapScreen> {
                                 _startRouteEditMode(waypoint);
                                 return;
                               }
-                              final editResult =
-                                  await this.context.showWaypointEditDialog(
-                                        initialName: waypoint.name,
-                                        initialDescription: waypoint.description,
-                                        initialType: type,
-                                      );
+                              final editResult = await this
+                                  .context
+                                  .showWaypointEditDialog(
+                                    initialName: waypoint.name,
+                                    initialDescription: waypoint.description,
+                                    initialType: type,
+                                  );
                               if (editResult == null) return;
                               await db.waypointsDao.updateWaypoint(
                                 waypoint.id,
@@ -1329,8 +1334,7 @@ class _MapScreenState extends State<MapScreen> {
     );
     final showTrackedUserNames =
         settingsService.settings.mapShowTrackedUserNames;
-    final showWaypointNames =
-        settingsService.settings.mapShowWaypointNames;
+    final showWaypointNames = settingsService.settings.mapShowWaypointNames;
 
     final telemetryConfigured = settingsService.settings.telemetryEnabled &&
         (settingsService.settings.telemetryChannelHash?.isNotEmpty ?? false);
@@ -1610,9 +1614,8 @@ class _MapScreenState extends State<MapScreen> {
                   if (_draggingPointIndex != null) {
                     // Place the selected point at the tapped location.
                     setState(() {
-                      _routeDraftPoints =
-                          List<LatLng>.of(_routeDraftPoints)
-                            ..[_draggingPointIndex!] = point;
+                      _routeDraftPoints = List<LatLng>.of(_routeDraftPoints)
+                        ..[_draggingPointIndex!] = point;
                       _draggingPointIndex = null;
                     });
                   } else {
@@ -1799,7 +1802,8 @@ class _MapScreenState extends State<MapScreen> {
                     );
                   }
 
-                  if (routeLines.isEmpty && !(_isRouteEditMode && _routeDraftPoints.isNotEmpty)) {
+                  if (routeLines.isEmpty &&
+                      !(_isRouteEditMode && _routeDraftPoints.isNotEmpty)) {
                     return const SizedBox.shrink();
                   }
 
@@ -1830,7 +1834,8 @@ class _MapScreenState extends State<MapScreen> {
                                   child: Center(
                                     child: Container(
                                       width: _draggingPointIndex == i ? 26 : 20,
-                                      height: _draggingPointIndex == i ? 26 : 20,
+                                      height:
+                                          _draggingPointIndex == i ? 26 : 20,
                                       decoration: BoxDecoration(
                                         color: _draggingPointIndex == i
                                             ? Colors.blue
@@ -1845,9 +1850,8 @@ class _MapScreenState extends State<MapScreen> {
                                         shape: BoxShape.circle,
                                         border: Border.all(
                                           color: Colors.white,
-                                          width: _draggingPointIndex == i
-                                              ? 3
-                                              : 2,
+                                          width:
+                                              _draggingPointIndex == i ? 3 : 2,
                                         ),
                                       ),
                                     ),
@@ -1944,8 +1948,9 @@ class _MapScreenState extends State<MapScreen> {
                                                 ),
                                               ),
                                             ),
-                                          if (waypoint_model.WaypointType.fromString(
-                                                wp.waypointType) ==
+                                          if (waypoint_model.WaypointType
+                                                  .fromString(
+                                                      wp.waypointType) ==
                                               waypoint_model.WaypointType.route)
                                             Container(
                                               width: 10,
@@ -1961,10 +1966,12 @@ class _MapScreenState extends State<MapScreen> {
                                             )
                                           else
                                             Text(
-                                              waypoint_model.WaypointType.fromString(
+                                              waypoint_model.WaypointType
+                                                  .fromString(
                                                 wp.waypointType,
                                               ).icon,
-                                              style: const TextStyle(fontSize: 18),
+                                              style:
+                                                  const TextStyle(fontSize: 18),
                                             ),
                                           if (wp.isNew)
                                             Positioned(
@@ -1989,7 +1996,8 @@ class _MapScreenState extends State<MapScreen> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: Colors.black87,
-                                            borderRadius: BorderRadius.circular(4),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
                                           ),
                                           child: Text(
                                             wp.name,

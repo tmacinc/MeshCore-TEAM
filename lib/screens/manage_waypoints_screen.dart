@@ -477,13 +477,6 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
         name: fileName,
       );
 
-      Directory? downloadsDir;
-      try {
-        downloadsDir = await getDownloadsDirectory();
-      } catch (_) {
-        // Not available on this platform.
-      }
-
       if (!mounted) return;
 
       // Show export options dialog.
@@ -501,13 +494,12 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
                 ),
               ),
               const Divider(height: 1),
-              if (downloadsDir != null)
-                ListTile(
-                  leading: const Icon(Icons.save_alt),
-                  title: const Text('Save to Downloads'),
-                  subtitle: Text(downloadsDir.path),
-                  onTap: () => Navigator.pop(ctx, 'downloads'),
-                ),
+              ListTile(
+                leading: const Icon(Icons.save_alt),
+                title: const Text('Save to file…'),
+                subtitle: const Text('Choose save location'),
+                onTap: () => Navigator.pop(ctx, 'save'),
+              ),
               ListTile(
                 leading: const Icon(Icons.share),
                 title: const Text('Share…'),
@@ -522,12 +514,25 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
 
       if (choice == null || !mounted) return;
 
-      if (choice == 'downloads') {
-        final file = File('${downloadsDir!.path}/$fileName');
-        await file.writeAsBytes(bytes, flush: true);
+      if (choice == 'save') {
+        final outputPath = await FilePicker.platform.saveFile(
+          dialogTitle: 'Save GPX file',
+          fileName: fileName,
+          type: FileType.any,
+          bytes: bytes,
+        );
+        if (outputPath == null || !mounted) return;
+
+        // On some platforms saveFile() writes the bytes for us when bytes is
+        // provided, on others it only returns the path. Write if needed.
+        final outFile = File(outputPath);
+        if (!await outFile.exists() || await outFile.length() == 0) {
+          await outFile.writeAsBytes(bytes, flush: true);
+        }
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Saved to ${file.path}')),
+          SnackBar(content: Text('Saved to $outputPath')),
         );
       } else {
         await Share.shareXFiles([xFile], subject: fileName);

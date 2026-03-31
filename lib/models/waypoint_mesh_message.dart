@@ -126,9 +126,8 @@ class WaypointMeshMessage {
 
   String encode() {
     final mesh = meshId ?? '';
-    final encodedRoute = routePoints.isEmpty
-        ? ''
-        : encodeRouteCoordinatesForMesh(routePoints);
+    final encodedRoute =
+        routePoints.isEmpty ? '' : encodeRouteCoordinatesForMesh(routePoints);
     final desc = _addColorPrefix(description, colorValue);
     return '$prefix$mesh|$name|$latitude|$longitude|$desc|$type|$encodedRoute';
   }
@@ -145,7 +144,8 @@ class WaypointMeshMessage {
   /// If it fits in a single frame, returns a single-element list (no part info).
   List<String> splitForMesh(int maxBytes) {
     final single = encode();
-    debugPrint('[WaypointSplit] 📏 Single encode: ${utf8.encode(single).length} bytes, limit=$maxBytes');
+    debugPrint(
+        '[WaypointSplit] 📏 Single encode: ${utf8.encode(single).length} bytes, limit=$maxBytes');
     debugPrint('[WaypointSplit] 📝 Full encoded: $single');
     if (utf8.encode(single).length <= maxBytes) {
       debugPrint('[WaypointSplit] ✅ Fits in single frame');
@@ -155,8 +155,7 @@ class WaypointMeshMessage {
     // Build the base message without route coordinates to measure overhead.
     final mesh = meshId ?? '';
     final desc = _addColorPrefix(description, colorValue);
-    final basePart =
-        '$prefix$mesh|$name|$latitude|$longitude|$desc|$type|';
+    final basePart = '$prefix$mesh|$name|$latitude|$longitude|$desc|$type|';
     // Reserve space for part info suffix like "|1/10" (max "|NN/NN" = 6 chars)
     const partInfoReserve = 6;
 
@@ -173,11 +172,11 @@ class WaypointMeshMessage {
       return [single];
     }
 
-    final fullCoords = routePoints.isEmpty
-        ? ''
-        : encodeRouteCoordinatesForMesh(routePoints);
+    final fullCoords =
+        routePoints.isEmpty ? '' : encodeRouteCoordinatesForMesh(routePoints);
     final coordBytes = utf8.encode(fullCoords);
-    debugPrint('[WaypointSplit] 📐 Coords: ${coordBytes.length} bytes, firstChunkMax=$firstChunkMaxBytes, contChunkMax=$contChunkMaxBytes');
+    debugPrint(
+        '[WaypointSplit] 📐 Coords: ${coordBytes.length} bytes, firstChunkMax=$firstChunkMaxBytes, contChunkMax=$contChunkMaxBytes');
     debugPrint('[WaypointSplit] 📝 Full coords: $fullCoords');
 
     // Split coordinate bytes into chunks respecting '~' boundaries.
@@ -220,7 +219,8 @@ class WaypointMeshMessage {
     }
 
     for (var i = 0; i < messages.length; i++) {
-      debugPrint('[WaypointSplit] 📦 Part ${i + 1}/$totalParts (${utf8.encode(messages[i]).length} bytes): ${messages[i]}');
+      debugPrint(
+          '[WaypointSplit] 📦 Part ${i + 1}/$totalParts (${utf8.encode(messages[i]).length} bytes): ${messages[i]}');
     }
 
     return messages;

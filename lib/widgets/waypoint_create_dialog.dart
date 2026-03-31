@@ -77,10 +77,11 @@ class _WaypointCreateDialogState extends State<WaypointCreateDialog> {
                 ),
                 items: [
                   for (final type in WaypointType.values)
-                    DropdownMenuItem(
-                      value: type,
-                      child: Text('${type.icon} ${type.displayName}'),
-                    ),
+                    if (type != WaypointType.route)
+                      DropdownMenuItem(
+                        value: type,
+                        child: Text('${type.icon} ${type.displayName}'),
+                      ),
                 ],
                 onChanged: (value) {
                   if (value == null) return;

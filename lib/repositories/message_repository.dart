@@ -690,8 +690,7 @@ class MessageRepository {
 
       // Multi-part route continuation messages.
       if (WaypointRouteContinuation.isContinuationMessage(messageContent)) {
-        debugPrint(
-            '[Waypoints] 📍 Route continuation message intercepted');
+        debugPrint('[Waypoints] 📍 Route continuation message intercepted');
         await _handleWaypointRouteContinuation(
           senderName: senderName,
           content: messageContent,
@@ -829,13 +828,15 @@ class MessageRepository {
     required String content,
     required bool isFromSelf,
   }) async {
-    debugPrint('[WaypointRX] 📥 Raw content (${content.length} chars): $content');
+    debugPrint(
+        '[WaypointRX] 📥 Raw content (${content.length} chars): $content');
     final msg = WaypointMeshMessage.parse(content);
     if (msg == null) {
       debugPrint('[WaypointRX] ⚠️ Failed to parse waypoint payload');
       return;
     }
-    debugPrint('[WaypointRX] ✅ Parsed: name=${msg.name}, type=${msg.type}, lat=${msg.latitude}, lon=${msg.longitude}, meshId=${msg.meshId}, routePoints=${msg.routePoints.length}, desc=${msg.description}');
+    debugPrint(
+        '[WaypointRX] ✅ Parsed: name=${msg.name}, type=${msg.type}, lat=${msg.latitude}, lon=${msg.longitude}, meshId=${msg.meshId}, routePoints=${msg.routePoints.length}, desc=${msg.description}');
 
     // If we sent this waypoint message ourselves, do not store it as a received
     // waypoint. We already have (or should have) a local copy and storing the
@@ -879,7 +880,8 @@ class MessageRepository {
     required String content,
     required bool isFromSelf,
   }) async {
-    debugPrint('[WaypointRX] 📥 #WRC raw content (${content.length} chars): $content');
+    debugPrint(
+        '[WaypointRX] 📥 #WRC raw content (${content.length} chars): $content');
     if (isFromSelf) return;
 
     final cont = WaypointRouteContinuation.parse(content);
@@ -908,12 +910,13 @@ class MessageRepository {
 
       // Reassemble route coordinates in order.
       final sortedKeys = buffer.chunks.keys.toList()..sort();
-      final fullCoords =
-          sortedKeys.map((k) => buffer.chunks[k]!).join();
-      debugPrint('[WaypointRX] 🔗 Joined coords (${fullCoords.length} chars): $fullCoords');
+      final fullCoords = sortedKeys.map((k) => buffer.chunks[k]!).join();
+      debugPrint(
+          '[WaypointRX] 🔗 Joined coords (${fullCoords.length} chars): $fullCoords');
       // Remove trailing '~' if present from chunk boundaries.
-      final trimmedCoords =
-          fullCoords.endsWith('~') ? fullCoords.substring(0, fullCoords.length - 1) : fullCoords;
+      final trimmedCoords = fullCoords.endsWith('~')
+          ? fullCoords.substring(0, fullCoords.length - 1)
+          : fullCoords;
       debugPrint('[WaypointRX] ✂️ Trimmed coords: $trimmedCoords');
       final allPoints = decodeRouteCoordinatesFromMesh(trimmedCoords);
       debugPrint('[WaypointRX] 📍 Decoded ${allPoints.length} points');
@@ -954,9 +957,11 @@ class MessageRepository {
     required WaypointMeshMessage msg,
     required String senderName,
   }) async {
-    debugPrint('[WaypointRX] 🔧 _processReceivedWaypoint: name=${msg.name}, type=${msg.type}, meshId=${msg.meshId}, lat=${msg.latitude}, lon=${msg.longitude}, routePoints=${msg.routePoints.length}, desc="${msg.description}"');
+    debugPrint(
+        '[WaypointRX] 🔧 _processReceivedWaypoint: name=${msg.name}, type=${msg.type}, meshId=${msg.meshId}, lat=${msg.latitude}, lon=${msg.longitude}, routePoints=${msg.routePoints.length}, desc="${msg.description}"');
     for (var i = 0; i < msg.routePoints.length; i++) {
-      debugPrint('[WaypointRX]   point[$i]: ${msg.routePoints[i].latitude}, ${msg.routePoints[i].longitude}');
+      debugPrint(
+          '[WaypointRX]   point[$i]: ${msg.routePoints[i].latitude}, ${msg.routePoints[i].longitude}');
     }
     // Suppress duplicates ASAP (before awaits) to avoid races.
     final meshIdKey = (msg.meshId ?? '').trim();
@@ -1001,13 +1006,16 @@ class MessageRepository {
       }
     }
 
-    final isRouteMessage =
-        msg.type.trim().toUpperCase() == waypoint_model.WaypointType.route.name.toUpperCase();
+    final isRouteMessage = msg.type.trim().toUpperCase() ==
+        waypoint_model.WaypointType.route.name.toUpperCase();
     final routePoints = isRouteMessage && msg.routePoints.isNotEmpty
         ? msg.routePoints
         : <latlong2.LatLng>[latlong2.LatLng(msg.latitude, msg.longitude)];
     final storedDescription = isRouteMessage
-        ? encodeRoutePayload(description: msg.description, points: routePoints, colorValue: msg.colorValue)
+        ? encodeRoutePayload(
+            description: msg.description,
+            points: routePoints,
+            colorValue: msg.colorValue)
         : msg.description;
     final anchorPoint = routePoints.first;
 
@@ -1134,9 +1142,8 @@ class MessageRepository {
       fallbackLongitude: waypoint.longitude,
     );
 
-    final routePoints = isRoute
-        ? routePayload.points
-        : const <latlong2.LatLng>[];
+    final routePoints =
+        isRoute ? routePayload.points : const <latlong2.LatLng>[];
 
     final routeAnchor = routePoints.isNotEmpty
         ? routePoints.first
@@ -1166,7 +1173,8 @@ class MessageRepository {
       final ok =
           await _bleService.sendChannelMessage(channel.channelIndex, parts[i]);
       if (!ok) {
-        debugPrint('[Waypoints] ❌ Failed to send part ${i + 1}/${parts.length}');
+        debugPrint(
+            '[Waypoints] ❌ Failed to send part ${i + 1}/${parts.length}');
         return false;
       }
     }
