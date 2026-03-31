@@ -78,6 +78,9 @@ class _MapScreenState extends State<MapScreen> {
 
   bool _isGroupStatusOpen = false;
 
+  Set<String> _contactPathsVisible = <String>{};
+  bool _pendingPathsSelectAll = false;
+
   LatLng? _navTarget;
   String _navTargetName = '';
 
@@ -230,6 +233,33 @@ class _MapScreenState extends State<MapScreen> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Close'),
+            ),
+            TextButton(
+              onPressed: () {
+                final key = state.publicKeyHex;
+                setState(() {
+                  if (_contactPathsVisible.contains(key)) {
+                    _contactPathsVisible.remove(key);
+                  } else {
+                    _contactPathsVisible.add(key);
+                  }
+                });
+                // Sync global toggle when all contacts have been individually hidden.
+                final svc = context.read<SettingsService>();
+                if (_contactPathsVisible.isEmpty &&
+                    svc.settings.mapShowContactPaths) {
+                  svc.setMapShowContactPaths(false);
+                } else if (_contactPathsVisible.isNotEmpty &&
+                    !svc.settings.mapShowContactPaths) {
+                  svc.setMapShowContactPaths(true);
+                }
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                _contactPathsVisible.contains(state.publicKeyHex)
+                    ? 'Hide Path'
+                    : 'Show Path',
+              ),
             ),
             if (state.lastLatitude != null && state.lastLongitude != null)
               TextButton(
@@ -1335,6 +1365,7 @@ class _MapScreenState extends State<MapScreen> {
     final showTrackedUserNames =
         settingsService.settings.mapShowTrackedUserNames;
     final showWaypointNames = settingsService.settings.mapShowWaypointNames;
+    final showContactPaths = settingsService.settings.mapShowContactPaths;
 
     final telemetryConfigured = settingsService.settings.telemetryEnabled &&
         (settingsService.settings.telemetryChannelHash?.isNotEmpty ?? false);
@@ -1517,6 +1548,17 @@ class _MapScreenState extends State<MapScreen> {
                   await settingsService
                       .setMapShowWaypointNames(!showWaypointNames);
                   break;
+                case 'toggle_contact_paths':
+                  final newVal = !showContactPaths;
+                  await settingsService.setMapShowContactPaths(newVal);
+                  setState(() {
+                    if (newVal) {
+                      _pendingPathsSelectAll = true;
+                    } else {
+                      _contactPathsVisible.clear();
+                    }
+                  });
+                  break;
                 case 'download_map_area':
                   _openDownloadMapAreaDialog(provider: tileConfig);
                   break;
@@ -1580,6 +1622,23 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                       Icon(
                         showWaypointNames
+                            ? Icons.check
+                            : Icons.check_box_outline_blank,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'toggle_contact_paths',
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Show Contact Paths'),
+                      ),
+                      Icon(
+                        _contactPathsVisible.isNotEmpty ||
+                                _pendingPathsSelectAll
                             ? Icons.check
                             : Icons.check_box_outline_blank,
                         size: 18,
@@ -1735,23 +1794,126 @@ class _MapScreenState extends State<MapScreen> {
 
                       if (visible.isEmpty) return const SizedBox.shrink();
 
-                      return MarkerLayer(
-                        markers: [
-                          for (final s in visible)
-                            Marker(
-                              point: LatLng(s.lastLatitude!, s.lastLongitude!),
-                              width: showTrackedUserNames ? 108 : 44,
-                              height: showTrackedUserNames ? 68 : 44,
-                              child: _ContactMarker(
-                                name: s.name,
-                                showName: showTrackedUserNames,
-                                pathLen: s.lastPathLen,
-                                lastSeenMs: s.lastSeen,
-                                isAutonomous: s.isAutonomousDevice,
-                                onTap: () => _showContactDetailsDialog(db, s),
-                                onDoubleTap: () => _showContactQuickInfo(s),
-                              ),
+                      // One-time populate when global toggle was just turned on.
+                      if (_pendingPathsSelectAll) {
+                        _pendingPathsSelectAll = false;
+                        for (final s in visible) {
+                          _contactPathsVisible.add(s.publicKeyHex);
+                        }
+                      }
+
+                      // Contacts whose paths should be rendered.
+                      final pathKeys = visible
+                          .where((s) =>
+                              _contactPathsVisible.contains(s.publicKeyHex))
+                          .map((s) => s.publicKeyHex)
+                          .toSet();
+
+                      return Stack(
+                        children: [
+                          // Path polylines (rendered below markers).
+                          if (pathKeys.isNotEmpty)
+                            StreamBuilder<List<ContactPositionHistoryData>>(
+                              stream: (db.select(db.contactPositionHistories)
+                                    ..where((t) =>
+                                        t.publicKeyHex.isIn(pathKeys) &
+                                        t.companionDeviceKey
+                                            .equals(companionKey!))
+                                    ..orderBy([
+                                      (t) =>
+                                          OrderingTerm(expression: t.timestamp),
+                                    ]))
+                                  .watch(),
+                              builder: (context, pathSnap) {
+                                final allPoints = pathSnap.data ??
+                                    const <ContactPositionHistoryData>[];
+                                if (allPoints.isEmpty) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                // Group by publicKeyHex.
+                                final grouped = <String,
+                                    List<ContactPositionHistoryData>>{};
+                                for (final p in allPoints) {
+                                  (grouped[p.publicKeyHex] ??= []).add(p);
+                                }
+
+                                final polylines = <Polyline>[];
+                                final dotMarkers = <Marker>[];
+                                for (final entry in grouped.entries) {
+                                  if (entry.value.length < 2) continue;
+                                  final points = entry.value
+                                      .map((p) =>
+                                          LatLng(p.latitude, p.longitude))
+                                      .toList();
+                                  // White outline underneath (dashed).
+                                  polylines.add(Polyline(
+                                    points: points,
+                                    strokeWidth: 4,
+                                    color: Colors.white,
+                                    pattern: const StrokePattern.dotted(
+                                        spacingFactor: 2.0),
+                                  ));
+                                  // Black dashed line on top.
+                                  polylines.add(Polyline(
+                                    points: points,
+                                    strokeWidth: 2,
+                                    color: Colors.black,
+                                    pattern: const StrokePattern.dotted(
+                                        spacingFactor: 2.0),
+                                  ));
+                                  // Dot at each GPS point.
+                                  for (final pt in points) {
+                                    dotMarkers.add(Marker(
+                                      point: pt,
+                                      width: 8,
+                                      height: 8,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 1,
+                                          ),
+                                        ),
+                                      ),
+                                    ));
+                                  }
+                                }
+
+                                if (polylines.isEmpty) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Stack(
+                                  children: [
+                                    PolylineLayer(polylines: polylines),
+                                    MarkerLayer(markers: dotMarkers),
+                                  ],
+                                );
+                              },
                             ),
+                          MarkerLayer(
+                            markers: [
+                              for (final s in visible)
+                                Marker(
+                                  point:
+                                      LatLng(s.lastLatitude!, s.lastLongitude!),
+                                  width: showTrackedUserNames ? 108 : 44,
+                                  height: showTrackedUserNames ? 68 : 44,
+                                  child: _ContactMarker(
+                                    name: s.name,
+                                    showName: showTrackedUserNames,
+                                    pathLen: s.lastPathLen,
+                                    lastSeenMs: s.lastSeen,
+                                    isAutonomous: s.isAutonomousDevice,
+                                    onTap: () =>
+                                        _showContactDetailsDialog(db, s),
+                                    onDoubleTap: () => _showContactQuickInfo(s),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ],
                       );
                     },

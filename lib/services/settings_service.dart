@@ -27,8 +27,8 @@ class SettingsService extends ChangeNotifier {
   static const String _keyMapZoomLevel = 'map_zoom_level';
   static const String _keyMapShowTrackedUserNames =
       'map_show_tracked_user_names';
-  static const String _keyMapShowWaypointNames =
-      'map_show_waypoint_names';
+  static const String _keyMapShowWaypointNames = 'map_show_waypoint_names';
+  static const String _keyMapShowContactPaths = 'map_show_contact_paths';
   static const String _keyDistanceRingsEnabled = 'distance_rings_enabled';
   static const String _keyDistanceRingInterval = 'distance_ring_interval';
   static const String _keyLastConnectedDevice = 'last_connected_device';
@@ -145,8 +145,8 @@ class SettingsService extends ChangeNotifier {
       mapZoomLevel: _prefs.getDouble(_keyMapZoomLevel) ?? 15.0,
       mapShowTrackedUserNames:
           _prefs.getBool(_keyMapShowTrackedUserNames) ?? true,
-      mapShowWaypointNames:
-          _prefs.getBool(_keyMapShowWaypointNames) ?? true,
+      mapShowWaypointNames: _prefs.getBool(_keyMapShowWaypointNames) ?? true,
+      mapShowContactPaths: _prefs.getBool(_keyMapShowContactPaths) ?? false,
       distanceRingsEnabled: _prefs.getBool(_keyDistanceRingsEnabled) ?? false,
       distanceRingInterval:
           _prefs.getString(_keyDistanceRingInterval) ?? '500m',
@@ -313,6 +313,13 @@ class SettingsService extends ChangeNotifier {
   Future<void> setMapShowWaypointNames(bool enabled) async {
     await _prefs.setBool(_keyMapShowWaypointNames, enabled);
     _settings = _settings.copyWith(mapShowWaypointNames: enabled);
+    notifyListeners();
+  }
+
+  /// Set contact path trail visibility on the map.
+  Future<void> setMapShowContactPaths(bool enabled) async {
+    await _prefs.setBool(_keyMapShowContactPaths, enabled);
+    _settings = _settings.copyWith(mapShowContactPaths: enabled);
     notifyListeners();
   }
 
