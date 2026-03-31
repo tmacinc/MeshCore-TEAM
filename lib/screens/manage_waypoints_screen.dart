@@ -654,30 +654,35 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
     if (waypoint.isReceived) return;
 
     final type = WaypointType.fromString(waypoint.waypointType);
-    final initialDescription = _isRoute(waypoint)
+    final routePayload = _isRoute(waypoint)
         ? decodeRoutePayload(
             waypoint.description,
             fallbackLatitude: waypoint.latitude,
             fallbackLongitude: waypoint.longitude,
-          ).description
-        : waypoint.description;
+          )
+        : null;
     final result = await context.showWaypointEditDialog(
       initialName: waypoint.name,
-      initialDescription: initialDescription,
+      initialDescription: routePayload?.description ?? waypoint.description,
       initialType: type,
+      initialColorValue: routePayload?.colorValue,
     );
 
     if (result == null) return;
 
     final db = context.read<AppDatabase>();
-    final nextDescription = _isRoute(waypoint)
+    final existingPayload = _isRoute(waypoint)
+        ? decodeRoutePayload(
+            waypoint.description,
+            fallbackLatitude: waypoint.latitude,
+            fallbackLongitude: waypoint.longitude,
+          )
+        : null;
+    final nextDescription = existingPayload != null
         ? encodeRoutePayload(
             description: result.description,
-            points: decodeRoutePayload(
-              waypoint.description,
-              fallbackLatitude: waypoint.latitude,
-              fallbackLongitude: waypoint.longitude,
-            ).points,
+            points: existingPayload.points,
+            colorValue: result.colorValue,
           )
         : result.description;
     await db.waypointsDao.updateWaypoint(
@@ -837,7 +842,7 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
                             )
                           : null;
                       final subtitle =
-                          '${w.latitude.toStringAsFixed(6)}, ${w.longitude.toStringAsFixed(6)}\n${payload != null ? 'Points: ${payload.points.length}\\n' : ''}${_formatDate(w.createdAt)}';
+                          '${w.latitude.toStringAsFixed(6)}, ${w.longitude.toStringAsFixed(6)}\n${payload != null ? 'Points: ${payload.points.length}\n' : ''}${_formatDate(w.createdAt)}';
 
                       final isSelected = _selectedWaypointIds.contains(w.id);
 
@@ -848,9 +853,25 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
                                   value: isSelected,
                                   onChanged: (_) => _toggleWaypointSelected(w),
                                 )
-                              : Text(
-                                  type.icon,
-                                  style: const TextStyle(fontSize: 22),
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      type.icon,
+                                      style: const TextStyle(fontSize: 22),
+                                    ),
+                                    if (payload?.colorValue != null) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        width: 12,
+                                        height: 12,
+                                        decoration: BoxDecoration(
+                                          color: Color(payload!.colorValue!),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                           title: Text(w.name),
                           subtitle: Text(subtitle),

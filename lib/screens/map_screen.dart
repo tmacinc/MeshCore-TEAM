@@ -69,6 +69,7 @@ class _MapScreenState extends State<MapScreen> {
   String _routeDraftName = '';
   String _routeDraftDescription = '';
   List<LatLng> _routeDraftPoints = <LatLng>[];
+  int? _routeDraftColorValue;
 
   bool _isWaypointMultiSelectMode = false;
   Set<String> _selectedWaypointIds = <String>{};
@@ -449,6 +450,7 @@ class _MapScreenState extends State<MapScreen> {
       _routeDraftName = '';
       _routeDraftDescription = '';
       _routeDraftPoints = <LatLng>[];
+      _routeDraftColorValue = null;
       _isFollowingUser = false;
     });
   }
@@ -467,6 +469,7 @@ class _MapScreenState extends State<MapScreen> {
       _routeDraftName = routeWaypoint.name;
       _routeDraftDescription = payload.description;
       _routeDraftPoints = List<LatLng>.of(payload.points);
+      _routeDraftColorValue = payload.colorValue;
       _isFollowingUser = false;
     });
   }
@@ -478,6 +481,7 @@ class _MapScreenState extends State<MapScreen> {
       _routeDraftName = '';
       _routeDraftDescription = '';
       _routeDraftPoints = <LatLng>[];
+      _routeDraftColorValue = null;
       _draggingPointIndex = null;
     });
   }
@@ -494,21 +498,24 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  Future<({String name, String description})?> _showRouteMetaDialog({
+  Future<({String name, String description, int? colorValue})?> _showRouteMetaDialog({
     required String initialName,
     required String initialDescription,
+    required int? initialColorValue,
     required bool isEdit,
   }) async {
     final nameCtrl = TextEditingController(text: initialName);
     final descCtrl = TextEditingController(text: initialDescription);
+    int? selectedColor = initialColorValue ?? kRouteColorPresets.first;
 
-    final result = await showDialog<({String name, String description})>(
+    final result = await showDialog<({String name, String description, int? colorValue})>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (dialogContext, setInnerState) {
             final canSave = nameCtrl.text.trim().isNotEmpty;
             return AlertDialog(
+              scrollable: true,
               title: Text(isEdit ? 'Edit Route' : 'Save Route'),
               content: SizedBox(
                 width: 420,
@@ -529,6 +536,48 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                       maxLines: 3,
                     ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Route Color',
+                        style: Theme.of(dialogContext).textTheme.bodySmall,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final preset in kRouteColorPresets)
+                          GestureDetector(
+                            onTap: () => setInnerState(() => selectedColor = preset),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Color(preset),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: selectedColor == preset
+                                      ? Colors.white
+                                      : Colors.transparent,
+                                  width: 3,
+                                ),
+                                boxShadow: selectedColor == preset
+                                    ? [
+                                        BoxShadow(
+                                          color: Color(preset).withValues(alpha: 0.6),
+                                          blurRadius: 6,
+                                          spreadRadius: 1,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -543,6 +592,7 @@ class _MapScreenState extends State<MapScreen> {
                           final res = (
                             name: nameCtrl.text.trim(),
                             description: descCtrl.text.trim(),
+                            colorValue: selectedColor,
                           );
                           Navigator.of(dialogContext).pop(res);
                         }
@@ -582,6 +632,7 @@ class _MapScreenState extends State<MapScreen> {
     final meta = await _showRouteMetaDialog(
       initialName: _routeDraftName,
       initialDescription: _routeDraftDescription,
+      initialColorValue: _routeDraftColorValue,
       isEdit: _editingRouteId != null,
     );
     if (meta == null) return;
@@ -593,6 +644,7 @@ class _MapScreenState extends State<MapScreen> {
     final encodedDescription = encodeRoutePayload(
       description: meta.description,
       points: _routeDraftPoints,
+      colorValue: meta.colorValue,
     );
 
     if (_editingRouteId != null) {
@@ -1721,13 +1773,17 @@ class _MapScreenState extends State<MapScreen> {
                     );
                     if (payload.points.length < 2) continue;
 
+                    final baseColor = payload.colorValue != null
+                        ? Color(payload.colorValue!)
+                        : Colors.deepPurple;
+
                     routeLines.add(
                       Polyline(
                         points: payload.points,
                         strokeWidth: 4,
                         color: wp.isReceived
-                            ? Colors.deepPurple.withValues(alpha: 0.65)
-                            : Colors.deepPurple,
+                            ? baseColor.withValues(alpha: 0.65)
+                            : baseColor,
                       ),
                     );
                   }

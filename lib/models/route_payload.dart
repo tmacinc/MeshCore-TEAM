@@ -4,21 +4,38 @@ import 'package:latlong2/latlong.dart';
 
 const String kRoutePayloadPrefix = 'ROUTE_V1:';
 
+/// Preset colors available for routes.
+const List<int> kRouteColorPresets = [
+  0xFF673AB7, // deepPurple (default)
+  0xFFF44336, // red
+  0xFF2196F3, // blue
+  0xFF4CAF50, // green
+  0xFFFF9800, // orange
+  0xFFE91E63, // pink
+  0xFF009688, // teal
+  0xFF795548, // brown
+  0xFF607D8B, // blueGrey
+  0xFFFFEB3B, // yellow
+];
+
 class RoutePayload {
   final String description;
   final List<LatLng> points;
+  final int? colorValue;
 
   const RoutePayload({
     required this.description,
     required this.points,
+    this.colorValue,
   });
 }
 
 String encodeRoutePayload({
   required String description,
   required List<LatLng> points,
+  int? colorValue,
 }) {
-  final payload = {
+  final payload = <String, dynamic>{
     'description': description,
     'points': [
       for (final p in points)
@@ -27,6 +44,7 @@ String encodeRoutePayload({
           'lon': p.longitude,
         },
     ],
+    if (colorValue != null) 'color': colorValue,
   };
 
   return '$kRoutePayloadPrefix${jsonEncode(payload)}';
@@ -53,6 +71,8 @@ RoutePayload decodeRoutePayload(
     }
 
     final desc = (decoded['description'] as String?) ?? '';
+    final colorRaw = decoded['color'];
+    final colorValue = colorRaw is int ? colorRaw : null;
     final pointsRaw = decoded['points'];
     final points = <LatLng>[];
     if (pointsRaw is List) {
@@ -71,7 +91,7 @@ RoutePayload decodeRoutePayload(
       points.add(LatLng(fallbackLatitude, fallbackLongitude));
     }
 
-    return RoutePayload(description: desc, points: points);
+    return RoutePayload(description: desc, points: points, colorValue: colorValue);
   } catch (_) {
     return RoutePayload(
       description: rawDescription,

@@ -926,6 +926,7 @@ class MessageRepository {
         description: buffer.msg.description,
         type: buffer.msg.type,
         routePoints: allPoints,
+        colorValue: buffer.msg.colorValue,
       );
 
       debugPrint(
@@ -1006,7 +1007,7 @@ class MessageRepository {
         ? msg.routePoints
         : <latlong2.LatLng>[latlong2.LatLng(msg.latitude, msg.longitude)];
     final storedDescription = isRouteMessage
-        ? encodeRoutePayload(description: msg.description, points: routePoints)
+        ? encodeRoutePayload(description: msg.description, points: routePoints, colorValue: msg.colorValue)
         : msg.description;
     final anchorPoint = routePoints.first;
 
@@ -1149,6 +1150,7 @@ class MessageRepository {
       description: isRoute ? routePayload.description : waypoint.description,
       type: waypoint.waypointType,
       routePoints: routePoints,
+      colorValue: isRoute ? routePayload.colorValue : null,
     );
 
     final parts = waypointMsg.splitForMesh(maxMeshMessageBytes);

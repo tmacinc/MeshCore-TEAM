@@ -16,6 +16,26 @@ import 'package:meshcore_team/models/route_payload.dart';
 /// Multi-part route messages (when route coords exceed single-message limit):
 /// Part 1:   `#WAY:meshId|name|lat|lon|description|type|routeCoords_chunk|1/N`
 /// Part 2+:  `#WRC:meshId|routeCoords_chunk|2/N`
+///
+/// Route color is encoded as a `@C:AARRGGBB` prefix in the description field.
+/// Older clients without color support will display the prefix as part of the
+/// description text — harmless and fully backward-compatible.
+
+/// Prefix a description with the route color tag (if non-null).
+String _addColorPrefix(String description, int? colorValue) {
+  if (colorValue == null) return description;
+  return '@C:${colorValue.toRadixString(16).padLeft(8, '0').toUpperCase()}$description';
+}
+
+/// Strip an optional `@C:AARRGGBB` prefix from a description.
+({String description, int? colorValue}) _stripColorPrefix(String raw) {
+  final match = RegExp(r'^@C:([0-9A-Fa-f]{8})').firstMatch(raw);
+  if (match == null) return (description: raw, colorValue: null);
+  final hex = match.group(1)!;
+  final value = int.tryParse(hex, radix: 16);
+  return (description: raw.substring(match.end), colorValue: value);
+}
+
 class WaypointMeshMessage {
   static const String prefix = '#WAY:';
 
@@ -26,6 +46,7 @@ class WaypointMeshMessage {
   final String description;
   final String type;
   final List<LatLng> routePoints;
+  final int? colorValue;
 
   const WaypointMeshMessage({
     required this.meshId,
@@ -35,6 +56,7 @@ class WaypointMeshMessage {
     required this.description,
     required this.type,
     this.routePoints = const <LatLng>[],
+    this.colorValue,
   });
 
   static bool isWaypointMessage(String content) => content.startsWith(prefix);
@@ -51,16 +73,20 @@ class WaypointMeshMessage {
       final lon = double.tryParse(parts[3]);
       if (lat == null || lon == null) return null;
 
+      final rawDesc = parts[4];
+      final (:description, :colorValue) = _stripColorPrefix(rawDesc);
+
       return WaypointMeshMessage(
         meshId: parts[0].isEmpty ? null : parts[0],
         name: parts[1],
         latitude: lat,
         longitude: lon,
-        description: parts[4],
+        description: description,
         type: parts[5],
         routePoints: decodeRouteCoordinatesFromMesh(
           parts.length >= 7 ? parts[6] : null,
         ),
+        colorValue: colorValue,
       );
     }
 
@@ -69,13 +95,17 @@ class WaypointMeshMessage {
       final lon = double.tryParse(parts[2]);
       if (lat == null || lon == null) return null;
 
+      final rawDesc = parts[3];
+      final (:description, :colorValue) = _stripColorPrefix(rawDesc);
+
       return WaypointMeshMessage(
         meshId: null,
         name: parts[0],
         latitude: lat,
         longitude: lon,
-        description: parts[3],
+        description: description,
         type: parts[4],
+        colorValue: colorValue,
       );
     }
 
@@ -99,13 +129,15 @@ class WaypointMeshMessage {
     final encodedRoute = routePoints.isEmpty
         ? ''
         : encodeRouteCoordinatesForMesh(routePoints);
-    return '$prefix$mesh|$name|$latitude|$longitude|$description|$type|$encodedRoute';
+    final desc = _addColorPrefix(description, colorValue);
+    return '$prefix$mesh|$name|$latitude|$longitude|$desc|$type|$encodedRoute';
   }
 
   /// Encode with a multi-part indicator appended.
   String encodeWithPartInfo(String routeChunk, int partNum, int totalParts) {
     final mesh = meshId ?? '';
-    return '$prefix$mesh|$name|$latitude|$longitude|$description|$type|$routeChunk|$partNum/$totalParts';
+    final desc = _addColorPrefix(description, colorValue);
+    return '$prefix$mesh|$name|$latitude|$longitude|$desc|$type|$routeChunk|$partNum/$totalParts';
   }
 
   /// Split this message into multiple frames if it exceeds [maxBytes].
@@ -122,8 +154,9 @@ class WaypointMeshMessage {
 
     // Build the base message without route coordinates to measure overhead.
     final mesh = meshId ?? '';
+    final desc = _addColorPrefix(description, colorValue);
     final basePart =
-        '$prefix$mesh|$name|$latitude|$longitude|$description|$type|';
+        '$prefix$mesh|$name|$latitude|$longitude|$desc|$type|';
     // Reserve space for part info suffix like "|1/10" (max "|NN/NN" = 6 chars)
     const partInfoReserve = 6;
 
