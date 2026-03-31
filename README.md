@@ -284,7 +284,7 @@ Planned features and improvements (see also the [issues tracker](../../issues)):
 
 - **Forwarding V2** — topology-aware routing using the mesh graph model (`#T:` topology events). V2 will build a real-time network graph and use it to compute targeted forward lists (`SET_FORWARD_LIST`) instead of relying solely on `maxHops`. The topology strategy skeleton is in place and currently falls back to V1; the graph model and prefix-based routing logic are next.
 - **iOS background reliability** — improve BLE connection persistence using Core Bluetooth state restoration; implement the Always-location upgrade flow for background tracking.
-- **Group member location history** — track and display historical location trails for group members on the map.
+- 1.0.3 Added - **Group member location history** — track and display historical location trails for group members on the map.
 - **Offline map save/load** — save downloaded offline map areas to external storage and reload them, enabling map sharing between devices.
 - **Group leader bulk setup** — allow a group leader to export/import channel configuration, waypoints, and offline maps as an external file for easy group onboarding.
 - Topology map visualization — display the mesh network graph on the map screen
