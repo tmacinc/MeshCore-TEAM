@@ -1,3 +1,30 @@
+# Release Notes — v1.0.3
+
+## Route Colors
+- Routes can now be assigned a color from a 10-color preset palette when saving.
+- Route colors are shared over the mesh network and displayed on the map.
+- Color is preserved when editing routes and when receiving multi-part routes.
+
+## Contact Path History
+- Contact movement trails can be displayed on the map.
+- Paths render as dotted lines (black with white outline) with dots at each GPS fix.
+- Global "Show Contact Paths" toggle in the map settings menu to show/hide all paths.
+- Per-contact "Show Path" / "Hide Path" button in the contact details dialog.
+- Global and per-contact toggles stay in sync — toggling all on/off updates individual states, and individually hiding the last contact turns off the global toggle.
+- 25-meter stationary gate prevents point clustering when a contact is not moving.
+- Position history is thinned to 50 real GPS points per contact (no averaging).
+
+## GPX Export
+- GPX export now uses a file picker dialog on both Android and iOS instead of saving to a hardcoded Downloads directory.
+
+## Bug Fixes
+- Fixed keyboard overflow when saving a route with a long name or description.
+- Fixed received multi-part routes losing their color.
+- Fixed literal `\n` showing in the manage waypoints subtitle instead of a newline.
+- Removed "Route" from the waypoint type dropdown in the create waypoint dialog.
+
+---
+
 # Release Notes — v1.0.2
 
 ## iOS Support
