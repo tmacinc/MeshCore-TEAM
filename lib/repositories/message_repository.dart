@@ -1460,15 +1460,8 @@ class MessageRepository {
     }
   }
 
-  static const int _binRaw = 0;
-  static const int _bin5Min = 1;
-  static const int _bin30Min = 2;
-  static const int _bin1Hour = 3;
-
-  static const int _maxRaw = 10;
-  static const int _max5Min = 10;
-  static const int _max30Min = 6;
-  static const int _max1Hour = 4;
+  static const int _maxHistoryPoints = 50;
+  static const double _stationaryGateMeters = 25.0;
 
   Future<void> _addPositionHistoryPoint({
     required String publicKeyHex,
@@ -1484,8 +1477,7 @@ class MessageRepository {
     final lastRaw = await (_database.select(_database.contactPositionHistories)
           ..where((t) =>
               t.publicKeyHex.equals(publicKeyHex) &
-              t.companionDeviceKey.equals(companionKey) &
-              t.binLevel.equals(_binRaw))
+              t.companionDeviceKey.equals(companionKey))
           ..orderBy([
             (t) => drift.OrderingTerm(
                 expression: t.timestamp, mode: drift.OrderingMode.desc),
@@ -1503,6 +1495,21 @@ class MessageRepository {
       return;
     }
 
+    // Stationary gate: skip if within 25m of last known point.
+    if (lastRaw != null) {
+      final dist = _haversineMeters(
+        lastRaw.latitude,
+        lastRaw.longitude,
+        latitude,
+        longitude,
+      );
+      if (dist < _stationaryGateMeters) {
+        debugPrint(
+            '[TELREC] 📍 Stationary gate: ${dist.toStringAsFixed(1)}m < ${_stationaryGateMeters}m, skipped');
+        return;
+      }
+    }
+
     await _database.into(_database.contactPositionHistories).insert(
           ContactPositionHistoriesCompanion.insert(
             publicKeyHex: publicKeyHex,
@@ -1512,156 +1519,65 @@ class MessageRepository {
             longitude: longitude,
             channelIdx: channelIdx,
             pathLen: pathLen,
-            binLevel: _binRaw,
+            binLevel: 0,
             isAggregated: false,
           ),
         );
 
-    await _performPositionHistoryBinning(publicKeyHex, companionKey);
+    await _thinPositionHistory(publicKeyHex, companionKey);
   }
 
-  Future<int> _countAtBinLevel(
+  /// Haversine distance in meters between two lat/lng points.
+  static double _haversineMeters(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const R = 6371000.0; // Earth radius in meters
+    final dLat = (lat2 - lat1) * (math.pi / 180);
+    final dLon = (lon2 - lon1) * (math.pi / 180);
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * (math.pi / 180)) *
+            math.cos(lat2 * (math.pi / 180)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+  }
+
+  /// Thin the position history for a contact to at most [_maxHistoryPoints]
+  /// real GPS points, keeping the first (oldest) and last (newest) and
+  /// evenly-spaced points in between.
+  Future<void> _thinPositionHistory(
     String publicKeyHex,
     String companionKey,
-    int binLevel,
   ) async {
-    final countExp = _database.contactPositionHistories.id.count();
-    final query = _database.selectOnly(_database.contactPositionHistories)
-      ..addColumns([countExp])
-      ..where(
-          _database.contactPositionHistories.publicKeyHex.equals(publicKeyHex) &
-              _database.contactPositionHistories.companionDeviceKey
-                  .equals(companionKey) &
-              _database.contactPositionHistories.binLevel.equals(binLevel));
-
-    final row = await query.getSingle();
-    return row.read(countExp) ?? 0;
-  }
-
-  Future<List<ContactPositionHistoryData>> _getOldestAtBinLevel({
-    required String publicKeyHex,
-    required String companionKey,
-    required int binLevel,
-    required int count,
-  }) {
-    return (_database.select(_database.contactPositionHistories)
+    final all = await (_database.select(_database.contactPositionHistories)
           ..where((t) =>
               t.publicKeyHex.equals(publicKeyHex) &
-              t.companionDeviceKey.equals(companionKey) &
-              t.binLevel.equals(binLevel))
-          ..orderBy([(t) => drift.OrderingTerm(expression: t.timestamp)])
-          ..limit(count))
+              t.companionDeviceKey.equals(companionKey))
+          ..orderBy([
+            (t) => drift.OrderingTerm(expression: t.timestamp),
+          ]))
         .get();
-  }
 
-  Future<void> _deleteHistoryIds(List<int> ids) async {
-    if (ids.isEmpty) return;
-    await (_database.delete(_database.contactPositionHistories)
-          ..where((t) => t.id.isIn(ids)))
-        .go();
-  }
+    if (all.length <= _maxHistoryPoints) return;
 
-  ContactPositionHistoriesCompanion _averagePoints(
-    List<ContactPositionHistoryData> points,
-    int newBinLevel,
-  ) {
-    final avgLat =
-        points.map((p) => p.latitude).reduce((a, b) => a + b) / points.length;
-    final avgLon =
-        points.map((p) => p.longitude).reduce((a, b) => a + b) / points.length;
-
-    final timestamps = points.map((p) => p.timestamp).toList()..sort();
-    final medianTimestamp = timestamps[timestamps.length ~/ 2];
-
-    final avgPathLen =
-        (points.map((p) => p.pathLen).reduce((a, b) => a + b) / points.length)
-            .round();
-
-    final first = points.first;
-
-    return ContactPositionHistoriesCompanion.insert(
-      publicKeyHex: first.publicKeyHex,
-      companionDeviceKey: first.companionDeviceKey,
-      timestamp: medianTimestamp,
-      latitude: avgLat,
-      longitude: avgLon,
-      accuracy: const drift.Value.absent(),
-      channelIdx: first.channelIdx,
-      pathLen: avgPathLen,
-      batteryVoltage: const drift.Value.absent(),
-      binLevel: newBinLevel,
-      isAggregated: true,
-    );
-  }
-
-  Future<void> _performPositionHistoryBinning(
-    String publicKeyHex,
-    String companionKey,
-  ) async {
-    final rawCount =
-        await _countAtBinLevel(publicKeyHex, companionKey, _binRaw);
-    if (rawCount > _maxRaw) {
-      final oldest = await _getOldestAtBinLevel(
-        publicKeyHex: publicKeyHex,
-        companionKey: companionKey,
-        binLevel: _binRaw,
-        count: 5,
-      );
-      if (oldest.isNotEmpty) {
-        await _database.into(_database.contactPositionHistories).insert(
-              _averagePoints(oldest, _bin5Min),
-            );
-        await _deleteHistoryIds(oldest.map((p) => p.id).toList());
-      }
+    // Keep first and last; pick (_maxHistoryPoints - 2) evenly-spaced points.
+    final keepIds = <int>{all.first.id, all.last.id};
+    final innerCount = _maxHistoryPoints - 2;
+    final step = (all.length - 2) / innerCount;
+    for (var i = 0; i < innerCount; i++) {
+      final idx = 1 + (i * step).round();
+      keepIds.add(all[idx].id);
     }
 
-    final level1Count =
-        await _countAtBinLevel(publicKeyHex, companionKey, _bin5Min);
-    if (level1Count > _max5Min) {
-      final oldest = await _getOldestAtBinLevel(
-        publicKeyHex: publicKeyHex,
-        companionKey: companionKey,
-        binLevel: _bin5Min,
-        count: 6,
-      );
-      if (oldest.isNotEmpty) {
-        await _database.into(_database.contactPositionHistories).insert(
-              _averagePoints(oldest, _bin30Min),
-            );
-        await _deleteHistoryIds(oldest.map((p) => p.id).toList());
-      }
-    }
-
-    final level2Count =
-        await _countAtBinLevel(publicKeyHex, companionKey, _bin30Min);
-    if (level2Count > _max30Min) {
-      final oldest = await _getOldestAtBinLevel(
-        publicKeyHex: publicKeyHex,
-        companionKey: companionKey,
-        binLevel: _bin30Min,
-        count: 2,
-      );
-      if (oldest.isNotEmpty) {
-        await _database.into(_database.contactPositionHistories).insert(
-              _averagePoints(oldest, _bin1Hour),
-            );
-        await _deleteHistoryIds(oldest.map((p) => p.id).toList());
-      }
-    }
-
-    final level3Count =
-        await _countAtBinLevel(publicKeyHex, companionKey, _bin1Hour);
-    if (level3Count > _max1Hour) {
-      final all = await _getOldestAtBinLevel(
-        publicKeyHex: publicKeyHex,
-        companionKey: companionKey,
-        binLevel: _bin1Hour,
-        count: 100,
-      );
-      if (all.length > _max1Hour) {
-        final toDelete = all.take(all.length - _max1Hour);
-        await _deleteHistoryIds(toDelete.map((p) => p.id).toList());
-      }
+    final deleteIds =
+        all.where((p) => !keepIds.contains(p.id)).map((p) => p.id).toList();
+    if (deleteIds.isNotEmpty) {
+      await (_database.delete(_database.contactPositionHistories)
+            ..where((t) => t.id.isIn(deleteIds)))
+          .go();
     }
   }
 

@@ -25,6 +25,7 @@ class AppSettings {
   final double mapZoomLevel; // 10.0-18.0
   final bool mapShowTrackedUserNames;
   final bool mapShowWaypointNames;
+  final bool mapShowContactPaths;
   final bool distanceRingsEnabled;
   final String distanceRingInterval; // '500m', '1km', '2km'
 
@@ -61,6 +62,7 @@ class AppSettings {
     this.mapZoomLevel = 15.0,
     this.mapShowTrackedUserNames = true,
     this.mapShowWaypointNames = true,
+    this.mapShowContactPaths = false,
     this.distanceRingsEnabled = false,
     this.distanceRingInterval = '500m',
     this.lastConnectedDevice,
@@ -90,6 +92,7 @@ class AppSettings {
     double? mapZoomLevel,
     bool? mapShowTrackedUserNames,
     bool? mapShowWaypointNames,
+    bool? mapShowContactPaths,
     bool? distanceRingsEnabled,
     String? distanceRingInterval,
     String? lastConnectedDevice,
@@ -122,8 +125,8 @@ class AppSettings {
       mapZoomLevel: mapZoomLevel ?? this.mapZoomLevel,
       mapShowTrackedUserNames:
           mapShowTrackedUserNames ?? this.mapShowTrackedUserNames,
-      mapShowWaypointNames:
-          mapShowWaypointNames ?? this.mapShowWaypointNames,
+      mapShowWaypointNames: mapShowWaypointNames ?? this.mapShowWaypointNames,
+      mapShowContactPaths: mapShowContactPaths ?? this.mapShowContactPaths,
       distanceRingsEnabled: distanceRingsEnabled ?? this.distanceRingsEnabled,
       distanceRingInterval: distanceRingInterval ?? this.distanceRingInterval,
       lastConnectedDevice: lastConnectedDevice ?? this.lastConnectedDevice,
