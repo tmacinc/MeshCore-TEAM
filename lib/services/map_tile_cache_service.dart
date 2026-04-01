@@ -6,6 +6,7 @@
 // Non-commercial use only. See LICENSE file for details.
 
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/widgets.dart';
@@ -152,6 +153,107 @@ class MapTileCacheService {
       total += tileBounds.count;
     }
     return total;
+  }
+
+  /// Enumerate all tile URLs for a region (for export/import).
+  List<String> tileUrlsForRegion({
+    required LatLngBounds bounds,
+    required int minZoom,
+    required int maxZoom,
+    required String urlTemplate,
+    required List<String> subdomains,
+  }) {
+    return tileCoordinatesForRegion(
+      bounds: bounds,
+      minZoom: minZoom,
+      maxZoom: maxZoom,
+      urlTemplate: urlTemplate,
+      subdomains: subdomains,
+    ).map((t) => t.url).toList();
+  }
+
+  /// Enumerate all tile coordinates + URLs for a region.
+  /// Returns records with (url, x, y, z) so callers don't need to parse URLs.
+  List<({String url, int x, int y, int z})> tileCoordinatesForRegion({
+    required LatLngBounds bounds,
+    required int minZoom,
+    required int maxZoom,
+    required String urlTemplate,
+    required List<String> subdomains,
+  }) {
+    final safeMin = math.min(minZoom, maxZoom);
+    final safeMax = math.max(minZoom, maxZoom);
+    final result = <({String url, int x, int y, int z})>[];
+
+    for (int zoom = safeMin; zoom <= safeMax; zoom++) {
+      final tileBounds = _tileBoundsForBounds(bounds, zoom);
+      for (int x = tileBounds.minX; x <= tileBounds.maxX; x++) {
+        for (int y = tileBounds.minY; y <= tileBounds.maxY; y++) {
+          result.add((
+            url: _buildTileUrl(
+              urlTemplate: urlTemplate,
+              subdomains: subdomains,
+              x: x,
+              y: y,
+              zoom: zoom,
+            ),
+            x: x,
+            y: y,
+            z: zoom,
+          ));
+        }
+      }
+    }
+    return result;
+  }
+
+  /// Get cached tile bytes by URL key. Returns null if not cached.
+  Future<Uint8List?> getTileBytes(String url) async {
+    final info = await cacheManager.getFileFromCache(url);
+    if (info == null) return null;
+    return info.file.readAsBytes();
+  }
+
+  /// Write tile bytes into the cache under the given URL key.
+  Future<void> putTileBytes(String url, Uint8List bytes) async {
+    await cacheManager.putFile(
+      url,
+      bytes,
+      key: url,
+      fileExtension: 'png',
+      maxAge: const Duration(days: 365),
+    );
+  }
+
+  /// Build a tile URL from template + coordinates (public accessor for export).
+  String buildTileUrl({
+    required String urlTemplate,
+    required List<String> subdomains,
+    required int x,
+    required int y,
+    required int zoom,
+  }) {
+    return _buildTileUrl(
+      urlTemplate: urlTemplate,
+      subdomains: subdomains,
+      x: x,
+      y: y,
+      zoom: zoom,
+    );
+  }
+
+  /// Parse a tile path like `{providerId}/{z}/{x}/{y}.png` into components.
+  /// Returns null if the path doesn't match the expected format.
+  static ({String providerId, int z, int x, int y})? parseTilePath(
+      String path) {
+    final parts = path.split('/');
+    if (parts.length < 4) return null;
+    final y = int.tryParse(parts.last.replaceAll(RegExp(r'\.\w+$'), ''));
+    final x = int.tryParse(parts[parts.length - 2]);
+    final z = int.tryParse(parts[parts.length - 3]);
+    final providerId = parts.sublist(0, parts.length - 3).join('/');
+    if (y == null || x == null || z == null || providerId.isEmpty) return null;
+    return (providerId: providerId, z: z, x: x, y: y);
   }
 
   Future<void> deleteRegion({

@@ -19,6 +19,12 @@ import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/screens/forwarding_debug_screen.dart';
 import 'package:meshcore_team/screens/debug_log_screen.dart';
+import 'package:meshcore_team/screens/team_config_screen.dart';
+import 'package:meshcore_team/screens/offline_share_screen.dart';
+import 'package:meshcore_team/services/map_tile_cache_service.dart';
+import 'package:meshcore_team/models/map_tile_providers.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// Connection Screen
@@ -125,6 +131,73 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                 ),
               ),
             ),
+          if (bleManager.isConnected)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Team Config',
+              onSelected: (value) {
+                if (value == 'share_offline') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const OfflineShareScreen(),
+                    ),
+                  );
+                  return;
+                }
+                if (value == 'wipe_data') {
+                  _showWipeDataDialog();
+                  return;
+                }
+                final mode = value == 'export'
+                    ? TeamConfigMode.export
+                    : TeamConfigMode.import;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => TeamConfigScreen(mode: mode),
+                  ),
+                );
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'export',
+                  child: ListTile(
+                    leading: Icon(Icons.file_download),
+                    title: Text('Create Team Config'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'import',
+                  child: ListTile(
+                    leading: Icon(Icons.file_upload),
+                    title: Text('Import Team Config'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'share_offline',
+                  child: ListTile(
+                    leading: Icon(Icons.wifi_tethering),
+                    title: Text('Share Config Offline'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'wipe_data',
+                  child: ListTile(
+                    leading: Icon(Icons.delete_forever, color: Colors.red),
+                    title: Text('Wipe Local Data',
+                        style: TextStyle(color: Colors.red)),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
+            ),
           _buildConnectionStatusIndicator(bleManager),
         ],
       ),
@@ -150,6 +223,197 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
               onPressed: _isScanning ? _stopScan : _startScan,
               child: Icon(_isScanning ? Icons.stop : Icons.search),
             ),
+    );
+  }
+
+  Future<void> _showWipeDataDialog() async {
+    final db = context.read<AppDatabase>();
+    final channelRepo = context.read<ChannelRepository>();
+    final settingsService = context.read<SettingsService>();
+    final tileCache = context.read<MapTileCacheService>();
+    final companionKey =
+        settingsService.settings.currentCompanionPublicKey ?? '';
+
+    // Load current data counts for display
+    final channels = companionKey.isNotEmpty
+        ? await db.channelsDao.getChannelsByCompanion(companionKey)
+        : <ChannelData>[];
+    final privateChannels =
+        channels.where((c) => !c.isPublic && c.channelIndex != 0).toList();
+    final waypoints = await db.waypointsDao.getAllWaypoints();
+    final mapAreas = await db.offlineMapAreasDao.getAllAreas();
+
+    if (!mounted) return;
+
+    bool wipeChannels = false;
+    bool wipeWaypoints = false;
+    bool wipeMaps = false;
+    bool isWiping = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final nothingSelected =
+                !wipeChannels && !wipeWaypoints && !wipeMaps;
+
+            return AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      color: Colors.red, size: 28),
+                  SizedBox(width: 8),
+                  Text('Wipe Local Data'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Select which data to permanently delete:',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  CheckboxListTile(
+                    value: wipeChannels,
+                    onChanged: isWiping
+                        ? null
+                        : (v) =>
+                            setDialogState(() => wipeChannels = v ?? false),
+                    title: Text('Channels (${privateChannels.length} private)'),
+                    subtitle:
+                        const Text('Clears from firmware and local database'),
+                    secondary: const Icon(Icons.radio),
+                    dense: true,
+                    enabled: privateChannels.isNotEmpty && !isWiping,
+                  ),
+                  CheckboxListTile(
+                    value: wipeWaypoints,
+                    onChanged: isWiping
+                        ? null
+                        : (v) =>
+                            setDialogState(() => wipeWaypoints = v ?? false),
+                    title: Text('Waypoints & Routes (${waypoints.length})'),
+                    secondary: const Icon(Icons.place),
+                    dense: true,
+                    enabled: waypoints.isNotEmpty && !isWiping,
+                  ),
+                  CheckboxListTile(
+                    value: wipeMaps,
+                    onChanged: isWiping
+                        ? null
+                        : (v) => setDialogState(() => wipeMaps = v ?? false),
+                    title: Text('Offline Maps (${mapAreas.length} areas)'),
+                    subtitle:
+                        const Text('Removes downloaded tiles and metadata'),
+                    secondary: const Icon(Icons.map),
+                    dense: true,
+                    enabled: mapAreas.isNotEmpty && !isWiping,
+                  ),
+                  if (isWiping) ...[
+                    const SizedBox(height: 16),
+                    const LinearProgressIndicator(),
+                    const SizedBox(height: 8),
+                    const Text('Wiping data...'),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      isWiping ? null : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton.icon(
+                  onPressed: (nothingSelected || isWiping)
+                      ? null
+                      : () async {
+                          // Second confirmation
+                          final confirm = await showDialog<bool>(
+                            context: dialogContext,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Are you sure?'),
+                              content: Text(
+                                'This will permanently delete the selected data. '
+                                '${wipeChannels ? 'Channels will be cleared from the connected companion firmware. ' : ''}'
+                                'This cannot be undone.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                FilledButton(
+                                  style: FilledButton.styleFrom(
+                                      backgroundColor: Colors.red),
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  child: const Text('Wipe'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm != true) return;
+
+                          setDialogState(() => isWiping = true);
+
+                          try {
+                            if (wipeChannels) {
+                              for (final ch in privateChannels) {
+                                try {
+                                  await channelRepo.deletePrivateChannel(ch);
+                                } catch (e) {
+                                  debugPrint(
+                                      '[Wipe] Channel delete failed: $e');
+                                }
+                              }
+                            }
+                            if (wipeWaypoints) {
+                              await db.waypointsDao.deleteAllWaypoints();
+                            }
+                            if (wipeMaps) {
+                              for (final area in mapAreas) {
+                                final provider =
+                                    tileProviderForId(area.providerId);
+                                await tileCache.deleteRegion(
+                                  bounds: LatLngBounds(
+                                    LatLng(area.south, area.west),
+                                    LatLng(area.north, area.east),
+                                  ),
+                                  minZoom: area.minZoom,
+                                  maxZoom: area.maxZoom,
+                                  urlTemplate: provider.urlTemplate,
+                                  subdomains: provider.subdomains,
+                                );
+                              }
+                              await db.offlineMapAreasDao.deleteAllAreas();
+                            }
+
+                            if (!dialogContext.mounted) return;
+                            Navigator.of(dialogContext).pop();
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Data wiped successfully')),
+                            );
+                          } catch (e) {
+                            setDialogState(() => isWiping = false);
+                            if (!dialogContext.mounted) return;
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              SnackBar(content: Text('Wipe failed: $e')),
+                            );
+                          }
+                        },
+                  icon: const Icon(Icons.delete_forever),
+                  label: const Text('Wipe Selected'),
+                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

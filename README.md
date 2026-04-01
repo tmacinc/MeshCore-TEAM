@@ -39,6 +39,7 @@ Core user-facing features that are already implemented:
 	- Phone location + optional "track-up" mode
 	- Contact markers (when location tracking is enabled)
 	- Waypoints (create/edit/manage)
+	- Routes (create multi-point paths, edit, color-code, share via mesh)
 	- Offline map download + management
 - Location settings
 	- Location source: phone GPS vs companion radio GPS
@@ -49,6 +50,12 @@ Core user-facing features that are already implemented:
 - **Smart forwarding** (V1) — app-managed multi-hop routing via the forwarding policy engine
 - **Autonomous mode** — firmware-side GPS tracking that operates without a phone connection
 - Capability advertisement between peers (`#CAP:` on the telemetry channel)
+- Team Config export/import
+	- Export channels, waypoints, radio settings, and offline map tiles as a portable `.teamcfg.zip` file
+	- Import config on a connected companion — channels are registered with the radio, radio settings applied, waypoints and map tiles merged
+	- Named configs with per-item selection (choose which channels, waypoints, and map areas to include)
+	- Offline sharing — serve configs over a local hotspot with QR code download (no internet required)
+- Wipe Local Data — selectively clear channels (from firmware too), waypoints/routes, and offline maps with double confirmation
 - Foreground service for background BLE stability (Android)
 - iOS BLE lifecycle handling with deferred reconnect and stale connection cleanup
 
@@ -197,7 +204,7 @@ Channel share links use this format:
 
 Treat the link like a password: anyone who has it can join the channel.
 
-### 5) Map, offline maps, and waypoints
+### 5) Map, offline maps, waypoints, and routes
 
 - Open **Map** (fourth tab) to see your position.
 - Use the map menus to:
@@ -206,9 +213,28 @@ Treat the link like a password: anyone who has it can join the channel.
 	- manage stored areas (**Manage Offline Maps**)
 	- manage waypoints (**Manage Waypoints**)
 
-To create a waypoint, tap the **add waypoint** button and confirm the position.
-
 Contact markers appear on the map when they have sent location telemetry on the tracking channel within the last 12 hours.
+
+#### Waypoints
+
+To create a waypoint, tap the **+** button on the map and choose **Create Waypoint**. Tap a location on the map, enter a name, select a type (Camp, Meetup, Hazard, Water, etc.), and save.
+
+Waypoints can be edited or deleted from the map (tap the marker) or from the **Manage Waypoints** screen. Waypoints sync over the mesh — when another user receives a waypoint, it appears on their map automatically.
+
+#### Routes
+
+Routes let you draw multi-point paths on the map — useful for marking trails, patrol routes, or planned movement paths.
+
+1. Tap the **+** button on the map and choose **Create Route**.
+2. Tap points on the map to build the path. Points are connected in order as a polyline.
+3. When finished, tap **Save** and enter a name, optional description, and choose a **route color** from the preset palette (purple, red, blue, green, orange, pink, teal, brown, grey, yellow).
+
+To **edit an existing route**, tap the route on the map and choose edit. In edit mode you can:
+- Drag existing points to adjust their position
+- Add new points to extend the route
+- Change the name, description, or color
+
+Routes are stored as waypoints with type `ROUTE` — they share over the mesh like any waypoint. When received by another user, routes render as colored polylines on their map. Routes can also be included in **Team Config** exports and imported as part of a `.teamcfg.zip` file.
 
 ### 6) Radio settings
 
@@ -219,7 +245,65 @@ From the Connection tab, tap **Radio Settings** to configure:
 - **Autonomous Mode** (custom firmware + GPS) — configures the firmware to track and broadcast location independently. See [How autonomous mode works](#how-autonomous-mode-works).
 - **Preset / Custom** radio parameters — frequency, bandwidth, spreading factor, coding rate, TX power.
 
-### 7) Location tracking and group setup
+### 7) Team Config (export / import)
+
+Team Config lets a group leader export channels, waypoints, radio settings, and offline map tiles as a single `.teamcfg.zip` file that other members can import to get set up quickly.
+
+#### Exporting a config
+
+1. Connect to your companion radio.
+2. Tap the **⋮ menu** on the Connection screen and choose **Create Team Config**.
+3. Enter a **config name** (e.g. "Alpha Team").
+4. Select the **channels**, **waypoints**, and **offline map areas** to include. Toggle **Radio Settings** to include your frequency/bandwidth/SF/CR.
+5. Tap **Export Config** and choose a save location.
+
+The exported `.teamcfg.zip` contains a `config.json` (channels, waypoints, radio settings), tile area metadata, and cached map tiles. Share it with group members via email, USB, or any file transfer method — or use **Share Config Offline** (see below).
+
+#### Importing a config
+
+1. Connect to your companion radio (import requires an active connection).
+2. Tap the **⋮ menu** on the Connection screen and choose **Import Team Config**.
+3. Choose how to import:
+   - **From File** — pick a `.teamcfg.zip` file from local storage.
+   - **From QR Code** — scan a QR code served by another user's **Share Config Offline** session.
+4. A preview dialog shows what's included. Tap **Import** to apply.
+5. Channels are registered with the companion firmware, radio settings are applied, waypoints are merged (duplicates skipped), and map tiles are added to the local cache.
+
+> **Note:** TX power is not included in the config — each radio keeps its own power setting. Channel indices are assigned automatically by the companion radio.
+
+#### Sharing a config offline (no internet)
+
+When your group has no internet access, you can share a config directly between phones using a Wi-Fi hotspot:
+
+**On the sender's phone:**
+
+1. Tap the **⋮ menu** on the Connection screen and choose **Share Config Offline**.
+2. Follow the on-screen instructions to create a Wi-Fi hotspot on your device (steps vary by Android/iOS).
+3. Tap **Continue**, then pick the `.teamcfg.zip` file to share.
+4. Review the config details and tap **Confirm**.
+5. The app starts a local web server and displays a **QR code**. A manual URL is also shown as a fallback.
+6. When finished, tap **Finished** to stop the server.
+
+**On each receiver's phone:**
+
+1. Connect to the sender's Wi-Fi hotspot.
+2. Open TEAM, connect to their companion radio, then tap **Import Team Config → From QR Code**.
+3. Scan the QR code displayed on the sender's screen.
+4. The config downloads automatically. Review the preview and tap **Import**.
+
+### 8) Wipe Local Data
+
+If you need to reset your device or clean up before redeploying, the **Wipe Local Data** option lets you selectively erase data:
+
+1. Connect to your companion radio.
+2. Tap the **⋮ menu** on the Connection screen and choose **Wipe Local Data**.
+3. Select which categories to clear:
+   - **Channels** — removes all private channels from the companion radio firmware and the local database. The public channel is never touched.
+   - **Waypoints & Routes** — deletes all waypoints and routes from the local database.
+   - **Offline Maps** — removes all downloaded tiles and area metadata.
+4. Tap **Wipe Selected**, then confirm a second time. This action is permanent.
+
+### 9) Location tracking and group setup
 
 Location tracking sends periodic location updates to the mesh via a **private channel**. All group members share telemetry packets on that channel.
 
@@ -285,8 +369,7 @@ Planned features and improvements (see also the [issues tracker](../../issues)):
 - **Forwarding V2** — topology-aware routing using the mesh graph model (`#T:` topology events). V2 will build a real-time network graph and use it to compute targeted forward lists (`SET_FORWARD_LIST`) instead of relying solely on `maxHops`. The topology strategy skeleton is in place and currently falls back to V1; the graph model and prefix-based routing logic are next.
 - **iOS background reliability** — improve BLE connection persistence using Core Bluetooth state restoration; implement the Always-location upgrade flow for background tracking.
 - 1.0.3 Added - **Group member location history** — track and display historical location trails for group members on the map.
-- **Offline map save/load** — save downloaded offline map areas to external storage and reload them, enabling map sharing between devices.
-- **Group leader bulk setup** — allow a group leader to export/import channel configuration, waypoints, and offline maps as an external file for easy group onboarding.
+- 1.0.3-beta2 Added - **Team Config export/import** — export/import channels, waypoints, radio settings, and offline map tiles as a portable `.teamcfg.zip` file for easy group onboarding. Includes offline sharing via local hotspot + QR code.
 - Topology map visualization — display the mesh network graph on the map screen
 - Multi-companion device switching
 
