@@ -49,6 +49,10 @@ Core user-facing features that are already implemented:
 - **Smart forwarding** (V1) — app-managed multi-hop routing via the forwarding policy engine
 - **Autonomous mode** — firmware-side GPS tracking that operates without a phone connection
 - Capability advertisement between peers (`#CAP:` on the telemetry channel)
+- Team Config export/import
+	- Export channels, waypoints, radio settings, and offline map tiles as a portable `.teamcfg.zip` file
+	- Import config on a connected companion — channels are registered with the radio, radio settings applied, waypoints and map tiles merged
+	- Named configs with per-item selection (choose which channels, waypoints, and map areas to include)
 - Foreground service for background BLE stability (Android)
 - iOS BLE lifecycle handling with deferred reconnect and stale connection cleanup
 
@@ -219,7 +223,30 @@ From the Connection tab, tap **Radio Settings** to configure:
 - **Autonomous Mode** (custom firmware + GPS) — configures the firmware to track and broadcast location independently. See [How autonomous mode works](#how-autonomous-mode-works).
 - **Preset / Custom** radio parameters — frequency, bandwidth, spreading factor, coding rate, TX power.
 
-### 7) Location tracking and group setup
+### 7) Team Config (export / import)
+
+Team Config lets a group leader export channels, waypoints, radio settings, and offline map tiles as a single `.teamcfg.zip` file that other members can import to get set up quickly.
+
+#### Exporting a config
+
+1. Connect to your companion radio.
+2. Tap the **⋮ menu** on the Connection screen and choose **Create Team Config**.
+3. Enter a **config name** (e.g. "Alpha Team").
+4. Select the **channels**, **waypoints**, and **offline map areas** to include. Toggle **Radio Settings** to include your frequency/bandwidth/SF/CR.
+5. Tap **Export Config** and choose a save location.
+
+The exported `.teamcfg.zip` contains a `config.json` (channels, waypoints, radio settings), tile area metadata, and cached map tiles. Share it with group members via email, USB, or any file transfer method.
+
+#### Importing a config
+
+1. Connect to your companion radio (import requires an active connection).
+2. Tap the **⋮ menu** on the Connection screen and choose **Import Team Config**.
+3. Pick the `.teamcfg.zip` file. A preview dialog shows what's included.
+4. Tap **Import** to apply. Channels are registered with the companion firmware, radio settings are applied, waypoints are merged (duplicates skipped), and map tiles are added to the local cache.
+
+> **Note:** TX power is not included in the config — each radio keeps its own power setting. Channel indices are assigned automatically by the companion radio.
+
+### 8) Location tracking and group setup
 
 Location tracking sends periodic location updates to the mesh via a **private channel**. All group members share telemetry packets on that channel.
 
@@ -285,8 +312,7 @@ Planned features and improvements (see also the [issues tracker](../../issues)):
 - **Forwarding V2** — topology-aware routing using the mesh graph model (`#T:` topology events). V2 will build a real-time network graph and use it to compute targeted forward lists (`SET_FORWARD_LIST`) instead of relying solely on `maxHops`. The topology strategy skeleton is in place and currently falls back to V1; the graph model and prefix-based routing logic are next.
 - **iOS background reliability** — improve BLE connection persistence using Core Bluetooth state restoration; implement the Always-location upgrade flow for background tracking.
 - 1.0.3 Added - **Group member location history** — track and display historical location trails for group members on the map.
-- **Offline map save/load** — save downloaded offline map areas to external storage and reload them, enabling map sharing between devices.
-- **Group leader bulk setup** — allow a group leader to export/import channel configuration, waypoints, and offline maps as an external file for easy group onboarding.
+- 1.0.3-beta2 Added - **Team Config export/import** — export/import channels, waypoints, radio settings, and offline map tiles as a portable `.teamcfg.zip` file for easy group onboarding.
 - Topology map visualization — display the mesh network graph on the map screen
 - Multi-companion device switching
 

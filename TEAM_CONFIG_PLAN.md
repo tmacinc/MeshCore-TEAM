@@ -5,8 +5,9 @@
 A team leader builds a self-contained mission package (`.teamcfg.zip`) containing channels, waypoints, routes, and offline map tiles. This file is saved locally for reuse across missions and can be shared with team members via any available method.
 
 Two distinct workflows:
-1. **Build & Save** — Create the config file locally
-2. **Share** — Send a saved config to other devices
+1. **Build & Save** — Create the config file locally (export available anytime)
+2. **Import** — Import requires an active companion connection (channels must be registered with firmware)
+3. **Share** — Send a saved config to other devices (deferred to Phase 2+)
 
 ---
 
@@ -59,6 +60,7 @@ tile_areas.json            # Offline map area definitions (bounds, zoom, provide
       "latitude": 37.7749,
       "longitude": -122.4194,
       "waypointType": "CAMP",
+      "creatorNodeId": "!aabbccdd",
       "createdAt": 1711900000
     }
   ]
@@ -67,6 +69,8 @@ tile_areas.json            # Offline map area definitions (bounds, zoom, provide
 - Waypoints and routes use the same schema (routes are `waypointType: "ROUTE"` with route payload in `description`)
 - `sharedKeyHex` is the 16-byte PSK as a 32-char hex string — same format used in `meshcore://` deep links
 - `channelIndex` is NOT exported — the receiver assigns the next available slot on import
+- `creatorNodeId` is exported; on import, it is preserved if present, otherwise set to the importer's companion node ID
+- On import, waypoints default to `isReceived: false`, `isVisible: true`, `isNew: true`
 
 ### tile_areas.json
 ```json
@@ -105,15 +109,25 @@ dependencies:
 
 New screen: `lib/screens/team_config_screen.dart`
 
-**Entry point:** Add a button/menu item to the Connection screen or a new bottom nav item. Alternatively, accessible from the map settings menu as "Team Config" or from the Channels screen AppBar.
+**Entry point:** Settings icon button (⚙️) in the Connection screen AppBar, positioned to the right of the connection status indicator. Only visible when a companion device is connected.
+
+```
+┌─────────────────────────────────────┐
+│ MeshCore TEAM            [🔧] [🟢] │  ← settings button + status indicator
+├─────────────────────────────────────┤
+│ (connected device view)             │
+└─────────────────────────────────────┘
+```
+
+Tapping the settings button opens the Team Config screen.
 
 **Screen layout:**
 ```
 ┌─────────────────────────────────┐
-│ Team Config                     │
+│ ← Team Config                   │
 ├─────────────────────────────────┤
 │                                 │
-│ ☐ Build New Config              │
+│ ── Export Config ────────────── │
 │                                 │
 │ ┌─ Select Channels ───────────┐ │
 │ │ ☑ TEAM 6                    │ │
@@ -135,13 +149,14 @@ New screen: `lib/screens/team_config_screen.dart`
 │                                 │
 │ [ Export Config ]               │
 │                                 │
-├─────────────────────────────────┤
+│ ── Import Config ────────────── │
 │                                 │
-│ ☐ Import Config                 │
 │ [ Select .teamcfg.zip file ]    │
 │                                 │
 └─────────────────────────────────┘
 ```
+
+**Import is gated on connection:** The "Select .teamcfg.zip file" button is only enabled when the companion device is connected. If disconnected mid-import, channel registration is queued and retried on next connection (same as existing `importChannel()` behavior).
 
 ### Export Implementation
 
@@ -197,11 +212,15 @@ class TeamConfigService
    - Map tiles: X tiles (~Y MB)
 3. User confirms import
 4. **Channels:** For each channel in `config.json`:
-   - Compute hash from `sharedKeyHex` using the same hash function as `ChannelRepository`
-   - Check if channel with that hash already exists → skip if so
-   - Find next available `channelIndex` (1-7 for private channels)
-   - Insert via `ChannelsDao.upsertChannel()`
-   - Note: channel is added to the local DB only — it must be pushed to the radio separately when connected
+   - Construct a `meshcore://` deep link URL from `sharedKeyHex`, `name`, and flags (same format as QR/share links)
+   - Call `ChannelRepository.importChannel(url)` — this handles:
+     - Hash computation
+     - Duplicate detection (skip if hash already exists)
+     - Next available `channelIndex` assignment
+     - DB insert via `ChannelsDao.upsertChannel()`
+     - Firmware registration via `_registerChannelWithFirmware()` if connected
+   - **Import requires active companion connection** — channels are registered with firmware immediately
+   - If a channel already exists (hash match), it is skipped
 5. **Waypoints/Routes:** For each waypoint:
    - Check for duplicate by `meshId` (if present) or by matching name + lat/lon
    - Skip duplicates, insert new ones via `WaypointsDao.insertWaypoint()`
@@ -224,19 +243,21 @@ class TeamConfigService
 
 ---
 
-## Workflow 2: Share Config
+## Workflow 2: Share Config (Deferred)
 
-### Option A: OS Share Sheet (simplest, covers most cases)
+Sharing will be added in a later phase. The export produces a `.teamcfg.zip` file saved to local storage via `FilePicker.platform.saveFile()`. Users can share this file manually (email, messaging, USB, cloud drive, AirDrop, Quick Share, etc.).
 
-After export (or from a "Saved Configs" list), share via `share_plus`:
+When share is implemented, it will integrate into the Team Config screen with these options:
+
+### Option A: OS Share Sheet
+
+Share via `share_plus`:
 ```dart
 await Share.shareXFiles(
   [XFile(configFile.path)],
   subject: 'Team Config — Operation Alpha',
 );
 ```
-- Covers: AirDrop (iOS→iOS), Quick Share (Android→Android), email, messaging apps, USB, cloud drive
-- Cross-platform Android↔iOS gap remains — but works if any shared medium is available
 
 ### Option B: Local Wi-Fi Server (offline cross-platform)
 
@@ -245,7 +266,6 @@ await Share.shareXFiles(
 dependencies:
   shelf: ^1.4.0
   shelf_io: ^1.1.0
-  qr_flutter: ^4.1.0    # QR code generation (if not already present)
 ```
 
 **Sender flow:**
@@ -297,20 +317,25 @@ When the app is opened via a file, route to the import preview screen automatica
 
 ## Implementation Phases
 
-### Phase 1: Build & Save (core)
+### Phase 1: Export & Import (core)
 **Files to create:**
 - `lib/services/team_config_service.dart` — Export/import logic, ZIP packing/unpacking
 - `lib/screens/team_config_screen.dart` — UI for building and importing configs
 
 **Files to modify:**
 - `pubspec.yaml` — Add `archive` dependency
-- `lib/services/map_tile_cache_service.dart` — Add `getFileFromCache()` and `enumerateRegionTiles()` helper methods for reading cached tiles and getting their bytes
-- Entry point screen (connection_screen or map settings menu) — Add navigation to Team Config screen
+- `lib/services/map_tile_cache_service.dart` — Add public tile helpers:
+  - `Future<Uint8List?> getTileBytes(String url)` — Get cached tile bytes by URL key
+  - `Future<void> putTileBytes(String url, Uint8List bytes)` — Write tile bytes into cache
+  - `List<String> tileUrlsForRegion(bounds, minZoom, maxZoom, urlTemplate, subdomains)` — Enumerate tile URLs for a region (expose existing `_tileBoundsForBounds` + `_buildTileUrl` logic)
+  - Both wrap `cacheManager.getFileFromCache(key)` and `cacheManager.putFile(key, bytes)`
+- `lib/screens/connection_screen.dart` — Add settings icon button (⚙️) in AppBar `actions`, before the connection status indicator, visible only when `bleManager.isConnected`. Navigates to `TeamConfigScreen`.
+- `lib/database/daos/offline_map_areas_dao.dart` — Add `findByProviderAndBounds()` query for duplicate/merge detection on import
 
-**Key methods on `MapTileCacheService` to add:**
-- `Future<Uint8List?> getTileBytes(String url)` — Get cached tile bytes by URL key
-- `Future<void> putTileBytes(String url, Uint8List bytes)` — Write tile bytes into cache
-- Both wrap `cacheManager.getFileFromCache(key)` and `cacheManager.putFile(key, bytes)`
+**Channel import strategy:**
+- For each channel in `config.json`, construct a `meshcore://` deep link URL from `sharedKeyHex` + `name` + flags
+- Call `ChannelRepository.importChannel(url)` which handles hash, dedup, index assignment, DB insert, and firmware registration
+- No need to expose private `_calculateHash()` or `_bytesToHex()` methods
 
 ### Phase 2: Share via OS Share Sheet
 **Files to modify:**
@@ -321,7 +346,7 @@ When the app is opened via a file, route to the import preview screen automatica
 - `lib/services/team_config_server.dart` — HTTP server using `shelf` + `shelf_io`
 
 **Files to modify:**
-- `pubspec.yaml` — Add `shelf`, `shelf_io`, `qr_flutter`
+- `pubspec.yaml` — Add `shelf`, `shelf_io`
 - `lib/screens/team_config_screen.dart` — Add "Share via Wi-Fi" UI with QR display
 - `lib/screens/qr_scan_screen.dart` — Handle `teamcfg://` URL scheme
 

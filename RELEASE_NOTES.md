@@ -1,3 +1,18 @@
+# Release Notes — v1.0.3-beta2
+
+## Team Config Export / Import
+- New **Create Team Config** and **Import Team Config** options in the Connection screen menu (visible when connected).
+- Export channels, waypoints, radio settings, and offline map tiles as a portable `.teamcfg.zip` file.
+- Named configs — give each export a descriptive name (stored in the manifest).
+- Per-item selection — choose exactly which channels, waypoints, and map areas to include.
+- Radio settings export includes frequency, bandwidth, spreading factor, and coding rate (TX power excluded — each radio keeps its own value).
+- Import requires an active companion connection — channels are registered with the firmware, radio settings applied, waypoints merged (dedup by meshId + name/location), and map tiles added to cache.
+- Preview dialog shows full config contents before importing.
+- Offline map tiles are packaged inside the ZIP and restored into the tile cache on import.
+- File saved via system file picker; compatible with Android and iOS.
+
+---
+
 # Release Notes — v1.0.3
 
 ## Route Colors

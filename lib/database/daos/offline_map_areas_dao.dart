@@ -54,6 +54,24 @@ class OfflineMapAreasDao extends DatabaseAccessor<AppDatabase>
     return delete(offlineMapAreas).go();
   }
 
+  /// Find areas matching a provider and overlapping bounds (for import merge detection).
+  Future<List<OfflineMapAreaData>> findByProviderAndOverlappingBounds({
+    required String providerId,
+    required double north,
+    required double south,
+    required double east,
+    required double west,
+  }) {
+    return (select(offlineMapAreas)
+          ..where((t) =>
+              t.providerId.equals(providerId) &
+              t.north.isBiggerOrEqualValue(south) &
+              t.south.isSmallerOrEqualValue(north) &
+              t.east.isBiggerOrEqualValue(west) &
+              t.west.isSmallerOrEqualValue(east)))
+        .get();
+  }
+
   Stream<int> watchTotalStorageBytes() {
     final query = selectOnly(offlineMapAreas)
       ..addColumns([offlineMapAreas.sizeBytes.sum()]);

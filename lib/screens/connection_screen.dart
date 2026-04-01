@@ -19,6 +19,7 @@ import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/screens/forwarding_debug_screen.dart';
 import 'package:meshcore_team/screens/debug_log_screen.dart';
+import 'package:meshcore_team/screens/team_config_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// Connection Screen
@@ -124,6 +125,41 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                   builder: (_) => const DebugLogScreen(),
                 ),
               ),
+            ),
+          if (bleManager.isConnected)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Team Config',
+              onSelected: (value) {
+                final mode = value == 'export'
+                    ? TeamConfigMode.export
+                    : TeamConfigMode.import;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => TeamConfigScreen(mode: mode),
+                  ),
+                );
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'export',
+                  child: ListTile(
+                    leading: Icon(Icons.file_download),
+                    title: Text('Create Team Config'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'import',
+                  child: ListTile(
+                    leading: Icon(Icons.file_upload),
+                    title: Text('Import Team Config'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
             ),
           _buildConnectionStatusIndicator(bleManager),
         ],

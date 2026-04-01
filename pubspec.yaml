@@ -3,7 +3,7 @@ description: "Cross-platform mesh networking app for iOS and Android"
 # Licensed under CC BY-NC-SA 4.0 - Non-commercial use only
 publish_to: 'none'
 
-version: 1.0.3-beta1+10301
+version: 1.0.3-beta2+10302
 
 environment:
   sdk: ^3.6.0
@@ -66,6 +66,9 @@ dependencies:
   # Map tile caching / offline maps
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1
+
+  # Team config export/import (ZIP)
+  archive: ^4.0.0
 
 dev_dependencies:
   flutter_test:
