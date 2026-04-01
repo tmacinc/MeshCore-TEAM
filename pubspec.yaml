@@ -70,6 +70,9 @@ dependencies:
   # Team config export/import (ZIP)
   archive: ^4.0.0
 
+  # Team config offline sharing (local HTTP server)
+  shelf: ^1.4.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

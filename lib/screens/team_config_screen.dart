@@ -15,6 +15,7 @@ import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/services/map_tile_cache_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/services/team_config_service.dart';
+import 'package:meshcore_team/screens/qr_scan_screen.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 
 enum TeamConfigMode { export, import }
@@ -338,14 +339,20 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
             const SizedBox(height: 16),
           ],
           const Text(
-            'Select a .teamcfg.zip file to import channels, waypoints, '
-            'and offline map tiles.',
+            'Import a team config from a local file or by scanning a '
+            'QR code from a nearby device sharing over Wi-Fi.',
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: isConnected ? _importConfig : null,
-            icon: const Icon(Icons.file_upload),
-            label: const Text('Select .teamcfg.zip file'),
+            icon: const Icon(Icons.folder_open),
+            label: const Text('From File'),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: isConnected ? _importFromQrCode : null,
+            icon: const Icon(Icons.qr_code_scanner),
+            label: const Text('From QR Code'),
           ),
         ],
       ),
@@ -432,20 +439,22 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
               .replaceAll(RegExp(r'[^a-zA-Z0-9_\- ]'), '')
               .replaceAll(' ', '_')
           : 'team_config';
+      final zipBytes = await zipFile.readAsBytes();
+
       final outputPath = await FilePicker.platform.saveFile(
         dialogTitle: 'Save Team Config',
         fileName: '$safeName.teamcfg.zip',
         type: FileType.any,
-        bytes: await zipFile.readAsBytes(),
+        bytes: zipBytes,
       );
 
       if (outputPath == null || !mounted) return;
 
-      // On some platforms saveFile() writes the bytes for us, on others
-      // it only returns the path.
+      // On some platforms saveFile writes the bytes but returns a path
+      // to an empty file — write again if needed.
       final outFile = File(outputPath);
       if (!await outFile.exists() || await outFile.length() == 0) {
-        await outFile.writeAsBytes(await zipFile.readAsBytes(), flush: true);
+        await outFile.writeAsBytes(zipBytes);
       }
 
       if (!mounted) return;
@@ -466,17 +475,17 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
-        withData: true,
+        withData: false,
       );
       if (result == null || result.files.isEmpty) return;
 
       final picked = result.files.single;
-      if (picked.bytes == null) return;
+      if (picked.path == null) return;
 
-      // Write to temp file for the archive library.
+      // Copy to temp so the original isn't locked.
       final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/import_${picked.name}');
-      await tempFile.writeAsBytes(picked.bytes!, flush: true);
+      await File(picked.path!).copy(tempFile.path);
 
       // Read preview.
       final preview = await _configService.readPreview(tempFile);
@@ -534,6 +543,133 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(importResult.toString())),
       );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Import failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
+  Future<void> _importFromQrCode() async {
+    try {
+      // Open QR scanner.
+      final scannedUrl = await Navigator.of(context).push<String>(
+        MaterialPageRoute(
+          builder: (_) => const QrScanScreen(title: 'Scan Config QR Code'),
+        ),
+      );
+      if (scannedUrl == null || !mounted) return;
+
+      // Validate the URL looks like an HTTP download link.
+      final uri = Uri.tryParse(scannedUrl);
+      if (uri == null || !uri.hasScheme || !uri.scheme.startsWith('http')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Invalid QR code. Expected a download URL.')),
+        );
+        return;
+      }
+
+      setState(() {
+        _isBusy = true;
+        _busyMessage = 'Downloading config…';
+        _busyProgress = 0;
+      });
+
+      // Download the ZIP from the URL.
+      final httpClient = HttpClient();
+      try {
+        final request = await httpClient.getUrl(uri);
+        final response = await request.close();
+
+        if (response.statusCode != 200) {
+          throw Exception('Download failed (HTTP ${response.statusCode})');
+        }
+
+        // Stream directly to a temp file to avoid holding in memory.
+        final totalBytes = response.contentLength;
+        var downloadedBytes = 0;
+        final tempDir = await getTemporaryDirectory();
+        final tempFile = File('${tempDir.path}/qr_import.teamcfg.zip');
+        final fileSink = tempFile.openWrite();
+        await for (final chunk in response) {
+          fileSink.add(chunk);
+          downloadedBytes += chunk.length;
+          if (mounted && totalBytes > 0) {
+            setState(() {
+              _busyProgress = downloadedBytes / totalBytes;
+              _busyMessage =
+                  'Downloading… ${(downloadedBytes / (1024 * 1024)).toStringAsFixed(1)} / ${(totalBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+            });
+          }
+        }
+        await fileSink.flush();
+        await fileSink.close();
+
+        if (!mounted) return;
+
+        // Read preview.
+        final preview = await _configService.readPreview(tempFile);
+
+        if (!mounted) return;
+
+        setState(() {
+          _isBusy = false;
+        });
+
+        // Show preview dialog.
+        final confirmed = await _showImportPreviewDialog(preview);
+        if (confirmed != true || !mounted) return;
+
+        setState(() {
+          _isBusy = true;
+          _busyMessage = 'Importing…';
+          _busyProgress = 0;
+        });
+
+        final db = context.read<AppDatabase>();
+        final tileCache = context.read<MapTileCacheService>();
+        final channelRepo = context.read<ChannelRepository>();
+        final connectionVM = context.read<ConnectionViewModel>();
+
+        final importResult = await _configService.importConfig(
+          zipFile: tempFile,
+          db: db,
+          tileCache: tileCache,
+          channelRepo: channelRepo,
+          applyRadioSettings: (settings) => connectionVM.applyRadioSettings(
+            frequencyMHz: settings.frequencyMHz,
+            bandwidthKHz: settings.bandwidthKHz,
+            spreadingFactor: settings.spreadingFactor,
+            codingRate: settings.codingRate,
+            txPowerDbm: connectionVM.deviceCapabilities?.txPower ?? 20,
+          ),
+          onProgress: (progress) {
+            if (!mounted) return;
+            setState(() {
+              _busyMessage = progress.phase;
+              _busyProgress =
+                  progress.total > 0 ? progress.current / progress.total : 0;
+            });
+          },
+        );
+
+        // Clean up temp file.
+        try {
+          await tempFile.delete();
+        } catch (_) {}
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(importResult.toString())),
+        );
+      } finally {
+        httpClient.close();
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

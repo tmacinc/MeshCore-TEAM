@@ -163,25 +163,48 @@ class MapTileCacheService {
     required String urlTemplate,
     required List<String> subdomains,
   }) {
+    return tileCoordinatesForRegion(
+      bounds: bounds,
+      minZoom: minZoom,
+      maxZoom: maxZoom,
+      urlTemplate: urlTemplate,
+      subdomains: subdomains,
+    ).map((t) => t.url).toList();
+  }
+
+  /// Enumerate all tile coordinates + URLs for a region.
+  /// Returns records with (url, x, y, z) so callers don't need to parse URLs.
+  List<({String url, int x, int y, int z})> tileCoordinatesForRegion({
+    required LatLngBounds bounds,
+    required int minZoom,
+    required int maxZoom,
+    required String urlTemplate,
+    required List<String> subdomains,
+  }) {
     final safeMin = math.min(minZoom, maxZoom);
     final safeMax = math.max(minZoom, maxZoom);
-    final urls = <String>[];
+    final result = <({String url, int x, int y, int z})>[];
 
     for (int zoom = safeMin; zoom <= safeMax; zoom++) {
       final tileBounds = _tileBoundsForBounds(bounds, zoom);
       for (int x = tileBounds.minX; x <= tileBounds.maxX; x++) {
         for (int y = tileBounds.minY; y <= tileBounds.maxY; y++) {
-          urls.add(_buildTileUrl(
-            urlTemplate: urlTemplate,
-            subdomains: subdomains,
+          result.add((
+            url: _buildTileUrl(
+              urlTemplate: urlTemplate,
+              subdomains: subdomains,
+              x: x,
+              y: y,
+              zoom: zoom,
+            ),
             x: x,
             y: y,
-            zoom: zoom,
+            z: zoom,
           ));
         }
       }
     }
-    return urls;
+    return result;
   }
 
   /// Get cached tile bytes by URL key. Returns null if not cached.
@@ -193,7 +216,13 @@ class MapTileCacheService {
 
   /// Write tile bytes into the cache under the given URL key.
   Future<void> putTileBytes(String url, Uint8List bytes) async {
-    await cacheManager.putFile(url, bytes, key: url);
+    await cacheManager.putFile(
+      url,
+      bytes,
+      key: url,
+      fileExtension: 'png',
+      maxAge: const Duration(days: 365),
+    );
   }
 
   /// Build a tile URL from template + coordinates (public accessor for export).

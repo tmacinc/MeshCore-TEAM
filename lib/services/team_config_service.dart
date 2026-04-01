@@ -338,7 +338,7 @@ class TeamConfigService {
         LatLng(area.south, area.west),
         LatLng(area.north, area.east),
       );
-      final urls = tileCache.tileUrlsForRegion(
+      final tiles = tileCache.tileCoordinatesForRegion(
         bounds: bounds,
         minZoom: area.minZoom,
         maxZoom: area.maxZoom,
@@ -349,22 +349,17 @@ class TeamConfigService {
       int areaTileCount = 0;
       int areaSizeBytes = 0;
 
-      for (final url in urls) {
+      for (final tile in tiles) {
         if (isCancelled?.call() == true) break;
 
-        final tileBytes = await tileCache.getTileBytes(url);
+        final tileBytes = await tileCache.getTileBytes(tile.url);
         if (tileBytes != null) {
-          // Reconstruct the path from URL coordinates.
-          final parsed = MapTileCacheService.parseTilePath(
-            _urlToTilePath(url, area.providerId, provider),
-          );
-          if (parsed != null) {
-            final tilePath =
-                'tiles/${area.providerId}/${parsed.z}/${parsed.x}/${parsed.y}.png';
-            archive.addFile(ArchiveFile(tilePath, tileBytes.length, tileBytes));
-            areaTileCount++;
-            areaSizeBytes += tileBytes.length;
-          }
+          // Use the known coordinates directly — no URL parsing needed.
+          final tilePath =
+              'tiles/${area.providerId}/${tile.z}/${tile.x}/${tile.y}.png';
+          archive.addFile(ArchiveFile(tilePath, tileBytes.length, tileBytes));
+          areaTileCount++;
+          areaSizeBytes += tileBytes.length;
         }
 
         tilesProcessed++;
@@ -802,32 +797,6 @@ class TeamConfigService {
       sb.write(b.toRadixString(16).padLeft(2, '0'));
     }
     return sb.toString();
-  }
-
-  /// Convert a tile cache URL back to a relative tile path for archiving.
-  /// We store as `{providerId}/{z}/{x}/{y}.png`.
-  String _urlToTilePath(
-    String url,
-    String providerId,
-    MapTileProviderOption provider,
-  ) {
-    // Parse z/x/y from the URL using the template pattern.
-    // Most tile URLs end with /{z}/{x}/{y}.png or /{z}/{y}/{x} variants.
-    // We use a regex to extract the three numeric path segments.
-    final segments = Uri.parse(url).pathSegments;
-    if (segments.length >= 3) {
-      final zStr = segments[segments.length - 3];
-      final xStr = segments[segments.length - 2];
-      final yStr = segments.last.replaceAll(RegExp(r'\.\w+$'), '');
-      final z = int.tryParse(zStr);
-      final x = int.tryParse(xStr);
-      final y = int.tryParse(yStr);
-      if (z != null && x != null && y != null) {
-        return '$providerId/$z/$x/$y.png';
-      }
-    }
-    // Fallback: use a hash-based name.
-    return '$providerId/${url.hashCode}.png';
   }
 
   /// Haversine distance in meters.

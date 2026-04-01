@@ -1,15 +1,35 @@
 # Release Notes — v1.0.3-beta2
 
 ## Team Config Export / Import
-- New **Create Team Config** and **Import Team Config** options in the Connection screen menu (visible when connected).
+- New **Create Team Config**, **Import Team Config**, and **Share Config Offline** options in the Connection screen menu (visible when connected).
 - Export channels, waypoints, radio settings, and offline map tiles as a portable `.teamcfg.zip` file.
 - Named configs — give each export a descriptive name (stored in the manifest).
 - Per-item selection — choose exactly which channels, waypoints, and map areas to include.
 - Radio settings export includes frequency, bandwidth, spreading factor, and coding rate (TX power excluded — each radio keeps its own value).
 - Import requires an active companion connection — channels are registered with the firmware, radio settings applied, waypoints merged (dedup by meshId + name/location), and map tiles added to cache.
+- Two import methods: **From File** (local file picker) or **From QR Code** (scan and download from a nearby device).
 - Preview dialog shows full config contents before importing.
 - Offline map tiles are packaged inside the ZIP and restored into the tile cache on import.
 - File saved via system file picker; compatible with Android and iOS.
+
+## Offline Config Sharing
+- New **Share Config Offline** option — serve a `.teamcfg.zip` over a local Wi-Fi hotspot without internet.
+- Guided setup: platform-specific hotspot instructions (Android/iOS), file picker, config confirmation, then one-tap serving.
+- Displays a QR code for receivers to scan from the **Import Team Config → From QR Code** flow.
+- Manual URL fallback shown below the QR code.
+- Download counter tracks how many devices have fetched the config.
+- Server shuts down cleanly when the user taps **Finished**.
+- Download progress bar with MB counter when importing via QR code.
+
+## Wipe Local Data
+- New **Wipe Local Data** option in the Connection screen menu.
+- Choose which data to clear: private channels, waypoints & routes, offline maps.
+- Channels are cleared from the companion radio firmware before being removed from the local database.
+- Double confirmation — a second "Are you sure?" dialog before any data is deleted.
+- Items with no data are shown as disabled.
+
+## Fixes
+- Fixed out-of-memory crash when exporting or importing large configs with many map tiles. File data is no longer passed through the Flutter method channel — all transfers use temp files and direct file I/O.
 
 ---
 
