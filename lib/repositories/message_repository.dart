@@ -1563,13 +1563,32 @@ class MessageRepository {
 
     if (all.length <= _maxHistoryPoints) return;
 
-    // Keep first and last; pick (_maxHistoryPoints - 2) evenly-spaced points.
+    // Keep first and last; pick (_maxHistoryPoints - 2) points at evenly-
+    // spaced *timestamps* so the history represents uniform time intervals.
     final keepIds = <int>{all.first.id, all.last.id};
     final innerCount = _maxHistoryPoints - 2;
-    final step = (all.length - 2) / innerCount;
-    for (var i = 0; i < innerCount; i++) {
-      final idx = 1 + (i * step).round();
-      keepIds.add(all[idx].id);
+    final tMin = all.first.timestamp;
+    final tMax = all.last.timestamp;
+    final tStep = (tMax - tMin) / (innerCount + 1);
+    var searchStart = 1; // skip first, already kept
+    for (var i = 1; i <= innerCount; i++) {
+      final targetT = tMin + (i * tStep);
+      // Find the point closest to targetT, scanning forward from the last match.
+      var bestIdx = searchStart;
+      var bestDiff = (all[bestIdx].timestamp - targetT).abs();
+      for (var j = searchStart + 1; j < all.length - 1; j++) {
+        final diff = (all[j].timestamp - targetT).abs();
+        if (diff < bestDiff) {
+          bestDiff = diff;
+          bestIdx = j;
+        } else {
+          // Timestamps are sorted, so once diff starts growing we can stop.
+          break;
+        }
+      }
+      keepIds.add(all[bestIdx].id);
+      searchStart = bestIdx + 1;
+      if (searchStart >= all.length - 1) searchStart = all.length - 2;
     }
 
     final deleteIds =
