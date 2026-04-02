@@ -3,7 +3,7 @@ description: "Cross-platform mesh networking app for iOS and Android"
 # Licensed under CC BY-NC-SA 4.0 - Non-commercial use only
 publish_to: 'none'
 
-version: 1.0.3-beta2+10302
+version: 1.0.3-beta3+10303
 
 environment:
   sdk: ^3.6.0
@@ -72,6 +72,7 @@ dependencies:
 
   # Team config offline sharing (local HTTP server)
   shelf: ^1.4.0
+  flutter_file_dialog: ^3.0.3
 
 dev_dependencies:
   flutter_test:

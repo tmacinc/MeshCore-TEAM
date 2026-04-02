@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -384,7 +385,6 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
 
     try {
       final tileCache = context.read<MapTileCacheService>();
-      final tempDir = await getTemporaryDirectory();
 
       final selectedChannels = _allChannels
           .where((c) => _selectedChannelHashes.contains(c.hash))
@@ -411,14 +411,13 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
         }
       }
 
-      final zipFile = await _configService.exportConfig(
+      final zipBytes = await _configService.exportConfig(
         channels: selectedChannels,
         waypoints: selectedWaypoints,
         mapAreas: selectedMapAreas,
         tileCache: tileCache,
         name: _configNameController.text.trim(),
         description: '',
-        tempDir: tempDir,
         radioSettings: radioSettings,
         onProgress: (progress) {
           if (!mounted) return;
@@ -432,39 +431,65 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
 
       if (!mounted) return;
 
-      // Let user choose save location.
+      // Write ZIP to a temp file. We must NOT send large byte arrays over the
+      // Flutter platform channel — Android's StandardMessageCodec will OOM
+      // trying to deserialize them (observed at ~250 MB).
       final configName = _configNameController.text.trim();
       final safeName = configName.isNotEmpty
           ? configName
               .replaceAll(RegExp(r'[^a-zA-Z0-9_\- ]'), '')
               .replaceAll(' ', '_')
           : 'team_config';
-      final zipBytes = await zipFile.readAsBytes();
+      final fileName = '$safeName.teamcfg.zip';
 
-      final outputPath = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save Team Config',
-        fileName: '$safeName.teamcfg.zip',
-        type: FileType.any,
-        bytes: zipBytes,
-      );
-
-      if (outputPath == null || !mounted) return;
-
-      // On some platforms saveFile writes the bytes but returns a path
-      // to an empty file — write again if needed.
-      final outFile = File(outputPath);
-      if (!await outFile.exists() || await outFile.length() == 0) {
-        await outFile.writeAsBytes(zipBytes);
-      }
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/$fileName');
+      await tempFile.writeAsBytes(zipBytes, flush: true);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Config saved to $outputPath')),
+
+      setState(() {
+        _busyMessage = 'Choose save location…';
+        _busyProgress = 1;
+      });
+
+      // Use flutter_file_dialog which passes only the file *path* over the
+      // platform channel. The native side (SAF on Android, UIDocumentPicker
+      // on iOS) copies the file directly — no large byte array crosses the
+      // channel, avoiding the StandardMessageCodec OOM at ~250 MB.
+      final savedPath = await FlutterFileDialog.saveFile(
+        params: SaveFileDialogParams(
+          sourceFilePath: tempFile.path,
+          fileName: fileName,
+          mimeTypesFilter: ['application/zip'],
+        ),
       );
+      try {
+        await tempFile.delete();
+      } catch (_) {}
+
+      if (!mounted) return;
+      setState(() => _isBusy = false);
+
+      if (savedPath != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Config exported successfully')),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export failed: $e')),
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Export Failed'),
+          content: Text('$e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
       );
     } finally {
       if (mounted) setState(() => _isBusy = false);

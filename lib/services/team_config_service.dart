@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -261,15 +262,18 @@ class TeamConfigImportResult {
 class TeamConfigService {
   static const int _formatVersion = 1;
 
-  /// Build and return a `.teamcfg.zip` file in the given temp directory.
-  Future<File> exportConfig({
+  /// Build a `.teamcfg.zip` and return the compressed bytes.
+  ///
+  /// ZIP encoding runs in a background isolate to avoid blocking the UI thread
+  /// (the `archive` package encoder is synchronous and can take seconds for
+  /// large tile sets).
+  Future<Uint8List> exportConfig({
     required List<ChannelData> channels,
     required List<WaypointData> waypoints,
     required List<OfflineMapAreaData> mapAreas,
     required MapTileCacheService tileCache,
     String name = '',
     String description = '',
-    required Directory tempDir,
     TeamConfigRadioSettings? radioSettings,
     void Function(TeamConfigProgress)? onProgress,
     bool Function()? isCancelled,
@@ -425,15 +429,18 @@ class TeamConfigService {
 
     // --- Write ZIP ---
     onProgress?.call(const TeamConfigProgress(
-      phase: 'Writing ZIP file',
+      phase: 'Compressing ZIP (this may take a moment)…',
       current: 0,
       total: 0,
     ));
-    final zipBytes = ZipEncoder().encode(archive);
 
-    final zipFile = File('${tempDir.path}/team_config.teamcfg.zip');
-    await zipFile.writeAsBytes(zipBytes, flush: true);
-    return zipFile;
+    // Run the synchronous ZIP encoder in a background isolate so we don't
+    // block the UI thread (ANR risk on large tile sets).
+    final zipBytes = await Isolate.run(() {
+      return Uint8List.fromList(ZipEncoder().encode(archive));
+    });
+
+    return zipBytes;
   }
 
   /// Read a `.teamcfg.zip` and return a preview without importing.
