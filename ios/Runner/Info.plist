@@ -22,10 +22,37 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>meshcore</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>MeshCore TEAM needs Bluetooth to connect to your mesh radio device for communication.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>MeshCore TEAM needs Bluetooth to connect to your mesh radio device for communication.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>TEAM Flutter needs camera access to scan channel QR codes.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>MeshCore TEAM uses the local network to improve location accuracy for compass and GPS features.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>TEAM Flutter needs background location access to continue sharing your position with the mesh network when the app is in the background.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>TEAM Flutter needs background location to maintain mesh connectivity and share telemetry.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TEAM Flutter needs your location to share your position with the mesh network and display contacts on the map.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>TEAM Flutter may need access to save map screenshots or waypoint images.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -49,6 +76,12 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<string>location</string>
+		<string>processing</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -65,53 +98,6 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	
-	<!-- Local Network (triggered by compassx CLLocationManager init at startup) -->
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>MeshCore TEAM uses the local network to improve location accuracy for compass and GPS features.</string>
-
-	<!-- Bluetooth Permissions -->
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>MeshCore TEAM needs Bluetooth to connect to your mesh radio device for communication.</string>
-	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>MeshCore TEAM needs Bluetooth to connect to your mesh radio device for communication.</string>
-	
-	<!-- Location Permissions -->
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>TEAM Flutter needs your location to share your position with the mesh network and display contacts on the map.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>TEAM Flutter needs background location access to continue sharing your position with the mesh network when the app is in the background.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>TEAM Flutter needs background location to maintain mesh connectivity and share telemetry.</string>
-	
-	<!-- Photo Library (for waypoint images, if added later) -->
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>TEAM Flutter may need access to save map screenshots or waypoint images.</string>
-	
-	<!-- Camera (QR scanning) -->
-	<key>NSCameraUsageDescription</key>
-	<string>TEAM Flutter needs camera access to scan channel QR codes.</string>
-	
-	<!-- meshcore:// deep links -->
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>meshcore</string>
-			</array>
-		</dict>
-	</array>
-	
-	<!-- Background Modes -->
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>bluetooth-central</string>
-		<string>location</string>
-		<string>processing</string>
 	</array>
 </dict>
 </plist>

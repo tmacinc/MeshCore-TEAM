@@ -152,6 +152,7 @@ Future<void> _runAppStartup() async {
       bleManager: bleManager,
       reconnectionManager: reconnectionManager,
       settings: settingsService,
+      notifications: flutterLocalNotificationsPlugin,
     );
     print('✅ Mesh connection service initialized');
 

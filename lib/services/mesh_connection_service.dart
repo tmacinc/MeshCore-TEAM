@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:meshcore_team/ble/ble_connection_manager.dart';
 import 'package:meshcore_team/ble/reconnection_manager.dart';
@@ -20,6 +21,9 @@ class MeshConnectionService extends ChangeNotifier {
   final BleConnectionManager _bleManager;
   final ReconnectionManager _reconnectionManager;
   final SettingsService _settings;
+  final FlutterLocalNotificationsPlugin? _notifications;
+
+  static const int _connectionNotificationId = 1001;
 
   bool _isServiceRunning = false;
   bool _isWakeLockEnabled = false;
@@ -32,9 +36,11 @@ class MeshConnectionService extends ChangeNotifier {
     required BleConnectionManager bleManager,
     required ReconnectionManager reconnectionManager,
     required SettingsService settings,
+    FlutterLocalNotificationsPlugin? notifications,
   })  : _bleManager = bleManager,
         _reconnectionManager = reconnectionManager,
-        _settings = settings {
+        _settings = settings,
+        _notifications = notifications {
     _initialize();
   }
 
@@ -72,7 +78,7 @@ class MeshConnectionService extends ChangeNotifier {
         ),
       ),
       iosNotificationOptions: const IOSNotificationOptions(
-        showNotification: true,
+        showNotification: false,
         playSound: false,
       ),
       foregroundTaskOptions: const ForegroundTaskOptions(
@@ -131,6 +137,11 @@ class MeshConnectionService extends ChangeNotifier {
       _isServiceRunning = true;
       await _settings.setServiceWasRunning(true);
 
+      // Show initial iOS connection notification
+      if (Platform.isIOS) {
+        _updateNotification(_bleManager.state, _reconnectionManager.state);
+      }
+
       // Start monitoring connection/reconnection state
       _monitorServiceLifecycle();
 
@@ -179,6 +190,11 @@ class MeshConnectionService extends ChangeNotifier {
 
       // Stop foreground task
       await FlutterForegroundTask.stopService();
+
+      // Remove iOS connection notification
+      if (Platform.isIOS) {
+        await _removeIOSConnectionNotification();
+      }
 
       // Mark service as not running
       _isServiceRunning = false;
@@ -290,6 +306,7 @@ class MeshConnectionService extends ChangeNotifier {
     ReconnectionState reconnectionState,
   ) {
     if (!_isServiceRunning) return;
+    // Android handles its own notification via native MeshBleService
     if (Platform.isAndroid) return;
 
     String title = 'Mesh network';
@@ -330,10 +347,40 @@ class MeshConnectionService extends ChangeNotifier {
       }
     }
 
-    FlutterForegroundTask.updateService(
-      notificationTitle: title,
-      notificationText: text,
+    if (Platform.isIOS) {
+      _showIOSConnectionNotification(title, text);
+    } else {
+      FlutterForegroundTask.updateService(
+        notificationTitle: title,
+        notificationText: text,
+      );
+    }
+  }
+
+  /// Show or update a persistent connection notification on iOS
+  Future<void> _showIOSConnectionNotification(String title, String text) async {
+    if (_notifications == null) return;
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: false,
+      presentSound: false,
     );
+
+    final details = const NotificationDetails(iOS: iosDetails);
+
+    await _notifications.show(
+      _connectionNotificationId,
+      title,
+      text,
+      details,
+    );
+  }
+
+  /// Remove the iOS connection notification
+  Future<void> _removeIOSConnectionNotification() async {
+    if (_notifications == null) return;
+    await _notifications.cancel(_connectionNotificationId);
   }
 
   /// Handle messages from foreground task
