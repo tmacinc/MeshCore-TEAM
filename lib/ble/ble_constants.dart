@@ -45,11 +45,11 @@ class BleConstants {
   static const int cmdSetAutoAddConfig = 58;
   static const int cmdGetAutoAddConfig = 59;
   static const int cmdGetAllowedRepeatFreq = 60;
-  static const int cmdGetRadioSettings = 72;
-  static const int cmdSetMaxHops = 73;
-  static const int cmdSetForwardList = 74;
-  static const int cmdGetAutonomousSettings = 75;
-  static const int cmdSetAutonomousSettings = 76;
+  static const int cmdGetRadioSettings = 200;
+  static const int cmdSetMaxHops = 201;
+  static const int cmdSetForwardList = 202;
+  static const int cmdGetAutonomousSettings = 203;
+  static const int cmdSetAutonomousSettings = 204;
 
   // Response codes (received from device)
   static const int respOk = 0;
@@ -69,7 +69,7 @@ class BleConstants {
   static const int respStats = 24;
   static const int respAutoAddConfig = 25;
   static const int respAllowedRepeatFreq = 26;
-  static const int respAutonomousSettings = 27;
+  static const int respAutonomousSettings = 200;
 
   // Push codes (async notifications from device)
   static const int pushCodeAdvert = 0x80; // Contact discovered
