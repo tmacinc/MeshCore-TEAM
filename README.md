@@ -10,6 +10,15 @@ The app works with stock MeshCore firmware for basic messaging, contacts, channe
 - **Autonomous mode** — firmware-side GPS tracking without a phone connection
 - **Full radio settings UI** — smart forwarding toggle, autonomous mode toggle
 
+## Support
+
+If you need help or have questions:
+
+- 📧 Email: tmacinc090@gmail.com  
+- 🐞 Report an issue: https://github.com/tmacinc/MeshCore-TEAM/issues  
+
+Please include device type and app version when reporting issues.
+
 ## Screenshots
 
 | Connection | Identity | Connection (sync) | Radio settings | Location tracking |
