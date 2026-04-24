@@ -131,4 +131,4 @@ This Privacy Policy may be updated from time to time. Updates will be reflected 
 
 If you have any questions about this Privacy Policy, you can contact:
 
-meshcore.team.beta@gmail.com
+tmacinc090@gmail.com
