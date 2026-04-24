@@ -1,65 +1,134 @@
-# Privacy Policy — MeshCore-TEAM
+# Privacy Policy for MeshCore-TEAM
 
-Last updated: 2026-02-20
+**Effective Date:** April 24, 2026
 
-MeshCore-TEAM ("the app") is a field communications app that connects to a companion MeshCore radio over Bluetooth.
+MeshCore-TEAM is designed to operate without reliance on centralized infrastructure. This Privacy Policy explains how the app handles information when you use it.
 
-## Data We Process
+---
 
-The app may process the following data on your device:
+## Overview
 
-- Bluetooth device identifiers (to discover and connect to your companion radio)
-- Location data (to show your position on map and share telemetry when enabled)
-- Camera access (only for scanning QR codes, e.g., channel import)
-- Messages/channels/contacts used for mesh communication
-- App settings and local cache (including offline map data)
+MeshCore-TEAM does not require user accounts and does not rely on cloud services operated by the developer. The app is designed to function using direct communication between your device and a compatible MeshCore radio.
 
-## How Data Is Used
+MeshCore-TEAM is available on multiple platforms, including iOS and Android. While implementation details such as background operation, Bluetooth handling, and system permissions may differ between platforms, the way data is used and handled remains consistent across all versions of the app.
 
-We use data to provide core app features:
+---
 
-- Connect to companion radio hardware
-- Send and receive mesh messages
-- Display and optionally share location telemetry
-- Scan QR codes for channel sharing/import
-- Store local app state and offline maps
+## Data Collection
+
+**MeshCore-TEAM does not collect, store, or transmit personal data to any external servers operated by the developer.**
+
+All data used by the app is processed locally on your device or transmitted directly between devices as described below.
+
+---
+
+## Peer-to-Peer Communication
+
+MeshCore-TEAM enables communication over a decentralized mesh network using a paired MeshCore radio.
+
+- Messages, location data, and related information are transmitted directly between devices over the mesh network  
+- This data is **not routed through, stored on, or accessible by developer-operated servers**  
+- Data is only accessible to devices that are connected to the same mesh network and configured with the appropriate channel access (e.g., shared keys)  
+
+---
+
+## Location Data
+
+MeshCore-TEAM may access location data from your device.
+
+Location data is used solely to:
+- Display your position on the map  
+- Share your location with other connected devices within the mesh network  
+
+Location data is:
+- Processed locally on your device  
+- Shared only with devices connected to the same mesh network and configured with appropriate channel access (e.g., shared keys)  
+- Not collected, stored, or transmitted to the developer  
+
+Communication over the mesh network is encrypted when supported by the connected MeshCore radio and configuration.
+
+---
+
+## Bluetooth Usage
+
+MeshCore-TEAM uses Bluetooth to communicate with a compatible MeshCore radio device.
+
+Bluetooth is used solely for:
+- Establishing and maintaining a connection with the companion radio  
+- Transferring data between your phone and the radio  
+
+No Bluetooth data is transmitted to external servers.
+
+---
+
+## Offline Maps and Local Storage
+
+The app may store the following data locally on your device:
+- Downloaded map tiles  
+- Waypoints and routes  
+- Team configuration files  
+- Application settings  
+
+This data remains on your device unless you explicitly share it with other users.
+
+---
+
+## Background Operation
+
+MeshCore-TEAM may operate in the background to:
+- Maintain connectivity with the companion radio  
+- Receive messages and updates  
+- Support ongoing location sharing when enabled  
+
+Background operation is limited to functionality required for core app features.
+
+---
 
 ## Data Sharing
 
-- The app does not sell personal data.
-- Data sent over the mesh network is shared only according to your app actions and selected channels.
-- Local data remains on your device unless you explicitly share/export it.
+MeshCore-TEAM does not share user data with:
+- The developer  
+- Third-party services  
+- Analytics or advertising platforms  
 
-## Data Storage
+Data may only be shared:
+- Directly between devices via the mesh network  
+- When initiated or enabled by the user  
 
-- Data is stored locally on your device.
-- You can remove app data by uninstalling the app or clearing app storage in Android settings.
+---
 
-## Permissions
+## Third-Party Services
 
-- **Bluetooth (`BLUETOOTH`, `BLUETOOTH_ADMIN`, `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`)**: required to discover and connect to companion radio hardware.
-- **Location (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`)**: required for map/telemetry features and BLE scanning behavior on some Android versions.
-- **Background Location (`ACCESS_BACKGROUND_LOCATION`)**: used only when enabled to support telemetry/location features while the app is in background.
-- **Foreground Service (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`)**: used to maintain reliable background BLE connectivity and related location/device operations.
-- **Wake Lock (`WAKE_LOCK`)**: helps keep critical background mesh operations running reliably.
-- **Notifications (`POST_NOTIFICATIONS`)**: used for message alerts and foreground-service status.
-- **Camera (`CAMERA`)**: used only for QR code scanning (for example, channel import/share).
-- **Battery Optimization Exemption (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`)**: requested so users can allow stable long-running background connectivity.
-- **Network (`INTERNET`)**: used for online map tiles and optional network-based app functionality.
-- **Storage (`READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE` on older Android versions)**: used for user-driven import/export flows such as GPX files.
+MeshCore-TEAM does not use third-party analytics, advertising, or tracking services.
 
-## Children
+Map data may be provided by third-party tile providers (e.g., OpenStreetMap or other map sources). Requests for map tiles are made directly from your device and are subject to those providers’ policies.
 
-This app is not directed to children under 13.
+---
 
-## Security
+## Data Security
 
-We take reasonable steps to protect local app data, but no method of storage or transmission is 100% secure.
+MeshCore-TEAM is designed to support encrypted communication over the mesh network when used with compatible MeshCore radios and configurations.
+
+However, users are responsible for:
+- Managing channel keys and configuration  
+- Ensuring secure use of their devices  
+
+---
+
+## Children’s Privacy
+
+MeshCore-TEAM does not knowingly collect personal data from anyone, including children under 13.
+
+---
 
 ## Changes to This Policy
 
-We may update this policy from time to time. Updates will be posted at this URL with a revised date.
+This Privacy Policy may be updated from time to time. Updates will be reflected by revising the effective date above.
+
+---
 
 ## Contact
 
-For privacy questions, contact: meshcore.team.beta@gmail.com
+If you have any questions about this Privacy Policy, you can contact:
+
+meshcore.team.beta@gmail.com
