@@ -3,7 +3,7 @@ description: "Cross-platform mesh networking app for iOS and Android"
 # Licensed under CC BY-NC-SA 4.0 - Non-commercial use only
 publish_to: 'none'
 
-version: 1.1.1+11100
+version: 1.1.2+11200
 
 environment:
   sdk: ^3.6.0
