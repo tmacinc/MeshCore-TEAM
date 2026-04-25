@@ -8,6 +8,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:meshcore_team/main.dart' show isBetaBuild;
 import 'package:meshcore_team/ble/ble_commands.dart';
 import 'package:meshcore_team/ble/ble_connection_manager.dart';
 import 'package:meshcore_team/ble/mesh_ble_device.dart';
@@ -26,6 +27,7 @@ import 'package:meshcore_team/models/map_tile_providers.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 /// Connection Screen
 /// Provides device scanning, connection, and sync progress UI
@@ -45,10 +47,14 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   Timer? _hideSyncTimer;
   bool _hideSyncProgress = false;
   bool _lastSyncWasComplete = false;
+  String _appVersion = '';
 
   @override
   void initState() {
     super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _appVersion = info.version);
+    });
   }
 
   @override
@@ -119,10 +125,27 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MeshCore TEAM'),
+        centerTitle: false,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('MeshCore TEAM'),
+            if (_appVersion.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(
+                  'v$_appVersion',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+                      ),
+                ),
+              ],
+          ],
+        ),
         actions: [
-          if (kDebugMode)
+          if (kDebugMode || isBetaBuild)
             IconButton(
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.article_outlined),
               tooltip: 'Debug Logs',
               onPressed: () => Navigator.of(context).push(
@@ -133,6 +156,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
             ),
           if (bleManager.isConnected)
             PopupMenuButton<String>(
+              padding: EdgeInsets.zero,
               icon: const Icon(Icons.settings),
               tooltip: 'Team Config',
               onSelected: (value) {
@@ -698,7 +722,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                               privateChannels,
                             ),
                   ),
-                  if (kDebugMode) ...[
+                  if (kDebugMode || isBetaBuild) ...[
                     const SizedBox(height: 8),
                     _buildSettingsCard(
                       title: 'Forwarding Debug',

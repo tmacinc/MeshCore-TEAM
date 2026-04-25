@@ -43,14 +43,16 @@ import 'services/debug_log_service.dart';
 // Global navigator key for deep linking
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+const bool isBetaBuild = bool.fromEnvironment('BETA');
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (kDebugMode) {
+  if (kDebugMode || isBetaBuild) {
     installDebugLogInterceptor();
   }
 
-  if (!kDebugMode) {
+  if (!kDebugMode && !isBetaBuild) {
     debugPrint = (String? message, {int? wrapWidth}) {};
     await runZonedGuarded(
       () async {

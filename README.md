@@ -165,6 +165,23 @@ flutter build apk --release
 flutter build ios --release
 ```
 
+### Beta builds (with debug tooling)
+
+A `BETA` compile-time flag enables the in-app debug log viewer and forwarding debug screen in release builds. This is useful for TestFlight / Play Store beta tracks where you want to collect logs from testers without shipping a debug build.
+
+```bash
+# iOS beta IPA (debug UI included, release performance)
+flutter build ipa --release --dart-define=BETA=true
+
+# Android beta APK
+flutter build apk --release --dart-define=BETA=true
+
+# Run on device to test locally
+flutter run --release --dart-define=BETA=true
+```
+
+Regular release builds (without `--dart-define=BETA=true`) exclude all debug UI via compile-time tree-shaking.
+
 ## User guide
 
 ### 1) First launch: permissions

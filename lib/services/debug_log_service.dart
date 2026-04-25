@@ -131,17 +131,15 @@ class DebugLogService extends ChangeNotifier {
   }
 }
 
-/// Installs a debug-mode interceptor that captures all debugPrint output into
+/// Installs an interceptor that captures all debugPrint output into
 /// [DebugLogService]. Call once at startup (before runApp).
 void installDebugLogInterceptor() {
-  if (!kDebugMode) return;
-
   final original = debugPrint;
   final logService = DebugLogService.instance;
 
   debugPrint = (String? message, {int? wrapWidth}) {
     if (message == null || message.isEmpty) return;
-    original(message, wrapWidth: wrapWidth);
+    if (kDebugMode) original(message, wrapWidth: wrapWidth);
     logService.add(DebugLogService.categorize(message), message);
   };
 }
