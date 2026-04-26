@@ -126,19 +126,18 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Row(
+        title: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('MeshCore TEAM'),
-            if (_appVersion.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                Text(
-                  'v$_appVersion',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                      ),
-                ),
-              ],
+            if (_appVersion.isNotEmpty)
+              Text(
+                'v$_appVersion',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+                    ),
+              ),
           ],
         ),
         actions: [

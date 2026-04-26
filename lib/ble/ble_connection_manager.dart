@@ -64,6 +64,7 @@ class BleConnectionManager extends ChangeNotifier {
   BluetoothDevice? _fbpDevice;
   BluetoothCharacteristic? _fbpRxChar;
   BluetoothCharacteristic? _fbpTxChar;
+  bool _fbpWriteWithoutResponse = true; // updated at connect time based on characteristic properties
   StreamSubscription<BluetoothConnectionState>? _fbpConnectionSub;
   StreamSubscription<List<int>>? _fbpNotifySub;
   StreamSubscription<List<ScanResult>>? _fbpScanSub;
@@ -357,6 +358,7 @@ class BleConnectionManager extends ChangeNotifier {
 
       _fbpRxChar = rxChar;
       _fbpTxChar = txChar;
+      _fbpWriteWithoutResponse = rxChar.properties.writeWithoutResponse;
 
       // Enable notifications on TX characteristic
       await txChar.setNotifyValue(true);
@@ -472,7 +474,7 @@ class BleConnectionManager extends ChangeNotifier {
           if (_fbpRxChar == null) {
             throw Exception('RX characteristic not available');
           }
-          await _fbpRxChar!.write(frame.toList(), withoutResponse: true);
+          await _fbpRxChar!.write(frame.toList(), withoutResponse: _fbpWriteWithoutResponse);
         }
         _lastWriteTime = DateTime.now();
         return true;
@@ -698,6 +700,7 @@ class BleConnectionManager extends ChangeNotifier {
     _fbpRxChar = null;
     _fbpTxChar = null;
     _fbpDevice = null;
+    _fbpWriteWithoutResponse = true;
   }
 
   @override
