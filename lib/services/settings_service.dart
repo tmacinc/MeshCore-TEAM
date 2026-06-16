@@ -151,7 +151,7 @@ class SettingsService extends ChangeNotifier {
       distanceRingInterval:
           _prefs.getString(_keyDistanceRingInterval) ?? '500m',
       lastConnectedDevice: _prefs.getString(_keyLastConnectedDevice),
-      autoReconnectEnabled: _prefs.getBool(_keyAutoReconnectEnabled) ?? false,
+      autoReconnectEnabled: _prefs.getBool(_keyAutoReconnectEnabled) ?? true,
       manualDisconnect: _prefs.getBool(_keyManualDisconnect) ?? false,
       currentCompanionPublicKey: currentCompanionKey,
       campModeEnabled: _prefs.getBool(_keyCampModeEnabled) ?? false,
