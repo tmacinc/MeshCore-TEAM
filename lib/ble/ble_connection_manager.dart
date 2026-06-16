@@ -11,6 +11,14 @@ import 'package:meshcore_team/ble/ble_protocol.dart';
 import 'package:meshcore_team/ble/mesh_ble_device.dart';
 import 'package:meshcore_team/utils/sync_trace.dart';
 
+void bleLog(String message) {
+  final now = DateTime.now();
+  final ts = '${now.hour.toString().padLeft(2, '0')}:'
+      '${now.minute.toString().padLeft(2, '0')}:'
+      '${now.second.toString().padLeft(2, '0')}';
+  debugPrint('[BLE $ts] $message');
+}
+
 /// BLE Connection State
 enum BleConnectionState {
   disconnected,
@@ -222,18 +230,20 @@ class BleConnectionManager extends ChangeNotifier {
   }
 
   /// Connect to a MeshCore device
-  Future<bool> connect(MeshBleDevice device) async {
+  Future<bool> connect(MeshBleDevice device,
+      {Duration timeout = const Duration(seconds: 15)}) async {
     if (_isAndroid) {
-      return _connectAndroid(device);
+      return _connectAndroid(device, timeout: timeout);
     } else if (_useFbp) {
-      return _connectFbp(device);
+      return _connectFbp(device, timeout: timeout);
     } else {
       _setError('BLE is not supported on this platform');
       return false;
     }
   }
 
-  Future<bool> _connectAndroid(MeshBleDevice device) async {
+  Future<bool> _connectAndroid(MeshBleDevice device,
+      {Duration timeout = const Duration(seconds: 15)}) async {
     debugPrint(
         '🔗 Connecting (native) to ${device.name} (${device.address})...');
 
@@ -260,13 +270,11 @@ class BleConnectionManager extends ChangeNotifier {
         'address': device.address,
       });
 
-      const connectTimeout = Duration(seconds: 120);
-
       final result = await _pendingConnect!.future.timeout(
-        connectTimeout,
+        timeout,
         onTimeout: () {
           debugPrint(
-              '❌ Connection timeout after ${connectTimeout.inSeconds} seconds');
+              '❌ Connection timeout after ${timeout.inSeconds} seconds');
           _setError('Connection timeout');
 
           _pendingConnect?.complete(false);
@@ -292,9 +300,9 @@ class BleConnectionManager extends ChangeNotifier {
     }
   }
 
-  Future<bool> _connectFbp(MeshBleDevice device) async {
-    debugPrint(
-        '🔗 Connecting (FBP) to ${device.name} (${device.address})...');
+  Future<bool> _connectFbp(MeshBleDevice device,
+      {Duration timeout = const Duration(seconds: 15)}) async {
+    bleLog('Connecting to ${device.name}...');
 
     _deviceName = device.name;
     _deviceAddress = device.address;
@@ -314,11 +322,32 @@ class BleConnectionManager extends ChangeNotifier {
       final fbpDevice = BluetoothDevice.fromId(device.address);
       _fbpDevice = fbpDevice;
 
-      // Monitor connection state for unexpected disconnections
+      // On Linux, use bluetoothctl to disconnect any stale session from a
+      // previous app run. The device holds the connection and won't advertise
+      // until it receives a proper disconnect. FBP's own state is stale after
+      // restart so we go direct to bluetoothctl.
+      if (Platform.isLinux) {
+        try {
+          final result = await Process.run(
+            'bluetoothctl',
+            ['disconnect', device.address],
+          );
+          if ((result.stdout as String).contains('Successful')) {
+            bleLog('Cleared stale connection to ${device.name}');
+            await Future.delayed(const Duration(milliseconds: 500));
+          }
+        } catch (_) {}
+      }
+
+      // Subscribe before connect — FBP on Linux needs an active subscriber to
+      // signal connection establishment. Guard on _state == connected so that
+      // spurious disconnected emissions (replayed state, or from the bluetoothctl
+      // stale-session clear above) don't trigger cleanup during connecting.
       _fbpConnectionSub?.cancel();
       _fbpConnectionSub = fbpDevice.connectionState.listen((state) {
-        if (state == BluetoothConnectionState.disconnected) {
-          debugPrint('[BleManager] FBP: device disconnected');
+        if (state == BluetoothConnectionState.disconnected &&
+            _state == BleConnectionState.connected) {
+          bleLog('Disconnected from ${device.name}');
           _cleanupFbpConnection();
           _deviceName = null;
           _deviceAddress = null;
@@ -326,19 +355,29 @@ class BleConnectionManager extends ChangeNotifier {
         }
       });
 
-      // On Linux, the device may still hold a connection from a previous app
-      // session. Disconnect first so BlueZ can establish a clean connection.
-      if (Platform.isLinux) {
-        try {
-          await fbpDevice.disconnect();
-        } catch (_) {}
-        await Future.delayed(const Duration(milliseconds: 500));
+      // FBP on Linux ignores the timeout parameter and uses its own ~60s
+      // internal timeout. Enforce ours with a cancellable timer so it doesn't
+      // fire after connect() succeeds and interrupt service discovery.
+      Timer? connectTimeoutTimer;
+      final timeoutCompleter = Completer<void>();
+      connectTimeoutTimer = Timer(timeout, () {
+        if (!timeoutCompleter.isCompleted) {
+          timeoutCompleter.completeError(
+            TimeoutException('BLE connect timed out after ${timeout.inSeconds}s'),
+          );
+          fbpDevice.disconnect().catchError((_) {});
+        }
+      });
+      try {
+        await Future.any([
+          fbpDevice.connect(license: License.free, timeout: timeout),
+          timeoutCompleter.future,
+        ]);
+        connectTimeoutTimer.cancel();
+      } catch (_) {
+        connectTimeoutTimer.cancel();
+        rethrow;
       }
-
-      await fbpDevice.connect(
-        license: License.free,
-        timeout: const Duration(seconds: 120),
-      );
 
       // Discover services
       final services = await fbpDevice.discoverServices();
@@ -381,7 +420,7 @@ class BleConnectionManager extends ChangeNotifier {
 
       _deviceName = device.name;
       _deviceAddress = device.address;
-      debugPrint('✅ BLE connected to ${device.name} (${device.address})');
+      bleLog('Connected to ${device.name}');
       _setState(BleConnectionState.connected);
       return true;
     } catch (e) {
@@ -497,7 +536,7 @@ class BleConnectionManager extends ChangeNotifier {
         if (_useFbp &&
             e.toString().contains('fbp-code: 6') &&
             _state == BleConnectionState.connected) {
-          debugPrint('[BleManager] Write failed with not-connected — forcing disconnect state');
+          bleLog('Disconnected (write failure detected)');
           _cleanupFbpConnection();
           _deviceName = null;
           _deviceAddress = null;
