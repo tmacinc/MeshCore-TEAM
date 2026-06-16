@@ -1254,6 +1254,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _startPhoneLocationTracking() {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     _positionSub?.cancel();
     _phoneLocationPollingTimer?.cancel();
 
@@ -1315,6 +1316,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _startCompassTracking() {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     _compassSub?.cancel();
     _compassSub = CompassX.events.listen((event) {
       if (!mounted) return;
@@ -1413,7 +1415,7 @@ class _MapScreenState extends State<MapScreen> {
         }
       }
     } else {
-      if (_positionSub == null) {
+      if (_positionSub == null && (Platform.isAndroid || Platform.isIOS)) {
         debugPrint('[MapScreen] 📍 Starting phone GPS fallback');
         _startPhoneLocationTracking();
       }
@@ -1510,6 +1512,7 @@ class _MapScreenState extends State<MapScreen> {
   double _radToDeg(double rad) => rad * (180.0 / math.pi);
 
   Future<void> _getCurrentLocation() async {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     setState(() {
       _isLoadingLocation = true;
       _locationError = null;
