@@ -81,8 +81,8 @@ class ReconnectionManager extends ChangeNotifier {
 
   /// Calculate exponential backoff delay
   int _calculateBackoff(int attempt) {
-    if (attempt == 0) return 0; // No delay for first attempt
-    final backoffMs = (2000 * (1 << (attempt - 1))).clamp(0, _maxBackoffMs);
+    if (attempt <= 1) return 0; // No delay for first attempt
+    final backoffMs = (2000 * (1 << (attempt - 2))).clamp(0, _maxBackoffMs);
     return backoffMs;
   }
 
@@ -93,22 +93,19 @@ class ReconnectionManager extends ChangeNotifier {
     _currentAttempt++;
     final backoffMs = _calculateBackoff(_currentAttempt);
 
-    debugPrint(
-        '[Reconnect] Attempt #$_currentAttempt (backoff: ${backoffMs}ms)');
-
     if (backoffMs > 0) {
       _setState(ReconnectionState.waiting);
-      debugPrint('[Reconnect] Waiting ${backoffMs}ms before next attempt...');
+      bleLog('Reconnecting in ${(backoffMs / 1000).toStringAsFixed(0)}s (attempt $_currentAttempt)...');
 
       _reconnectionTimer = Timer(Duration(milliseconds: backoffMs), () {
         if (_connectionManager.isConnected) {
-          debugPrint('[Reconnect] Already connected - stopping');
           stopReconnecting();
           return;
         }
         _attemptReconnection();
       });
     } else {
+      bleLog('Reconnecting now (attempt $_currentAttempt)...');
       _attemptReconnection();
     }
   }
@@ -149,9 +146,10 @@ class ReconnectionManager extends ChangeNotifier {
             _setState(ReconnectionState.connecting);
             await _connectionManager.connect(
               MeshBleDevice(address: d.remoteId.str, name: d.platformName),
+              timeout: const Duration(seconds: 15),
             );
             if (_connectionManager.isConnected) {
-              debugPrint('[Reconnect] ✅ Reconnection successful (direct)');
+              bleLog('Reconnected successfully');
               stopReconnecting();
               return;
             }
@@ -191,11 +189,12 @@ class ReconnectionManager extends ChangeNotifier {
         _setState(ReconnectionState.connecting);
         debugPrint('[Reconnect] Attempting connection...');
 
-        await _connectionManager.connect(foundDevice);
+        await _connectionManager.connect(foundDevice,
+            timeout: const Duration(seconds: 15));
 
         // Check if connection succeeded
         if (_connectionManager.isConnected) {
-          debugPrint('[Reconnect] ✅ Reconnection successful!');
+          bleLog('Reconnected successfully');
           stopReconnecting();
           return;
         } else {
