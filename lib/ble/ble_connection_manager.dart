@@ -2,6 +2,7 @@
 // Licensed under CC BY-NC-SA 4.0
 
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -325,6 +326,15 @@ class BleConnectionManager extends ChangeNotifier {
         }
       });
 
+      // On Linux, the device may still hold a connection from a previous app
+      // session. Disconnect first so BlueZ can establish a clean connection.
+      if (Platform.isLinux) {
+        try {
+          await fbpDevice.disconnect();
+        } catch (_) {}
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
       await fbpDevice.connect(
         license: License.free,
         timeout: const Duration(seconds: 120),
@@ -369,7 +379,9 @@ class BleConnectionManager extends ChangeNotifier {
         _handleReceivedFrame(Uint8List.fromList(value));
       });
 
-      debugPrint('✅ BLE connected to ${device.name}');
+      _deviceName = device.name;
+      _deviceAddress = device.address;
+      debugPrint('✅ BLE connected to ${device.name} (${device.address})');
       _setState(BleConnectionState.connected);
       return true;
     } catch (e) {
