@@ -306,7 +306,7 @@ class TelemetrySendService extends ChangeNotifier {
     if (_currentLocationSource == LocationSource.companion) {
       // Seed from companion's last known position.
       _seedCompanionPosition();
-    } else {
+    } else if (Platform.isAndroid || Platform.isIOS) {
       // Phone GPS mode — subscribe to the platform location stream.
       unawaited(_seedCurrentPosition());
 
@@ -336,6 +336,7 @@ class TelemetrySendService extends ChangeNotifier {
   }
 
   Future<void> _seedCurrentPosition() async {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     try {
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
