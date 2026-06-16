@@ -237,6 +237,8 @@ class MeshConnectionService extends ChangeNotifier {
   }
 
   /// Handle connection state changes
+  BleConnectionState _previousConnectionState = BleConnectionState.disconnected;
+
   void _onConnectionStateChanged() {
     final state = _bleManager.state;
     debugPrint('[MeshService] Connection state changed: $state');
@@ -249,18 +251,32 @@ class MeshConnectionService extends ChangeNotifier {
         // Stop reconnection when connected
         _reconnectionManager.stopReconnecting();
 
+        // Save device address and clear manual disconnect immediately on connect
+        // so _handleDisconnection has a target even if sync never completes.
+        final deviceAddress = _bleManager.deviceAddress;
+        if (deviceAddress != null && deviceAddress.isNotEmpty) {
+          debugPrint('[MeshService] Saving last connected device: $deviceAddress');
+          _settings.setLastConnectedDevice(deviceAddress);
+          _settings.setManualDisconnect(false);
+        }
+
         // Enable wake lock
         _enableWakeLock();
         break;
 
       case BleConnectionState.disconnected:
-        // Check if we should auto-reconnect
-        _handleDisconnection();
+        // Only auto-reconnect if we were previously connected (not mid-connect).
+        // A disconnect during connecting is a failed attempt, not a drop.
+        if (_previousConnectionState == BleConnectionState.connected) {
+          _handleDisconnection();
+        }
         break;
 
       default:
         break;
     }
+
+    _previousConnectionState = state;
   }
 
   /// Handle reconnection state changes
