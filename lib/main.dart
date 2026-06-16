@@ -107,9 +107,12 @@ Future<void> _runAppStartup() async {
       requestBadgePermission: false,
       requestSoundPermission: false,
     );
+    const initializationSettingsLinux =
+        LinuxInitializationSettings(defaultActionName: 'Open notification');
     const initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
+      linux: initializationSettingsLinux,
     );
 
     await flutterLocalNotificationsPlugin.initialize(
@@ -498,6 +501,15 @@ class _PermissionGateState extends State<_PermissionGate>
 
   /// Check if all required permissions are already granted
   Future<void> _checkPermissions() async {
+    // Desktop platforms don't use runtime permissions
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      setState(() {
+        _permissionsGranted = true;
+        _isChecking = false;
+      });
+      return;
+    }
+
     try {
       bool allGranted = true;
 
@@ -554,9 +566,9 @@ class _PermissionGateState extends State<_PermissionGate>
     });
   }
 
-  /// Start iOS auto-reconnect that was deferred until after permissions.
+  /// Start auto-reconnect that was deferred until after permissions.
   void _startDeferredReconnect() {
-    if (Platform.isAndroid) return;
+    if (Platform.isAndroid) return; // Android native service handles reconnect
     final settings = context.read<SettingsService>();
     if (!settings.settings.serviceWasRunning ||
         settings.settings.manualDisconnect) {
