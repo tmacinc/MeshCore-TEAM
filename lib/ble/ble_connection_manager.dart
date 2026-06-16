@@ -480,6 +480,17 @@ class BleConnectionManager extends ChangeNotifier {
         return true;
       } catch (e) {
         debugPrint('❌ Write error: $e');
+        // On Linux, BlueZ may not fire a connection-state event when the device
+        // powers off. Treat a "not connected" write failure as a disconnect.
+        if (_useFbp &&
+            e.toString().contains('fbp-code: 6') &&
+            _state == BleConnectionState.connected) {
+          debugPrint('[BleManager] Write failed with not-connected — forcing disconnect state');
+          _cleanupFbpConnection();
+          _deviceName = null;
+          _deviceAddress = null;
+          _setState(BleConnectionState.disconnected);
+        }
         return false;
       }
     });

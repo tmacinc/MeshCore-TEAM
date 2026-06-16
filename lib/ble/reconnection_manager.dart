@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:meshcore_team/ble/ble_connection_manager.dart';
 import 'package:meshcore_team/ble/mesh_ble_device.dart';
 import 'package:meshcore_team/ble/reconnection_state.dart';
@@ -134,6 +135,32 @@ class ReconnectionManager extends ChangeNotifier {
       debugPrint('[Reconnect] Already connected - stopping');
       stopReconnecting();
       return;
+    }
+
+    // On Linux, paired devices won't advertise so they won't appear in scan
+    // results. Try connecting directly via the system device list first.
+    if (Platform.isLinux) {
+      try {
+        final known = await FlutterBluePlus.systemDevices([]);
+        for (final d in known) {
+          if (d.remoteId.str.toUpperCase() ==
+              _targetDeviceAddress!.toUpperCase()) {
+            debugPrint('[Reconnect] Linux: found known device, connecting directly');
+            _setState(ReconnectionState.connecting);
+            await _connectionManager.connect(
+              MeshBleDevice(address: d.remoteId.str, name: d.platformName),
+            );
+            if (_connectionManager.isConnected) {
+              debugPrint('[Reconnect] ✅ Reconnection successful (direct)');
+              stopReconnecting();
+              return;
+            }
+            break;
+          }
+        }
+      } catch (e) {
+        debugPrint('[Reconnect] Linux systemDevices error: $e');
+      }
     }
 
     // Start scanning
