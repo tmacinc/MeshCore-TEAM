@@ -66,7 +66,7 @@ class AppSettings {
     this.distanceRingsEnabled = false,
     this.distanceRingInterval = '500m',
     this.lastConnectedDevice,
-    this.autoReconnectEnabled = false,
+    this.autoReconnectEnabled = true,
     this.manualDisconnect = false,
     this.currentCompanionPublicKey,
     this.campModeEnabled = false,
