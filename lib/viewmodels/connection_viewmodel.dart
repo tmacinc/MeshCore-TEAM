@@ -456,11 +456,6 @@ class ConnectionViewModel extends ChangeNotifier {
     if (_bleManager.state == BleConnectionState.connected) {
       debugPrint(
           '[ConnectionVM] 🔗 Device connected - triggering initial sync...');
-      final deviceAddress = _bleManager.deviceAddress;
-      if (deviceAddress != null && deviceAddress.isNotEmpty) {
-        _settingsService.setLastConnectedDevice(deviceAddress);
-        _settingsService.setManualDisconnect(false);
-      }
       _performInitialSync();
     } else if (_bleManager.state == BleConnectionState.disconnected) {
       debugPrint('[ConnectionVM] 🔌 Device disconnected - stopping sync');
