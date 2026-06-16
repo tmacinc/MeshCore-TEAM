@@ -454,6 +454,12 @@ class ConnectionViewModel extends ChangeNotifier {
   /// Handle connection state changes
   void _onConnectionStateChanged() {
     if (_bleManager.state == BleConnectionState.connected) {
+      final alreadySyncing = _syncStatus.phase != SyncPhase.idle &&
+          !_syncStatus.isComplete;
+      if (alreadySyncing) {
+        debugPrint('[ConnectionVM] 🔗 Reconnected mid-sync — not restarting sync');
+        return;
+      }
       debugPrint(
           '[ConnectionVM] 🔗 Device connected - triggering initial sync...');
       _performInitialSync();
