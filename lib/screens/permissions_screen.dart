@@ -41,6 +41,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   Future<void> _requestAllPermissions() async {
     if (_isRequesting) return;
 
+    // Desktop platforms don't use runtime permissions
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      widget.onPermissionsGranted();
+      return;
+    }
+
     setState(() {
       _isRequesting = true;
       _permissionsDenied = false;
