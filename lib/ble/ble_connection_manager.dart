@@ -326,16 +326,21 @@ class BleConnectionManager extends ChangeNotifier {
       // previous app run. The device holds the connection and won't advertise
       // until it receives a proper disconnect. FBP's own state is stale after
       // restart so we go direct to bluetoothctl.
+      // Always wait 500ms after the command (whether or not it reports success)
+      // so BlueZ has time to settle — BlueZ may say "Device has been disconnected"
+      // rather than "Successful" even on a clean disconnect.
       if (Platform.isLinux) {
         try {
           final result = await Process.run(
             'bluetoothctl',
             ['disconnect', device.address],
           );
-          if ((result.stdout as String).contains('Successful')) {
+          final out = result.stdout as String;
+          if (out.contains('Successful') ||
+              out.contains('Device has been disconnected')) {
             bleLog('Cleared stale connection to ${device.name}');
-            await Future.delayed(const Duration(milliseconds: 500));
           }
+          await Future.delayed(const Duration(milliseconds: 500));
         } catch (_) {}
       }
 
