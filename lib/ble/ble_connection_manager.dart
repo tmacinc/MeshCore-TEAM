@@ -344,8 +344,8 @@ class BleConnectionManager extends ChangeNotifier {
       // spurious disconnected emissions (replayed state, or from the bluetoothctl
       // stale-session clear above) don't trigger cleanup during connecting.
       _fbpConnectionSub?.cancel();
-      _fbpConnectionSub = fbpDevice.connectionState.listen((state) {
-        if (state == BluetoothConnectionState.disconnected &&
+      _fbpConnectionSub = fbpDevice.connectionState.listen((fbpState) {
+        if (fbpState == BluetoothConnectionState.disconnected &&
             _state == BleConnectionState.connected) {
           bleLog('Disconnected from ${device.name}');
           _cleanupFbpConnection();
