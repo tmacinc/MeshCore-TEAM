@@ -326,6 +326,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         controller
             .add(_UnreadCounts(latestContactsUnread, latestChannelsUnread));
       }
+    }, onError: (Object e) {
+      debugPrint('[MainNav] ⚠️ channels unread stream error: $e');
     });
 
     // Listen to contacts with unread
@@ -339,6 +341,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         controller
             .add(_UnreadCounts(latestContactsUnread, latestChannelsUnread));
       }
+    }, onError: (Object e) {
+      debugPrint('[MainNav] ⚠️ contacts unread stream error: $e');
     });
 
     // Emit initial value

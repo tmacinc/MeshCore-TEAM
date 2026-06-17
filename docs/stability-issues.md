@@ -98,34 +98,44 @@ looping, reducing N*2 round-trips per emission to 2 regardless of contact count.
 
 ---
 
-### 7. Null dereference in BLE write catch block (ble_connection_manager.dart:474)
+### ~~7. Null dereference in BLE write catch block (ble_connection_manager.dart:474)~~
 
-Line 477 accesses `_fbpRxChar!` inside a catch block without a null check. If the
-device disconnects just as a write fails, the field may have been nulled during cleanup.
+~~Line 477 accesses `_fbpRxChar!` inside a catch block without a null check. If the
+device disconnects just as a write fails, the field may have been nulled during cleanup.~~
 
-**Trigger:** Send a large message, then yank BLE power mid-write. Check logcat for a
-null-check exception on top of the original write error.
+~~**Trigger:** Send a large message, then yank BLE power mid-write. Check logcat for a
+null-check exception on top of the original write error.~~
+
+**False positive.** Line 530 explicitly checks `if (_fbpRxChar == null)` and throws
+before the `!` dereference on line 533. The catch block never touches `_fbpRxChar`.
 
 ---
 
-### 8. GPS state inconsistency on disconnect during autonomous setup (connection_viewmodel.dart:220)
+### ~~8. GPS state inconsistency on disconnect during autonomous setup (connection_viewmodel.dart:220)~~
 
-`setGpsEnabled(needsGps)` is awaited at line 246 while enabling autonomous mode. If
+~~`setGpsEnabled(needsGps)` is awaited at line 246 while enabling autonomous mode. If
 the device disconnects during that await, GPS is saved as enabled locally but the
-device is offline and never configured.
+device is offline and never configured.~~
 
-**Trigger:** Enable autonomous mode, immediately toggle airplane mode. Re-enable radios
-and reconnect; verify the device's GPS state matches the local setting.
+~~**Trigger:** Enable autonomous mode, immediately toggle airplane mode. Re-enable radios
+and reconnect; verify the device's GPS state matches the local setting.~~
+
+**False positive.** The entire method is wrapped in a try/catch. A disconnect mid-await
+throws, is caught, and returns `false`. Line 246 only runs if `verified` is true, so
+GPS state is never saved locally on a failed or interrupted call.
 
 ---
 
-### 9. Silent native method channel crash (telemetry_send_service.dart:179)
+### ~~9. Silent native method channel crash (telemetry_send_service.dart:179)~~
 
-`invokeMethod` is wrapped in `.catchError()` but the error handler is itself
-`unawaited()`. If the handler throws, the exception is completely swallowed.
+~~`invokeMethod` is wrapped in `.catchError()` but the error handler is itself
+`unawaited()`. If the handler throws, the exception is completely swallowed.~~
 
-**Trigger:** Revoke location permission while the app is running. The native call will
-fail; confirm whether the UI reflects the failure or silently stops updating.
+~~**Trigger:** Revoke location permission while the app is running. The native call will
+fail; confirm whether the UI reflects the failure or silently stops updating.~~
+
+**False positive.** The `.catchError()` handler only logs the error via `debugPrint`
+and cannot itself throw, so the unawaited pattern is safe here.
 
 ---
 
@@ -136,6 +146,9 @@ error kills the subscription; unread counts then freeze until app restart.
 
 **Trigger:** Simulate a DB error (e.g. corrupt a test database, or provoke a drift
 exception) and confirm badge counts stop updating.
+
+**Fixed.** Added `onError` handlers to both `.listen()` calls that log the error and
+keep the subscription alive.
 
 ---
 
