@@ -1,6 +1,7 @@
 /// Sync phase enumeration matching Android implementation
 enum SyncPhase {
   idle,
+  connecting,
   syncingContacts,
   syncingChannels,
   syncingMessages,

@@ -546,6 +546,8 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     switch (phase) {
       case SyncPhase.idle:
         return 'Idle';
+      case SyncPhase.connecting:
+        return 'Connecting...';
       case SyncPhase.syncingContacts:
         return 'Syncing Contacts...';
       case SyncPhase.syncingChannels:

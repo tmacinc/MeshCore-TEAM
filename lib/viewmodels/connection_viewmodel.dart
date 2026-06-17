@@ -490,9 +490,10 @@ class ConnectionViewModel extends ChangeNotifier {
       // Default to full sync until we confirm we're reconnecting to the same companion.
       _shouldRunFullSyncForThisConnection = true;
 
-      // Reset sync status
+      // Mark sync as in-progress immediately so a rapid reconnect doesn't
+      // bypass the guard in _onConnectionStateChanged and launch a second sync.
       _updateSyncStatus(
-          const SyncStatus(phase: SyncPhase.idle, isComplete: false));
+          const SyncStatus(phase: SyncPhase.connecting, isComplete: false));
 
       // Set up frame subscription for entire sync process (matches Android TEAM)
       _setupFrameSubscription();

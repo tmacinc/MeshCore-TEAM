@@ -312,5 +312,7 @@ of the per-row loop, reducing N+1 DB round-trips to one atomic operation.
 second `connected` event within that window bypasses the in-progress guard and launches
 a concurrent sync.
 
-**Fix:** Set `_syncStatus` to a non-idle phase synchronously at the top of
-`_performInitialSync` before the first `await`.
+**Fixed.** Added `SyncPhase.connecting` to the enum and set it synchronously at the
+top of `_performInitialSync` before the first `await`. The guard in
+`_onConnectionStateChanged` now sees a non-idle phase immediately and rejects the
+duplicate sync.
