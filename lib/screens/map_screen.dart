@@ -2917,7 +2917,7 @@ class _ContactMarker extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: scheme.surface,
+              color: isNighttime ? NightColors.surfaceHigh : scheme.surface,
               shape: BoxShape.circle,
               border: Border.all(
                 color: color,
@@ -2927,7 +2927,7 @@ class _ContactMarker extends StatelessWidget {
             child: Center(
               child: Icon(
                 isAutonomous ? Icons.gps_fixed : Icons.person,
-                color: color,
+                color: isNighttime ? NightColors.onSurface : color,
                 size: 20,
               ),
             ),
