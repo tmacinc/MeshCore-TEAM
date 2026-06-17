@@ -121,6 +121,16 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
         .go();
   }
 
+  /// Delete all channels then insert replacements in a single transaction.
+  Future<void> replaceAllChannels(List<ChannelsCompanion> replacements) {
+    return db.transaction(() async {
+      await delete(channels).go();
+      for (final channel in replacements) {
+        await into(channels).insertOnConflictUpdate(channel);
+      }
+    });
+  }
+
   /// Watch all channels (stream)
   Stream<List<ChannelData>> watchAllChannels() {
     return (select(channels)

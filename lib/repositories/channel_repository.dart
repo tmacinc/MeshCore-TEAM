@@ -692,22 +692,10 @@ class ChannelRepository {
       debugPrint(
           '[COMPANION-SYNC] [ChannelSync] Tagging channels with companion: ${_settingsService.settings.currentCompanionPublicKey?.substring(0, 16)}...');
 
-      // FIRMWARE IS SOURCE OF TRUTH - Delete all local channels, then insert fetched ones
-      // Note: We delete ALL channels, not just for this companion, to ensure clean state
-      final allChannels = await _channelsDao.getAllChannels();
-      for (final channel in allChannels) {
-        await _channelsDao.deleteChannel(channel.hash);
-      }
-      debugPrint('[ChannelSync] 🗑️ Deleted all local channels');
-
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      // Insert fetched channels
-      for (final channel in fetchedChannels) {
-        await _channelsDao.upsertChannel(channel);
-        debugPrint(
-            '[ChannelSync] 💾 Saved: \'${channel.name.value}\' (index=${channel.channelIndex.value})');
-      }
+      // FIRMWARE IS SOURCE OF TRUTH - Replace all local channels atomically
+      await _channelsDao.replaceAllChannels(fetchedChannels);
+      debugPrint(
+          '[ChannelSync] 💾 Replaced all channels (${fetchedChannels.length} saved)');
 
       // Mark sync as complete
       _updateProgress(ChannelSyncProgress(

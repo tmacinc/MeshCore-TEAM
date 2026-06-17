@@ -300,7 +300,9 @@ After fetching all channels from firmware, the repository deletes then re-insert
 one by one with sequential `await` calls (lines 698-710) before emitting `isComplete`,
 causing the UI to appear frozen at the end of channel sync.
 
-**Fix:** Wrap the delete and insert loop in a single database transaction.
+**Fixed.** Added `replaceAllChannels()` to `ChannelsDao` which wraps the full
+delete-and-insert in a single Drift transaction. The repository now calls this instead
+of the per-row loop, reducing N+1 DB round-trips to one atomic operation.
 
 ---
 
