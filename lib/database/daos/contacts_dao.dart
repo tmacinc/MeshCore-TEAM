@@ -344,18 +344,18 @@ class ContactsDao extends DatabaseAccessor<AppDatabase>
     try {
       await for (final _ in controller.stream) {
         final contactsList = await getAllContacts();
+        final unreadCounts =
+            await db.messagesDao.getUnreadCountsForContacts();
+        final messageCounts =
+            await db.messagesDao.getMessageCountsForContacts();
         final contactsWithStats =
             <({ContactData contact, int unreadCount, int messageCount})>[];
 
         for (final contact in contactsList) {
-          final unreadCount =
-              await db.messagesDao.getUnreadCountByContact(contact.hash);
-          final messageCount =
-              await db.messagesDao.getMessageCountByContact(contact.hash);
           contactsWithStats.add((
             contact: contact,
-            unreadCount: unreadCount,
-            messageCount: messageCount,
+            unreadCount: unreadCounts[contact.hash] ?? 0,
+            messageCount: messageCounts[contact.hash] ?? 0,
           ));
         }
 
@@ -419,18 +419,18 @@ class ContactsDao extends DatabaseAccessor<AppDatabase>
     try {
       await for (final _ in controller.stream) {
         final contactsList = await getContactsByCompanion(companionKey);
+        final unreadCounts = await db.messagesDao
+            .getUnreadCountsForContactsByCompanion(companionKey);
+        final messageCounts = await db.messagesDao
+            .getMessageCountsForContactsByCompanion(companionKey);
         final contactsWithStats =
             <({ContactData contact, int unreadCount, int messageCount})>[];
 
         for (final contact in contactsList) {
-          final unreadCount = await db.messagesDao
-              .getUnreadCountByContactForCompanion(contact.hash, companionKey);
-          final messageCount = await db.messagesDao
-              .getMessageCountByContactForCompanion(contact.hash, companionKey);
           contactsWithStats.add((
             contact: contact,
-            unreadCount: unreadCount,
-            messageCount: messageCount,
+            unreadCount: unreadCounts[contact.hash] ?? 0,
+            messageCount: messageCounts[contact.hash] ?? 0,
           ));
         }
 

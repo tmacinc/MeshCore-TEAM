@@ -36,36 +36,47 @@ the 100ms window closes. Toggle BLE on/off rapidly while syncing contacts.~~
 
 ---
 
-### 3. Hang on channel fetch with unresponsive firmware (channel_repository.dart:840)
+### ~~3. Hang on channel fetch with unresponsive firmware (channel_repository.dart:840)~~
 
-The pipelined channel fetch awaits `completion.future` at line 881. The max-wait timer
+~~The pipelined channel fetch awaits `completion.future` at line 881. The max-wait timer
 cancels but the future can remain pending if the stream subscription is not also closed,
-leaving the sync coroutine stuck indefinitely.
+leaving the sync coroutine stuck indefinitely.~~
 
-**Trigger:** Start channel sync, then power off the companion mid-fetch. The app should
-time out and recover; if it hangs, this is the cause.
+~~**Trigger:** Start channel sync, then power off the companion mid-fetch. The app should
+time out and recover; if it hangs, this is the cause.~~
+
+**False positive.** `completeIfPending` guards with `!completion.isCompleted`, the
+`maxWaitTimer` fires it on timeout, and the `finally` block cancels both subscriptions
+regardless of how the future resolves. No hang is possible here.
 
 ---
 
 ## High
 
-### 4. Unhandled exception in battery poll timer (connection_viewmodel.dart:941)
+### ~~4. Unhandled exception in battery poll timer (connection_viewmodel.dart:941)~~
 
-`_pollBattery()` has no try-catch. If `sendFrame` throws during a disconnect, the
-unhandled exception in the timer callback crashes the app.
+~~`_pollBattery()` has no try-catch. If `sendFrame` throws during a disconnect, the
+unhandled exception in the timer callback crashes the app.~~
 
-**Trigger:** Initiate a battery poll (wait ~30 s after connecting), then immediately
-disconnect the BLE device. Observe crash or logcat exception.
+~~**Trigger:** Initiate a battery poll (wait ~30 s after connecting), then immediately
+disconnect the BLE device. Observe crash or logcat exception.~~
+
+**False positive.** `_pollBattery()` has a try/catch at line 959 that catches and logs
+any exception from `sendFrame`. No unhandled exception is possible here.
 
 ---
 
-### 5. Unhandled exception in deep link listener (deep_link_listener.dart:31,38,45)
+### ~~5. Unhandled exception in deep link listener (deep_link_listener.dart:31,38,45)~~
 
-Three `unawaited()` calls in `initState` and the stream listener have no error handling.
-A malformed or unexpected URI silently crashes the handler.
+~~Three `unawaited()` calls in `initState` and the stream listener have no error handling.
+A malformed or unexpected URI silently crashes the handler.~~
 
-**Trigger:** Send a malformed `meshcore://` deep link to the running app (e.g. via
-`adb shell am start -a android.intent.action.VIEW -d "meshcore://%invalid"`).
+~~**Trigger:** Send a malformed `meshcore://` deep link to the running app (e.g. via
+`adb shell am start -a android.intent.action.VIEW -d "meshcore://%invalid"`).~~
+
+**False positive.** `_init()` wraps the initial link fetch in a try/catch and
+`_handleUri()` has its own try/catch that surfaces errors via a SnackBar. Both paths
+are covered.
 
 ---
 
@@ -77,6 +88,13 @@ With 50+ contacts this is 100+ synchronous-style DB round trips per update.
 
 **Trigger:** Import or sync 50+ contacts, then send a message. Observe frame drops on
 the contacts list screen using Flutter DevTools timeline.
+
+**Fixed.** Added `getUnreadCountsForContacts()`, `getMessageCountsForContacts()`,
+`getUnreadCountsForContactsByCompanion()`, and `getMessageCountsForContactsByCompanion()`
+to `MessagesDao` — each issues a single `GROUP BY` query returning counts for all
+contacts at once. Both `watchAllContactsWithUnread()` and
+`watchContactsWithUnreadByCompanion()` in `ContactsDao` now call these instead of
+looping, reducing N*2 round-trips per emission to 2 regardless of contact count.
 
 ---
 

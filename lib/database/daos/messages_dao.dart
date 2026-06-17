@@ -286,6 +286,68 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
     return result.read(messages.id.count()) ?? 0;
   }
 
+  /// Get message and unread counts for all contacts in one query each.
+  /// Returns a map of contactHash -> count.
+  Future<Map<int, int>> getMessageCountsForContacts() async {
+    final query = selectOnly(messages)
+      ..addColumns([messages.channelHash, messages.id.count()])
+      ..where(messages.isPrivate.equals(true))
+      ..groupBy([messages.channelHash]);
+
+    final rows = await query.get();
+    return {
+      for (final row in rows)
+        row.read(messages.channelHash)!: row.read(messages.id.count()) ?? 0,
+    };
+  }
+
+  Future<Map<int, int>> getUnreadCountsForContacts() async {
+    final query = selectOnly(messages)
+      ..addColumns([messages.channelHash, messages.id.count()])
+      ..where(messages.isPrivate.equals(true) &
+          messages.isRead.equals(false) &
+          messages.isSentByMe.equals(false))
+      ..groupBy([messages.channelHash]);
+
+    final rows = await query.get();
+    return {
+      for (final row in rows)
+        row.read(messages.channelHash)!: row.read(messages.id.count()) ?? 0,
+    };
+  }
+
+  Future<Map<int, int>> getMessageCountsForContactsByCompanion(
+      String companionKey) async {
+    final query = selectOnly(messages)
+      ..addColumns([messages.channelHash, messages.id.count()])
+      ..where(messages.isPrivate.equals(true) &
+          messages.companionDeviceKey.equals(companionKey))
+      ..groupBy([messages.channelHash]);
+
+    final rows = await query.get();
+    return {
+      for (final row in rows)
+        row.read(messages.channelHash)!: row.read(messages.id.count()) ?? 0,
+    };
+  }
+
+  Future<Map<int, int>> getUnreadCountsForContactsByCompanion(
+      String companionKey) async {
+    final query = selectOnly(messages)
+      ..addColumns([messages.channelHash, messages.id.count()])
+      ..where(messages.isPrivate.equals(true) &
+          messages.isRead.equals(false) &
+          messages.isSentByMe.equals(false) &
+          messages.companionDeviceKey.equals(companionKey))
+      ..groupBy([messages.channelHash]);
+
+    final rows = await query.get();
+    return {
+      for (final row in rows)
+        row.read(messages.channelHash)!: row.read(messages.id.count()) ?? 0,
+    };
+  }
+
   /// Get message count for a contact (private conversation / DM)
   Future<int> getMessageCountByContact(int contactHash) async {
     final query = selectOnly(messages)
