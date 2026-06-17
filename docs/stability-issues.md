@@ -23,13 +23,16 @@ and the timer checks it before calling `complete()` (line 405). No bug exists he
 
 ---
 
-### 2. Double-complete crash on contact sync timeout (contact_repository.dart:261)
+### ~~2. Double-complete crash on contact sync timeout (contact_repository.dart:261)~~
 
-Same pattern as above: a periodic timer fires after the contact sync Completer is
-already completed by a BLE response, causing a StateError crash.
+~~Same pattern as above: a periodic timer fires after the contact sync Completer is
+already completed by a BLE response, causing a StateError crash.~~
 
-**Trigger:** Connect to a companion that is slow to respond but does respond before
-the 100ms window closes. Toggle BLE on/off rapidly while syncing contacts.
+~~**Trigger:** Connect to a companion that is slow to respond but does respond before
+the 100ms window closes. Toggle BLE on/off rapidly while syncing contacts.~~
+
+**False positive.** Every `completer.complete()` call in the timer is guarded with
+`!completer.isCompleted` (lines 273, 290, 308). No bug exists here.
 
 ---
 
