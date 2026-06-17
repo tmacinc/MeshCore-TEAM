@@ -24,3 +24,8 @@ target_link_libraries(${BINARY_NAME} PRIVATE flutter)
 target_link_libraries(${BINARY_NAME} PRIVATE PkgConfig::GTK)
 
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
+
+# Bundle the app icon next to the binary.
+install(FILES "resources/app_icon.png"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}"
+)

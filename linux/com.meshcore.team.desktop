@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=MeshCore TEAM
+Comment=MeshCore off-grid team communicator
+Exec=meshcore_team
+Icon=com.meshcore.team
+Type=Application
+Categories=Network;Communication;
+StartupWMClass=meshcore_team
