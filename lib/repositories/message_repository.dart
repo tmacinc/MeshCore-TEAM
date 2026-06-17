@@ -220,34 +220,38 @@ class MessageRepository {
         debugPrint('[🔍DISC] 📢 PUSH_ADVERT received - syncing contacts...');
 
         unawaited(() async {
-          // Small delay to let firmware process the advert before we poll.
-          await Future<void>.delayed(const Duration(milliseconds: 100));
+          try {
+            // Small delay to let firmware process the advert before we poll.
+            await Future<void>.delayed(const Duration(milliseconds: 100));
 
-          final companionKey =
-              _settingsService.settings.currentCompanionPublicKey;
-          final countBefore = (companionKey == null || companionKey.isEmpty)
-              ? (await _contactsDao.getAllContacts()).length
-              : (await _contactsDao.getContactsByCompanion(companionKey))
-                  .length;
+            final companionKey =
+                _settingsService.settings.currentCompanionPublicKey;
+            final countBefore = (companionKey == null || companionKey.isEmpty)
+                ? (await _contactsDao.getAllContacts()).length
+                : (await _contactsDao.getContactsByCompanion(companionKey))
+                    .length;
 
-          final result = await _contactRepository.syncContactsComplete();
+            final result = await _contactRepository.syncContactsComplete();
 
-          if (!result.success) {
-            debugPrint('[🔍DISC] ❌ Contact sync failed or timed out');
-            return;
-          }
+            if (!result.success) {
+              debugPrint('[🔍DISC] ❌ Contact sync failed or timed out');
+              return;
+            }
 
-          final countAfter = (companionKey == null || companionKey.isEmpty)
-              ? (await _contactsDao.getAllContacts()).length
-              : (await _contactsDao.getContactsByCompanion(companionKey))
-                  .length;
+            final countAfter = (companionKey == null || companionKey.isEmpty)
+                ? (await _contactsDao.getAllContacts()).length
+                : (await _contactsDao.getContactsByCompanion(companionKey))
+                    .length;
 
-          if (countAfter > countBefore) {
-            debugPrint(
-                '[🔍DISC] 📤 New contact detected ($countBefore → $countAfter) - sending reciprocal advert');
-            await _bleService.sendSelfAdvert();
-          } else {
-            debugPrint('[🔍DISC] ✓ Existing contact - no reciprocal needed');
+            if (countAfter > countBefore) {
+              debugPrint(
+                  '[🔍DISC] 📤 New contact detected ($countBefore → $countAfter) - sending reciprocal advert');
+              await _bleService.sendSelfAdvert();
+            } else {
+              debugPrint('[🔍DISC] ✓ Existing contact - no reciprocal needed');
+            }
+          } catch (e) {
+            debugPrint('[🔍DISC] ⚠️ Advert contact sync failed: $e');
           }
         }());
       }
@@ -258,8 +262,12 @@ class MessageRepository {
         debugPrint(
             '[🔍DISC] 📣 PUSH_NEW_ADVERT received - syncing contacts...');
         unawaited(() async {
-          await Future<void>.delayed(const Duration(milliseconds: 500));
-          await _contactRepository.syncContactsComplete();
+          try {
+            await Future<void>.delayed(const Duration(milliseconds: 500));
+            await _contactRepository.syncContactsComplete();
+          } catch (e) {
+            debugPrint('[🔍DISC] ⚠️ New advert contact sync failed: $e');
+          }
         }());
       }
 
