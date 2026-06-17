@@ -6,6 +6,10 @@ import 'package:provider/provider.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/models/unread_models.dart';
 import 'package:meshcore_team/repositories/contact_repository.dart';
+import 'package:meshcore_team/models/app_settings.dart';
+import 'package:meshcore_team/services/settings_service.dart';
+import 'package:meshcore_team/theme/night_theme.dart';
+import 'package:meshcore_team/widgets/night_mode_button.dart';
 import 'direct_message_screen.dart';
 
 /// Contacts Screen
@@ -16,12 +20,14 @@ class ContactsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final contactRepository = context.watch<ContactRepository>();
+    final settings = context.watch<SettingsService>();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Contacts'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        actions: [
+          NightModeButton(settings: settings),
+        ],
       ),
       // Repository handles companion filtering automatically
       body: StreamBuilder<List<ContactWithUnread>>(
@@ -100,12 +106,13 @@ class ContactListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasLocation = contact.latitude != null && contact.longitude != null;
     final lastSeenText = _formatLastSeen(contact.lastSeen);
+    final isNighttime = context.watch<SettingsService>().settings.appTheme ==
+        AppThemeMode.nighttime;
 
-    // Simple connectivity indicator based on lastSeen
     final minutesSinceLastSeen =
         (DateTime.now().millisecondsSinceEpoch - contact.lastSeen).toDouble();
     final connectivityColor =
-        _getConnectivityColor(minutesSinceLastSeen.toInt());
+        _getConnectivityColor(minutesSinceLastSeen.toInt(), isNighttime);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -118,8 +125,8 @@ class ContactListTile extends StatelessWidget {
                 contact.name?.isNotEmpty == true
                     ? contact.name!.substring(0, 1).toUpperCase()
                     : '?',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isNighttime ? NightColors.onSurface : Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -195,8 +202,10 @@ class ContactListTile extends StatelessWidget {
           ],
         ),
         trailing: hasLocation
-            ? const Icon(Icons.location_on, color: Colors.blue)
-            : const Icon(Icons.location_off, color: Colors.grey),
+            ? Icon(Icons.location_on,
+                color: isNighttime ? NightColors.primary : Colors.blue)
+            : Icon(Icons.location_off,
+                color: isNighttime ? NightColors.dimmer : Colors.grey),
         onTap: () {
           if (contact.isRepeater) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -234,13 +243,21 @@ class ContactListTile extends StatelessWidget {
     }
   }
 
-  Color _getConnectivityColor(int millisSinceLastSeen) {
+  Color _getConnectivityColor(int millisSinceLastSeen, bool isNighttime) {
     final minutesSince = millisSinceLastSeen / 60000.0;
 
-    if (minutesSince < 1) return Colors.green; // Direct - just seen
-    if (minutesSince < 5) return Colors.yellow; // Recent
-    if (minutesSince < 10) return Colors.orange; // Getting stale
-    if (minutesSince < 30) return Colors.red; // Offline
-    return Colors.grey; // Out of range
+    if (isNighttime) {
+      if (minutesSince < 1) return NightColors.connectJustSeen;
+      if (minutesSince < 5) return NightColors.connectRecent;
+      if (minutesSince < 10) return NightColors.connectStale;
+      if (minutesSince < 30) return NightColors.connectOffline;
+      return NightColors.connectOutOfRange;
+    }
+
+    if (minutesSince < 1) return Colors.green;
+    if (minutesSince < 5) return Colors.yellow;
+    if (minutesSince < 10) return Colors.orange;
+    if (minutesSince < 30) return Colors.red;
+    return Colors.grey;
   }
 }

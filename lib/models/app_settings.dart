@@ -4,6 +4,9 @@
 /// Application settings model
 /// Matches Android AppPreferences
 class AppSettings {
+  // UI theme
+  final String appTheme; // 'system', 'light', 'dark', 'nighttime'
+
   // Location settings
   final String locationSource; // 'phone' or 'companion'
 
@@ -48,6 +51,7 @@ class AppSettings {
   final bool serviceWasRunning;
 
   const AppSettings({
+    this.appTheme = AppThemeMode.system,
     this.locationSource = LocationSource.phone,
     this.telemetryEnabled = false,
     this.telemetryChannelHash,
@@ -78,6 +82,7 @@ class AppSettings {
   });
 
   AppSettings copyWith({
+    String? appTheme,
     String? locationSource,
     bool? telemetryEnabled,
     String? telemetryChannelHash,
@@ -107,6 +112,7 @@ class AppSettings {
     bool? batteryOptimizationRequested,
   }) {
     return AppSettings(
+      appTheme: appTheme ?? this.appTheme,
       locationSource: locationSource ?? this.locationSource,
       telemetryEnabled: telemetryEnabled ?? this.telemetryEnabled,
       telemetryChannelHash: telemetryChannelHash ?? this.telemetryChannelHash,
@@ -166,6 +172,7 @@ class MapProvider {
   static const String hot = 'hot';
   static const String esriSat = 'esri_sat';
   static const String carto = 'carto';
+  static const String noMap = 'no_map';
 
   // Legacy IDs from earlier Flutter iterations (normalized in UI/service)
   static const String openTopoLegacy = 'opentopo';
@@ -180,6 +187,16 @@ class DistanceRingInterval {
   static const String meters500 = '500m';
   static const String km1 = '1km';
   static const String km2 = '2km';
+}
+
+/// App theme mode constants
+class AppThemeMode {
+  static const String system = 'system';
+  static const String light = 'light';
+  static const String dark = 'dark';
+  static const String nighttime = 'nighttime';
+
+  static const Set<String> values = <String>{system, light, dark, nighttime};
 }
 
 class ForwardingAlgorithmMode {

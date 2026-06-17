@@ -19,6 +19,9 @@ import '../repositories/contact_repository.dart';
 import '../repositories/message_repository.dart';
 import '../services/message_notification_service.dart';
 import '../widgets/chat_message_text.dart';
+import '../models/app_settings.dart';
+import '../services/settings_service.dart';
+import '../theme/night_theme.dart';
 
 /// Channel chat screen for group conversations
 class ChannelChatScreen extends StatefulWidget {
@@ -91,6 +94,8 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isNighttime = context.watch<SettingsService>().settings.appTheme ==
+        AppThemeMode.nighttime;
 
     return Scaffold(
       appBar: AppBar(
@@ -106,8 +111,6 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
             ),
           ],
         ),
-        backgroundColor: theme.colorScheme.surfaceVariant,
-        foregroundColor: theme.colorScheme.onSurfaceVariant,
         elevation: 0,
         actions: [
           if (!widget.channel.isPublic)
@@ -119,7 +122,9 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
           IconButton(
             icon: Icon(
               widget.channel.isPublic ? Icons.public : Icons.lock,
-              color: widget.channel.isPublic ? Colors.green : Colors.orange,
+              color: isNighttime
+                  ? NightColors.onSurfaceVariant
+                  : (widget.channel.isPublic ? Colors.green : Colors.orange),
             ),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -267,36 +272,62 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: 'Type a message to ${widget.channel.name}...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+                    child: Stack(
+                      children: [
+                        TextField(
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            hintText:
+                                'Type a message to ${widget.channel.name}...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: theme.colorScheme.surfaceVariant,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            counterText: '',
+                          ),
+                          maxLines: null,
+                          maxLength: 130,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                          onChanged: (text) {
+                            // Mark as read when user starts typing
+                            if (text.isNotEmpty &&
+                                _firstUnreadTimestamp != null) {
+                              _messageRepository.messagesDao
+                                  .markChannelMessagesAsRead(
+                                      widget.channel.hash);
+                              setState(() {
+                                _firstUnreadTimestamp = null;
+                              });
+                            }
+                            _updateMentionSuggestions(text);
+                          },
                         ),
-                        filled: true,
-                        fillColor: theme.colorScheme.surfaceVariant,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
+                        Positioned(
+                          top: 4,
+                          right: 12,
+                          child: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _messageController,
+                            builder: (context, value, _) {
+                              final count = value.text.length;
+                              if (count == 0) return const SizedBox.shrink();
+                              return Text(
+                                '$count/130',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withOpacity(0.6),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                      maxLines: null,
-                      maxLength: 130,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
-                      onChanged: (text) {
-                        // Mark as read when user starts typing
-                        if (text.isNotEmpty && _firstUnreadTimestamp != null) {
-                          _messageRepository.messagesDao
-                              .markChannelMessagesAsRead(widget.channel.hash);
-                          setState(() {
-                            _firstUnreadTimestamp = null; // Hide divider
-                          });
-                        }
-                        _updateMentionSuggestions(text);
-                      },
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),

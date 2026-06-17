@@ -29,7 +29,9 @@ import 'package:meshcore_team/services/forwarding_policy_service.dart';
 import 'package:meshcore_team/services/kmz_import_service.dart';
 import 'package:meshcore_team/services/map_tile_cache_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
+import 'package:meshcore_team/theme/night_theme.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
+import 'package:meshcore_team/widgets/night_mode_button.dart';
 import 'package:meshcore_team/widgets/offline_map_download_dialog.dart';
 import 'package:meshcore_team/widgets/waypoint_create_dialog.dart';
 import 'package:meshcore_team/widgets/waypoint_edit_dialog.dart';
@@ -1545,6 +1547,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final settingsService = context.watch<SettingsService>();
+    final isNighttime = settingsService.settings.appTheme == AppThemeMode.nighttime;
     final connectionVM = context.watch<ConnectionViewModel>();
     final forwardingPolicy = context.watch<ForwardingPolicyService>();
     final tileCache = context.read<MapTileCacheService>();
@@ -1609,9 +1612,9 @@ class _MapScreenState extends State<MapScreen> {
                 const Text('Map'),
                 Text(
                   gpsSourceLine,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white70,
+                    color: isNighttime ? NightColors.onSurfaceVariant : Colors.white70,
                     height: 1.1,
                   ),
                 ),
@@ -1627,7 +1630,9 @@ class _MapScreenState extends State<MapScreen> {
               child: Icon(
                 Icons.sensors,
                 size: 22,
-                color: telemetryActive ? Colors.green : Colors.red,
+                color: isNighttime
+                    ? (telemetryActive ? NightColors.primary : NightColors.dimmer)
+                    : (telemetryActive ? Colors.green : Colors.red),
               ),
             ),
             const SizedBox(width: 12),
@@ -1641,11 +1646,9 @@ class _MapScreenState extends State<MapScreen> {
                       : campModeEnabled
                           ? 'Forwarding mode: camp'
                           : 'Forwarding mode: full mesh';
-              final iconColor = forwardingActive
-                  ? Colors.lightGreenAccent
-                  : campModeEnabled
-                      ? Colors.lightGreenAccent
-                      : Colors.lightGreenAccent;
+              final iconColor = isNighttime
+                  ? NightColors.onSurfaceVariant
+                  : Colors.lightGreenAccent;
               final label = campModeEnabled
                   ? (forwardingActive ? 'C$activeHops' : 'C')
                   : forwardingActive
@@ -1695,18 +1698,17 @@ class _MapScreenState extends State<MapScreen> {
                           ],
                         ],
                       )
-                    : const Icon(
+                    : Icon(
                         Icons.check,
                         size: 20,
-                        color: Colors.lightGreenAccent,
+                        color: iconColor,
                       ),
               );
             }),
           ],
         ),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
         actions: [
+          NightModeButton(settings: settingsService),
           PopupMenuButton<String>(
             tooltip: 'Map type',
             initialValue: currentProviderId,
@@ -1874,7 +1876,8 @@ class _MapScreenState extends State<MapScreen> {
       ),
       body: Stack(
         children: [
-          FlutterMap(
+          Positioned.fill(
+            child: FlutterMap(
             mapController: _mapController,
             options: MapOptions(
               initialCenter: _userLocation ??
@@ -1882,6 +1885,9 @@ class _MapScreenState extends State<MapScreen> {
               initialZoom: 15.0,
               minZoom: 3.0,
               maxZoom: 18.0,
+              backgroundColor: currentProviderId == MapProvider.noMap
+                  ? Colors.black
+                  : const Color(0xFFE0E0E0),
               interactionOptions: InteractionOptions(
                 flags: _isHeadingUp
                     ? (InteractiveFlag.all &
@@ -1944,13 +1950,14 @@ class _MapScreenState extends State<MapScreen> {
               },
             ),
             children: [
-              TileLayer(
-                urlTemplate: tileConfig.urlTemplate,
-                subdomains: tileConfig.subdomains,
-                tileProvider: tileCache.tileProvider,
-                userAgentPackageName: 'com.meshcore.team',
-                maxNativeZoom: 18,
-              ),
+              if (currentProviderId != MapProvider.noMap)
+                TileLayer(
+                  urlTemplate: tileConfig.urlTemplate,
+                  subdomains: tileConfig.subdomains,
+                  tileProvider: tileCache.tileProvider,
+                  userAgentPackageName: 'com.meshcore.team',
+                  maxNativeZoom: 18,
+                ),
               // KMZ imported overlay maps — rendered above the base tile layer
               if (_cachedOverlayImages.isNotEmpty)
                 OverlayImageLayer(
@@ -2478,6 +2485,7 @@ class _MapScreenState extends State<MapScreen> {
                 ),
             ],
           ),
+          ), // Positioned.fill wrapping FlutterMap
 
           if (_isRouteEditMode)
             Positioned(
@@ -2584,21 +2592,24 @@ class _MapScreenState extends State<MapScreen> {
               left: 16,
               right: 16,
               child: Card(
-                color: Colors.red[100],
+                color: isNighttime ? NightColors.surfaceHigh : Colors.red[100],
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
-                      const Icon(Icons.error, color: Colors.red),
+                      Icon(Icons.error,
+                          color: isNighttime ? NightColors.primary : Colors.red),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _locationError!,
-                          style: const TextStyle(color: Colors.red),
+                          style: TextStyle(
+                              color: isNighttime ? NightColors.onSurface : Colors.red),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
+                        icon: Icon(Icons.close,
+                            color: isNighttime ? NightColors.primary : Colors.red),
                         onPressed: () {
                           setState(() {
                             _locationError = null;
@@ -2627,8 +2638,9 @@ class _MapScreenState extends State<MapScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.navigation,
-                          size: 14, color: Colors.blue),
+                      Icon(Icons.navigation,
+                          size: 14,
+                          color: isNighttime ? NightColors.primary : Colors.blue),
                       const SizedBox(width: 6),
                       Text(
                         () {
@@ -2839,9 +2851,16 @@ class _MapScreenState extends State<MapScreen> {
   }
 }
 
-Color _contactStatusColor(int lastSeenMs, int pathLen) {
+Color _contactStatusColor(int lastSeenMs, int pathLen, {bool isNighttime = false}) {
   final nowMs = DateTime.now().millisecondsSinceEpoch;
   final minutesSince = (nowMs - lastSeenMs) / 60000.0;
+  if (isNighttime) {
+    if (minutesSince >= 10) return NightColors.connectOutOfRange;
+    if (minutesSince >= 5) return NightColors.connectOffline;
+    if (pathLen == 0) return NightColors.connectJustSeen;
+    if (pathLen <= 3) return NightColors.connectRecent;
+    return NightColors.connectStale;
+  }
   if (minutesSince >= 10) return Colors.grey;
   if (minutesSince >= 5) return Colors.red;
   if (pathLen == 0) return Colors.green;
@@ -2868,12 +2887,12 @@ class _ContactMarker extends StatelessWidget {
     this.onDoubleTap,
   });
 
-  Color _borderColorForStatus() => _contactStatusColor(lastSeenMs, pathLen);
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = _borderColorForStatus();
+    final isNighttime = context.watch<SettingsService>().settings.appTheme ==
+        AppThemeMode.nighttime;
+    final color = _contactStatusColor(lastSeenMs, pathLen, isNighttime: isNighttime);
     final displayName = name?.trim();
     final hasDisplayName = displayName != null && displayName.isNotEmpty;
 
@@ -3001,25 +3020,21 @@ class _GroupStatusPanel extends StatelessWidget {
 
   Widget _buildContactList(BuildContext context) {
     final settings = settingsService.settings;
+    final dimColor = Theme.of(context).colorScheme.outline;
+    final dimStyle = TextStyle(color: dimColor, fontSize: 12);
 
     if (!settings.telemetryEnabled) {
-      return const Padding(
-        padding: EdgeInsets.all(12),
-        child: Text(
-          'Location sharing is off',
-          style: TextStyle(color: Colors.grey, fontSize: 12),
-        ),
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text('Location sharing is off', style: dimStyle),
       );
     }
 
     final companionKey = settings.currentCompanionPublicKey;
     if (companionKey == null || companionKey.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(12),
-        child: Text(
-          'Not connected',
-          style: TextStyle(color: Colors.grey, fontSize: 12),
-        ),
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text('Not connected', style: dimStyle),
       );
     }
 
@@ -3036,23 +3051,17 @@ class _GroupStatusPanel extends StatelessWidget {
 
     final selectedHashHex = settings.telemetryChannelHash;
     if (selectedHashHex == null || selectedHashHex.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(12),
-        child: Text(
-          'No telemetry channel set',
-          style: TextStyle(color: Colors.grey, fontSize: 12),
-        ),
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text('No telemetry channel set', style: dimStyle),
       );
     }
 
     final selectedHash = tryParseHash(selectedHashHex);
     if (selectedHash == null) {
-      return const Padding(
-        padding: EdgeInsets.all(12),
-        child: Text(
-          'Invalid telemetry channel',
-          style: TextStyle(color: Colors.grey, fontSize: 12),
-        ),
+      return Padding(
+        padding: const EdgeInsets.all(12),
+        child: Text('Invalid telemetry channel', style: dimStyle),
       );
     }
 
@@ -3070,12 +3079,9 @@ class _GroupStatusPanel extends StatelessWidget {
         }
 
         if (selectedChannel == null || selectedChannel.isPublic) {
-          return const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text(
-              'No group channel active',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-            ),
+          return Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text('No group channel active', style: dimStyle),
           );
         }
 
@@ -3101,12 +3107,9 @@ class _GroupStatusPanel extends StatelessWidget {
                   ..sort((a, b) => b.lastSeen.compareTo(a.lastSeen));
 
             if (visible.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.all(12),
-                child: Text(
-                  'No members on map',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
+              return Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text('No members on map', style: dimStyle),
               );
             }
 
@@ -3126,12 +3129,15 @@ class _GroupStatusPanel extends StatelessWidget {
                   final hopText = s.lastPathLen == 0
                       ? 'Direct'
                       : '${s.lastPathLen} hop${s.lastPathLen == 1 ? '' : 's'}';
+                  final isNighttime =
+                      settingsService.settings.appTheme == AppThemeMode.nighttime;
                   return ListTile(
                     dense: true,
                     leading: Icon(
                       s.isAutonomousDevice ? Icons.gps_fixed : Icons.person,
                       size: 20,
-                      color: _contactStatusColor(s.lastSeen, s.lastPathLen),
+                      color: _contactStatusColor(s.lastSeen, s.lastPathLen,
+                          isNighttime: isNighttime),
                     ),
                     title: Text(
                       name,

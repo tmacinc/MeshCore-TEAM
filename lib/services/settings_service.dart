@@ -45,6 +45,7 @@ class SettingsService extends ChangeNotifier {
       'battery_optimization_requested';
   static const String _keyServiceWasRunning = 'service_was_running';
   static const String _keyContactLastmod = 'contact_lastmod';
+  static const String _keyAppTheme = 'app_theme';
 
   final SharedPreferences _prefs;
   AppSettings _settings = const AppSettings();
@@ -126,6 +127,7 @@ class SettingsService extends ChangeNotifier {
         _getTelemetryChannelNameForCompanion(currentCompanionKey);
 
     _settings = AppSettings(
+      appTheme: _sanitizeAppTheme(_prefs.getString(_keyAppTheme)),
       locationSource:
           _prefs.getString(_keyLocationSource) ?? LocationSource.phone,
       telemetryEnabled: _prefs.getBool(_keyTelemetryEnabled) ?? false,
@@ -446,6 +448,20 @@ class SettingsService extends ChangeNotifier {
     if (companionPublicKeyHex.isEmpty) return;
     await _prefs.setInt(
         _contactLastmodKeyForCompanion(companionPublicKeyHex), lastmodSeconds);
+  }
+
+  Future<void> setAppTheme(String theme) async {
+    final sanitized = _sanitizeAppTheme(theme);
+    await _prefs.setString(_keyAppTheme, sanitized);
+    _settings = _settings.copyWith(appTheme: sanitized);
+    notifyListeners();
+  }
+
+  String _sanitizeAppTheme(String? theme) {
+    if (theme == null || !AppThemeMode.values.contains(theme)) {
+      return AppThemeMode.system;
+    }
+    return theme;
   }
 
   /// Clear all settings (reset to defaults)

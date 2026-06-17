@@ -8,7 +8,10 @@ import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/models/unread_models.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/screens/qr_scan_screen.dart';
+import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/services/settings_service.dart';
+import 'package:meshcore_team/theme/night_theme.dart';
+import 'package:meshcore_team/widgets/night_mode_button.dart';
 import 'channel_chat_screen.dart';
 
 /// Channels Screen
@@ -19,13 +22,13 @@ class ChannelsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final channelRepository = context.watch<ChannelRepository>();
+    final settings = context.watch<SettingsService>();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Channels'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
         actions: [
+          NightModeButton(settings: settings),
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add channel',
@@ -58,20 +61,21 @@ class ChannelsScreen extends StatelessWidget {
           final channelsWithUnread = snapshot.data ?? [];
 
           if (channelsWithUnread.isEmpty) {
-            return const Center(
+            final emptyColor = Theme.of(context).colorScheme.outline;
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
+                  Icon(Icons.chat_bubble_outline, size: 64, color: emptyColor),
+                  const SizedBox(height: 16),
                   Text(
                     'No channels',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                    style: TextStyle(fontSize: 18, color: emptyColor),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     'Connect to a device and sync to see channels',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: emptyColor),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -439,6 +443,8 @@ class ChannelListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPublic = channel.isPublic;
     final createdText = _formatCreatedAt(channel.createdAt);
+    final isNighttime = context.watch<SettingsService>().settings.appTheme ==
+        AppThemeMode.nighttime;
 
     // Determine if this channel is the active telemetry channel.
     final settings = context.watch<SettingsService>().settings;
@@ -458,10 +464,12 @@ class ChannelListTile extends StatelessWidget {
         leading: Stack(
           children: [
             CircleAvatar(
-              backgroundColor: isPublic ? Colors.green : Colors.blue,
+              backgroundColor: isNighttime
+                  ? (isPublic ? NightColors.connectStale : NightColors.surfaceHigh)
+                  : (isPublic ? Colors.green : Colors.blue),
               child: Icon(
                 isPublic ? Icons.public : Icons.lock,
-                color: Colors.white,
+                color: isNighttime ? NightColors.onSurface : Colors.white,
               ),
             ),
             if (unreadCount > 0)
@@ -470,8 +478,8 @@ class ChannelListTile extends StatelessWidget {
                 top: 0,
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
+                  decoration: BoxDecoration(
+                    color: isNighttime ? NightColors.primary : Colors.red,
                     shape: BoxShape.circle,
                   ),
                   constraints: const BoxConstraints(
@@ -480,8 +488,8 @@ class ChannelListTile extends StatelessWidget {
                   ),
                   child: Text(
                     unreadCount > 99 ? '99+' : unreadCount.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isNighttime ? NightColors.onSurface : Colors.white,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -506,10 +514,30 @@ class ChannelListTile extends StatelessWidget {
             Text('Type: ${isPublic ? 'Public' : 'Private'}'),
             if (channel.muteNotifications) const Text('🔕 Notifications muted'),
             if (isTelemetryChannel)
-              const Text('📍 Location sharing on')
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.location_on,
+                      size: 14,
+                      color: isNighttime ? NightColors.primary : Colors.blue),
+                  const SizedBox(width: 2),
+                  const Text('Location sharing on'),
+                ],
+              )
             else if (!settings.telemetryEnabled &&
                 channel.hash == telemetryHashInt)
-              const Text('📍 Location sharing off'),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.location_off,
+                      size: 14,
+                      color: isNighttime
+                          ? NightColors.dimmer
+                          : Colors.grey),
+                  const SizedBox(width: 2),
+                  const Text('Location sharing off'),
+                ],
+              ),
           ],
         ),
         trailing: Row(
@@ -520,7 +548,9 @@ class ChannelListTile extends StatelessWidget {
               children: [
                 Icon(
                   isPublic ? Icons.public : Icons.group,
-                  color: isPublic ? Colors.green : Colors.blue,
+                  color: isNighttime
+                      ? (isPublic ? NightColors.connectStale : NightColors.onSurfaceVariant)
+                      : (isPublic ? Colors.green : Colors.blue),
                 ),
                 const SizedBox(height: 4),
                 Text(

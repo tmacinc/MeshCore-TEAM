@@ -103,8 +103,6 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
             ),
           ],
         ),
-        backgroundColor: theme.colorScheme.surfaceVariant,
-        foregroundColor: theme.colorScheme.onSurfaceVariant,
         elevation: 0,
       ),
       body: Column(
@@ -254,37 +252,60 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      enabled: !isRepeater,
-                      decoration: InputDecoration(
-                        hintText: 'Type a message...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+                    child: Stack(
+                      children: [
+                        TextField(
+                          controller: _messageController,
+                          enabled: !isRepeater,
+                          decoration: InputDecoration(
+                            hintText: 'Type a message...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: theme.colorScheme.surfaceVariant,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            counterText: '',
+                          ),
+                          maxLines: null,
+                          maxLength: 130,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                          onChanged: (text) {
+                            // Mark as read when user starts typing
+                            if (text.isNotEmpty && _firstUnreadTimestamp != null) {
+                              _messageRepository.messagesDao
+                                  .markContactMessagesAsRead(widget.contact.hash);
+                              setState(() {
+                                _firstUnreadTimestamp = null;
+                              });
+                            }
+                            _updateMentionSuggestions(text);
+                          },
                         ),
-                        filled: true,
-                        fillColor: theme.colorScheme.surfaceVariant,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
+                        Positioned(
+                          top: 4,
+                          right: 12,
+                          child: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _messageController,
+                            builder: (context, value, _) {
+                              final count = value.text.length;
+                              if (count == 0) return const SizedBox.shrink();
+                              return Text(
+                                '$count/130',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant
+                                      .withOpacity(0.6),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                      maxLines: null,
-                      maxLength: 130,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
-                      onChanged: (text) {
-                        // Mark as read when user starts typing
-                        if (text.isNotEmpty && _firstUnreadTimestamp != null) {
-                          _messageRepository.messagesDao
-                              .markContactMessagesAsRead(widget.contact.hash);
-                          setState(() {
-                            _firstUnreadTimestamp = null; // Hide divider
-                          });
-                        }
-                        _updateMentionSuggestions(text);
-                      },
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),

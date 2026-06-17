@@ -14,7 +14,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'database/database.dart';
+import 'models/app_settings.dart';
 import 'services/settings_service.dart';
+import 'theme/night_theme.dart';
 import 'services/map_tile_cache_service.dart';
 import 'services/kmz_import_service.dart';
 import 'services/message_notification_service.dart';
@@ -441,27 +443,138 @@ class TeamFlutterApp extends StatelessWidget {
         // Capability publisher (sends #CAP: on discovery and settings change)
         Provider<CapabilityPublisher>.value(value: capabilityPublisher),
       ],
-      child: MaterialApp(
-        navigatorKey: navigatorKey,
-        title: 'TEAM Flutter',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-        ),
-        themeMode: ThemeMode.system,
-        home: const DeepLinkListener(
-          child: _PermissionGate(),
-        ),
+      child: Consumer<SettingsService>(
+        builder: (context, settings, _) {
+          final appTheme = settings.settings.appTheme;
+          final isNighttime = appTheme == AppThemeMode.nighttime;
+          return MaterialApp(
+            navigatorKey: navigatorKey,
+            title: 'TEAM Flutter',
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+              ),
+              bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+                selectedItemColor: Colors.blue,
+                unselectedItemColor: Colors.grey,
+              ),
+              useMaterial3: true,
+            ),
+            darkTheme: isNighttime ? _nighttimeTheme() : ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.blue,
+                brightness: Brightness.dark,
+              ),
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+              ),
+              bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+                selectedItemColor: Colors.blue,
+                unselectedItemColor: Colors.grey,
+              ),
+              useMaterial3: true,
+            ),
+            themeMode: switch (appTheme) {
+              AppThemeMode.light => ThemeMode.light,
+              AppThemeMode.dark => ThemeMode.dark,
+              AppThemeMode.nighttime => ThemeMode.dark,
+              _ => ThemeMode.system,
+            },
+            home: const DeepLinkListener(
+              child: _PermissionGate(),
+            ),
+          );
+        },
       ),
     );
   }
+}
+
+ThemeData _nighttimeTheme() {
+  final base = ColorScheme.fromSeed(
+    seedColor: NightColors.primary,
+    brightness: Brightness.dark,
+  );
+  final scheme = base.copyWith(
+    surface: NightColors.surfaceLow,
+    onSurface: NightColors.onSurface,
+    surfaceVariant: NightColors.surfaceHigh,
+    onSurfaceVariant: NightColors.onSurfaceVariant,
+    surfaceContainerLowest: NightColors.background,
+    surfaceContainerLow: NightColors.surfaceLow,
+    surfaceContainer: NightColors.surface,
+    surfaceContainerHigh: const Color(0xFF170000),
+    surfaceContainerHighest: NightColors.surfaceHigh,
+    primary: NightColors.primary,
+    onPrimary: NightColors.onPrimary,
+    primaryContainer: NightColors.dim,
+    onPrimaryContainer: NightColors.onSurface,
+    secondary: const Color(0xFF6B0000),
+    onSecondary: NightColors.onSurface,
+    outline: NightColors.dim,
+    outlineVariant: NightColors.dimmer,
+  );
+  return ThemeData(
+    colorScheme: scheme,
+    scaffoldBackgroundColor: NightColors.background,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: NightColors.appBarBg,
+      foregroundColor: NightColors.onSurface,
+    ),
+    iconTheme: const IconThemeData(color: NightColors.onSurface),
+    hintColor: NightColors.onSurfaceVariant,
+    switchTheme: SwitchThemeData(
+      trackColor: WidgetStateProperty.resolveWith((states) => states
+              .contains(WidgetState.selected)
+          ? NightColors.primary
+          : NightColors.dimmest),
+      thumbColor: WidgetStateProperty.resolveWith((states) => states
+              .contains(WidgetState.selected)
+          ? NightColors.onSurface
+          : NightColors.dim),
+      trackOutlineColor: WidgetStateProperty.resolveWith((states) => states
+              .contains(WidgetState.selected)
+          ? Colors.transparent
+          : NightColors.dim),
+    ),
+    sliderTheme: const SliderThemeData(
+      activeTrackColor: NightColors.primary,
+      inactiveTrackColor: NightColors.dimmest,
+      thumbColor: NightColors.primary,
+      overlayColor: Color(0x1F8B0000),
+    ),
+    inputDecorationTheme: const InputDecorationTheme(
+      enabledBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: NightColors.dim),
+      ),
+      focusedBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: NightColors.primary, width: 2),
+      ),
+      labelStyle: TextStyle(color: NightColors.onSurfaceVariant),
+      hintStyle: TextStyle(color: NightColors.dim),
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: NightColors.surface,
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: NightColors.appBarBg,
+      selectedItemColor: NightColors.onSurface,
+      unselectedItemColor: NightColors.dim,
+    ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      backgroundColor: NightColors.surfaceHigh,
+      foregroundColor: NightColors.onSurface,
+    ),
+    snackBarTheme: const SnackBarThemeData(
+      backgroundColor: NightColors.surfaceHigh,
+      contentTextStyle: TextStyle(color: NightColors.onSurface),
+      actionTextColor: NightColors.primary,
+    ),
+    useMaterial3: true,
+  );
 }
 
 /// Permission Gate - Shows permissions screen or main app based on permission status

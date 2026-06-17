@@ -64,6 +64,11 @@ const List<MapTileProviderOption> kMapTileProviderOptions = [
         'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
     subdomains: ['a', 'b', 'c', 'd'],
   ),
+  MapTileProviderOption(
+    id: MapProvider.noMap,
+    label: 'No Map (markers only)',
+    urlTemplate: '',
+  ),
 ];
 
 String normalizeMapProviderId(String providerId) {

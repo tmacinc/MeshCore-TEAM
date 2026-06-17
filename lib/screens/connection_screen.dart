@@ -16,6 +16,9 @@ import 'package:meshcore_team/models/sync_status.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/services/settings_service.dart';
+import 'package:meshcore_team/theme/night_theme.dart';
+import 'package:meshcore_team/widgets/night_mode_button.dart';
+import 'package:meshcore_team/widgets/themed_dropdown.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/screens/forwarding_debug_screen.dart';
@@ -123,6 +126,8 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
       isSyncComplete: connectionVM.syncStatus.isComplete,
     );
 
+    final settingsService = context.watch<SettingsService>();
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
@@ -135,15 +140,13 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
               Text(
                 'v$_appVersion',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withAlpha(153),
+                      color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
                     ),
               ),
           ],
         ),
         actions: [
+          NightModeButton(settings: settingsService),
           if (kDebugMode || isBetaBuild)
             IconButton(
               padding: EdgeInsets.zero,
@@ -445,33 +448,36 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
 
   /// Connection status indicator
   Widget _buildConnectionStatusIndicator(BleConnectionManager bleManager) {
+    final isNighttime = context.read<SettingsService>().settings.appTheme ==
+        AppThemeMode.nighttime;
+
     Color statusColor;
     IconData statusIcon;
     String statusText;
 
     switch (bleManager.state) {
       case BleConnectionState.connected:
-        statusColor = Colors.green;
+        statusColor = isNighttime ? NightColors.statusConnected : Colors.green;
         statusIcon = Icons.check_circle;
         statusText = 'Connected';
         break;
       case BleConnectionState.connecting:
-        statusColor = Colors.orange;
+        statusColor = isNighttime ? NightColors.statusConnecting : Colors.orange;
         statusIcon = Icons.sync;
         statusText = 'Connecting';
         break;
       case BleConnectionState.scanning:
-        statusColor = Colors.blue;
+        statusColor = isNighttime ? NightColors.statusScanning : Colors.blue;
         statusIcon = Icons.search;
         statusText = 'Scanning';
         break;
       case BleConnectionState.error:
-        statusColor = Colors.red;
+        statusColor = isNighttime ? NightColors.primary : Colors.red;
         statusIcon = Icons.error;
         statusText = 'Error';
         break;
       default:
-        statusColor = Colors.grey;
+        statusColor = isNighttime ? NightColors.statusDisconnected : Colors.grey;
         statusIcon = Icons.bluetooth_disabled;
         statusText = 'Disconnected';
     }
@@ -493,13 +499,11 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     final syncStatus = connectionVM.syncStatus;
     final phaseText = _getSyncPhaseText(syncStatus.phase);
     final progress = syncStatus.progressPercentage;
-
-    const primaryTextColor = Colors.black87;
-    const secondaryTextColor = Colors.black54;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       padding: const EdgeInsets.all(16.0),
-      color: Colors.blue.shade50,
+      color: colorScheme.surfaceContainerHighest,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -516,10 +520,10 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
               const SizedBox(width: 8),
               Text(
                 phaseText,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: primaryTextColor,
+                  color: colorScheme.onSurface,
                 ),
               ),
             ],
@@ -530,9 +534,9 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
             const SizedBox(height: 4),
             Text(
               '${syncStatus.currentItem} / ${syncStatus.totalItems}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: secondaryTextColor,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -663,18 +667,19 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     }
 
     if (_discoveredDevices.isEmpty) {
-      return const Center(
+      final emptyColor = Theme.of(context).colorScheme.outline;
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.bluetooth_searching, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('No devices found'),
-            SizedBox(height: 8),
+            Icon(Icons.bluetooth_searching, size: 64, color: emptyColor),
+            const SizedBox(height: 16),
+            const Text('No devices found'),
+            const SizedBox(height: 8),
             Text(
               'Tap the scan button to search for MeshCore companion radios',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: emptyColor),
             ),
           ],
         ),
@@ -1200,7 +1205,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                             },
                     ),
                     const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
+                    ThemedDropdown<String>(
                       value: selectedChannelHash,
                       decoration: const InputDecoration(
                         labelText: 'Channel',
@@ -1263,7 +1268,9 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
                           'Enabled on: ${channelNameForHash(selectedChannelHash) ?? selectedChannelHash}',
-                          style: const TextStyle(color: Colors.grey),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
                   ],
@@ -1568,7 +1575,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                           ],
                           if (campModeEnabled) const SizedBox(height: 8),
                           const SizedBox(height: 8),
-                          DropdownButtonFormField<String>(
+                          ThemedDropdown<String>(
                             value: normalizedSelectedPreset(),
                             isExpanded: true,
                             decoration: const InputDecoration(
@@ -1613,7 +1620,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                             },
                           ),
                           const SizedBox(height: 12),
-                          DropdownButtonFormField<double>(
+                          ThemedDropdown<double>(
                             value: bandwidthKHz,
                             decoration:
                                 const InputDecoration(labelText: 'Bandwidth'),
@@ -1636,7 +1643,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                                   },
                           ),
                           const SizedBox(height: 12),
-                          DropdownButtonFormField<int>(
+                          ThemedDropdown<int>(
                             value: spreadingFactor,
                             decoration: const InputDecoration(
                                 labelText: 'Spreading Factor'),
@@ -1658,7 +1665,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                                   },
                           ),
                           const SizedBox(height: 12),
-                          DropdownButtonFormField<int>(
+                          ThemedDropdown<int>(
                             value: codingRate,
                             decoration:
                                 const InputDecoration(labelText: 'Coding Rate'),
@@ -1995,7 +2002,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.bluetooth_connected, color: Colors.green),
+            Icon(Icons.bluetooth_connected, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -2016,9 +2023,9 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                       padding: const EdgeInsets.only(bottom: 2),
                       child: Text(
                         line,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,

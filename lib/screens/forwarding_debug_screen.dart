@@ -11,6 +11,7 @@ import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/services/forwarding_policy_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
+import 'package:meshcore_team/widgets/themed_dropdown.dart';
 import 'package:provider/provider.dart';
 
 class ForwardingDebugScreen extends StatefulWidget {
@@ -315,7 +316,7 @@ class _ForwardingDebugScreenState extends State<ForwardingDebugScreen> {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
-            DropdownButtonFormField<String>(
+            ThemedDropdown<String>(
               value: selectedAlgorithmMode,
               decoration: const InputDecoration(
                 labelText: 'Forwarding algorithm (debug)',
