@@ -39,3 +39,13 @@ class NightColors {
   static const Color statusScanning     = Color(0xFF6B2020);
   static const Color statusDisconnected = Color(0xFF4A1515);
 }
+
+/// ColorFilter that converts map tiles to a dim red-grayscale for nighttime mode.
+/// Converts each pixel to luminance (standard Rec. 601 weights * 0.4 brightness)
+/// and maps it exclusively to the red channel, zeroing green and blue.
+const ColorFilter kNightMapTileFilter = ColorFilter.matrix(<double>[
+  0.12, 0.235, 0.046, 0, 0,
+  0,    0,     0,     0, 0,
+  0,    0,     0,     0, 0,
+  0,    0,     0,     1, 0,
+]);

@@ -1885,7 +1885,7 @@ class _MapScreenState extends State<MapScreen> {
               initialZoom: 15.0,
               minZoom: 3.0,
               maxZoom: 18.0,
-              backgroundColor: currentProviderId == MapProvider.noMap
+              backgroundColor: (currentProviderId == MapProvider.noMap || isNighttime)
                   ? Colors.black
                   : const Color(0xFFE0E0E0),
               interactionOptions: InteractionOptions(
@@ -1951,13 +1951,19 @@ class _MapScreenState extends State<MapScreen> {
             ),
             children: [
               if (currentProviderId != MapProvider.noMap)
-                TileLayer(
-                  urlTemplate: tileConfig.urlTemplate,
-                  subdomains: tileConfig.subdomains,
-                  tileProvider: tileCache.tileProvider,
-                  userAgentPackageName: 'com.meshcore.team',
-                  maxNativeZoom: 18,
-                ),
+                Builder(builder: (_) {
+                  final tile = TileLayer(
+                    urlTemplate: tileConfig.urlTemplate,
+                    subdomains: tileConfig.subdomains,
+                    tileProvider: tileCache.tileProvider,
+                    userAgentPackageName: 'com.meshcore.team',
+                    maxNativeZoom: 18,
+                  );
+                  return isNighttime
+                      ? ColorFiltered(
+                          colorFilter: kNightMapTileFilter, child: tile)
+                      : tile;
+                }),
               // KMZ imported overlay maps — rendered above the base tile layer
               if (_cachedOverlayImages.isNotEmpty)
                 OverlayImageLayer(
@@ -2940,11 +2946,11 @@ class _ContactMarker extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10,
                   height: 1.1,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: isNighttime ? NightColors.onSurface : Colors.white,
                 ),
               ),
             ),
