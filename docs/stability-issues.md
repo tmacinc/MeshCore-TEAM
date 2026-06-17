@@ -292,8 +292,23 @@ companion-filtered one.
 
 ---
 
-## Next Steps
+## Open TODOs
 
-Items 1-3 are the most likely to produce hard crashes in normal use and should be
-addressed first. Items 6 and 20 are the most likely to cause visible UI lag on
-devices with large contact lists.
+### 21. Channel sync progress freezes at end (channel_repository.dart:698)
+
+After fetching all channels from firmware, the repository deletes then re-inserts them
+one by one with sequential `await` calls (lines 698-710) before emitting `isComplete`,
+causing the UI to appear frozen at the end of channel sync.
+
+**Fix:** Wrap the delete and insert loop in a single database transaction.
+
+---
+
+### 22. Dual sync race on rapid reconnect (connection_viewmodel.dart)
+
+`_performInitialSync` sets `_syncStatus` to non-idle only after a 500ms `await`, so a
+second `connected` event within that window bypasses the in-progress guard and launches
+a concurrent sync.
+
+**Fix:** Set `_syncStatus` to a non-idle phase synchronously at the top of
+`_performInitialSync` before the first `await`.
