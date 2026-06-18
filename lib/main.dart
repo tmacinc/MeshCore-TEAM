@@ -553,9 +553,13 @@ ThemeData _nighttimeTheme() {
       focusedBorder: UnderlineInputBorder(
         borderSide: BorderSide(color: NightColors.primary, width: 2),
       ),
+      disabledBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: NightColors.dimmer),
+      ),
       labelStyle: TextStyle(color: NightColors.onSurfaceVariant),
       hintStyle: TextStyle(color: NightColors.dim),
     ),
+    disabledColor: NightColors.dimmer,
     dialogTheme: const DialogThemeData(
       backgroundColor: NightColors.surface,
     ),

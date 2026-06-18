@@ -33,6 +33,8 @@ class ThemedDropdown<T> extends StatelessWidget {
             AppThemeMode.nighttime;
     final iconColor =
         isNighttime ? NightColors.onSurfaceVariant : null;
+    final iconDisabledColor =
+        isNighttime ? NightColors.dimmer : null;
 
     return DropdownButtonFormField<T>(
       value: value,
@@ -41,6 +43,7 @@ class ThemedDropdown<T> extends StatelessWidget {
       onChanged: onChanged,
       isExpanded: isExpanded,
       iconEnabledColor: iconColor,
+      iconDisabledColor: iconDisabledColor,
     );
   }
 }
