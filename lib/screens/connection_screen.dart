@@ -2,8 +2,6 @@
 // Licensed under CC BY-NC-SA 4.0
 
 import 'dart:async';
-import 'dart:io' show Platform;
-
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -17,7 +15,7 @@ import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
-import 'package:meshcore_team/widgets/night_mode_button.dart';
+import 'package:meshcore_team/widgets/night_clock.dart';
 import 'package:meshcore_team/widgets/themed_dropdown.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
@@ -126,8 +124,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
       isSyncComplete: connectionVM.syncStatus.isComplete,
     );
 
-    final settingsService = context.watch<SettingsService>();
-
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
@@ -146,7 +142,9 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
           ],
         ),
         actions: [
-          NightModeButton(settings: settingsService),
+          if (context.watch<SettingsService>().settings.appTheme ==
+              AppThemeMode.nighttime)
+            const NightClock(),
           if (kDebugMode || isBetaBuild)
             IconButton(
               padding: EdgeInsets.zero,
@@ -726,40 +724,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
               child: _buildConnectedDeviceTile(bleManager, connectionVM),
             ),
             const Divider(height: 1),
-            if (Platform.isIOS) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: Text(
-                  'App Settings',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Column(
-                  children: [
-                    _buildSettingsCard(
-                      title: 'Always On Location',
-                      subtitle: settingsService
-                              .settings.backgroundLocationEnabled
-                          ? 'Enabled — location updates continue in background'
-                          : 'Disabled',
-                      leading:
-                          settingsService.settings.backgroundLocationEnabled
-                              ? Icons.my_location
-                              : Icons.location_disabled,
-                      onTap: () =>
-                          _showBackgroundLocationDialog(settingsService),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-            ],
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Text(
@@ -975,82 +939,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         );
       },
     );
-  }
-
-  Future<void> _showBackgroundLocationDialog(
-      SettingsService settingsService) async {
-    if (settingsService.settings.backgroundLocationEnabled) {
-      // Already enabled — offer to disable
-      await settingsService.setBackgroundLocationEnabled(false);
-      return;
-    }
-
-    final shouldEnable = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Background Location'),
-        content: const Text(
-          'MeshCore TEAM needs background location access to continue '
-          'sharing your position with the mesh network when the app is '
-          'minimized.\n\n'
-          'This allows location tracking and BLE communication to '
-          'continue working in the background.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not Now'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Enable'),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldEnable != true || !mounted) return;
-
-    var status = await Permission.locationAlways.request();
-
-    // iOS processes the "Always" upgrade asynchronously — the request()
-    // may return before the change is applied. Poll briefly to catch it.
-    if (!status.isGranted) {
-      for (var i = 0; i < 5; i++) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        status = await Permission.locationAlways.status;
-        if (status.isGranted) break;
-      }
-    }
-
-    if (status.isGranted) {
-      await settingsService.setBackgroundLocationEnabled(true);
-    } else if (status.isPermanentlyDenied) {
-      if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Permission Required'),
-          content: const Text(
-            'Background location was denied. Please enable "Always" '
-            'location access in your device Settings for MeshCore TEAM.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                openAppSettings();
-              },
-              child: const Text('Open Settings'),
-            ),
-          ],
-        ),
-      );
-    }
   }
 
   Future<void> _showLocationSourceDialog(

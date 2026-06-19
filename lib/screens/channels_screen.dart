@@ -11,7 +11,7 @@ import 'package:meshcore_team/screens/qr_scan_screen.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
-import 'package:meshcore_team/widgets/night_mode_button.dart';
+import 'package:meshcore_team/widgets/night_clock.dart';
 import 'channel_chat_screen.dart';
 
 /// Channels Screen
@@ -22,13 +22,15 @@ class ChannelsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final channelRepository = context.watch<ChannelRepository>();
-    final settings = context.watch<SettingsService>();
 
     return Scaffold(
       appBar: AppBar(
+        centerTitle: false,
         title: const Text('Channels'),
         actions: [
-          NightModeButton(settings: settings),
+          if (context.watch<SettingsService>().settings.appTheme ==
+              AppThemeMode.nighttime)
+            const NightClock(),
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add channel',

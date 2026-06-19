@@ -17,6 +17,7 @@ import 'connection_screen.dart';
 import 'contacts_screen.dart';
 import 'channels_screen.dart';
 import 'map_screen.dart';
+import 'settings_screen.dart';
 
 /// Main Navigation Screen with Bottom Navigation Bar
 class MainNavigationScreen extends StatefulWidget {
@@ -40,6 +41,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     const ContactsScreen(),
     const ChannelsScreen(),
     const MapScreen(),
+    const SettingsScreen(),
   ];
 
   @override
@@ -165,6 +167,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 const BottomNavigationBarItem(
                   icon: Icon(Icons.map),
                   label: 'Map',
+                ),
+                const BottomNavigationBarItem(
+                  icon: Icon(Icons.settings),
+                  label: 'Settings',
                 ),
               ],
             );
@@ -361,7 +367,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     }
   }
 }
-
 /// Simple data class for unread counts
 class _UnreadCounts {
   final int contacts;

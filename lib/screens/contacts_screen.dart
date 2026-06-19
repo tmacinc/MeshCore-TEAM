@@ -9,7 +9,7 @@ import 'package:meshcore_team/repositories/contact_repository.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
-import 'package:meshcore_team/widgets/night_mode_button.dart';
+import 'package:meshcore_team/widgets/night_clock.dart';
 import 'direct_message_screen.dart';
 
 /// Contacts Screen
@@ -20,13 +20,15 @@ class ContactsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final contactRepository = context.watch<ContactRepository>();
-    final settings = context.watch<SettingsService>();
 
     return Scaffold(
       appBar: AppBar(
+        centerTitle: false,
         title: const Text('Contacts'),
         actions: [
-          NightModeButton(settings: settings),
+          if (context.watch<SettingsService>().settings.appTheme ==
+              AppThemeMode.nighttime)
+            const NightClock(),
         ],
       ),
       // Repository handles companion filtering automatically

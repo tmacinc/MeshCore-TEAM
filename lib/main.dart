@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:provider/provider.dart';
@@ -447,6 +448,9 @@ class TeamFlutterApp extends StatelessWidget {
         builder: (context, settings, _) {
           final appTheme = settings.settings.appTheme;
           final isNighttime = appTheme == AppThemeMode.nighttime;
+          SystemChrome.setEnabledSystemUIMode(
+            isNighttime ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+          );
           return MaterialApp(
             navigatorKey: navigatorKey,
             title: 'TEAM Flutter',

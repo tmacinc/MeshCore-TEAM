@@ -31,7 +31,7 @@ import 'package:meshcore_team/services/map_tile_cache_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
-import 'package:meshcore_team/widgets/night_mode_button.dart';
+import 'package:meshcore_team/widgets/night_clock.dart';
 import 'package:meshcore_team/widgets/offline_map_download_dialog.dart';
 import 'package:meshcore_team/widgets/waypoint_create_dialog.dart';
 import 'package:meshcore_team/widgets/waypoint_edit_dialog.dart';
@@ -1603,6 +1603,7 @@ class _MapScreenState extends State<MapScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        centerTitle: false,
         title: Row(
           children: [
             Column(
@@ -1621,6 +1622,7 @@ class _MapScreenState extends State<MapScreen> {
               ],
             ),
             const Spacer(),
+            if (isNighttime) const NightClock(),
             Tooltip(
               message: telemetryActive
                   ? 'Sharing location'
@@ -1708,7 +1710,6 @@ class _MapScreenState extends State<MapScreen> {
           ],
         ),
         actions: [
-          NightModeButton(settings: settingsService),
           PopupMenuButton<String>(
             tooltip: 'Map type',
             initialValue: currentProviderId,
