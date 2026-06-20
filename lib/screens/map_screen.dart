@@ -25,7 +25,6 @@ import 'package:meshcore_team/screens/direct_message_screen.dart';
 import 'package:meshcore_team/screens/manage_waypoints_screen.dart';
 import 'package:meshcore_team/screens/imported_maps_screen.dart';
 import 'package:meshcore_team/screens/offline_maps_screen.dart';
-import 'package:meshcore_team/services/forwarding_policy_service.dart';
 import 'package:meshcore_team/services/kmz_import_service.dart';
 import 'package:meshcore_team/services/map_tile_cache_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
@@ -33,6 +32,7 @@ import 'package:meshcore_team/theme/night_theme.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 import 'package:meshcore_team/widgets/app_menu_button.dart';
 import 'package:meshcore_team/widgets/bt_status_icon.dart';
+import 'package:meshcore_team/widgets/network_status_icons.dart';
 import 'package:meshcore_team/widgets/night_clock.dart';
 import 'package:meshcore_team/widgets/offline_map_download_dialog.dart';
 import 'package:meshcore_team/widgets/waypoint_create_dialog.dart';
@@ -1281,9 +1281,7 @@ class _MapScreenState extends State<MapScreen> {
             : null,
       );
     }, onError: (Object error) {
-      setState(() {
-        _locationError = 'Location stream error: $error';
-      });
+      debugPrint('[Map] Location stream error: $error');
     });
 
     // Periodic polling as a safety net: guarantees at least one update every
@@ -1539,8 +1537,8 @@ class _MapScreenState extends State<MapScreen> {
         _mapController.move(_userLocation!, 15.0);
       }
     } catch (e) {
+      debugPrint('[Map] Failed to get location: $e');
       setState(() {
-        _locationError = 'Failed to get location: $e';
         _isLoadingLocation = false;
       });
     }
@@ -1551,7 +1549,6 @@ class _MapScreenState extends State<MapScreen> {
     final settingsService = context.watch<SettingsService>();
     final isNighttime = settingsService.settings.appTheme == AppThemeMode.nighttime;
     final connectionVM = context.watch<ConnectionViewModel>();
-    final forwardingPolicy = context.watch<ForwardingPolicyService>();
     final tileCache = context.read<MapTileCacheService>();
     final db = context.read<AppDatabase>();
     final tileConfig = tileProviderForId(settingsService.settings.mapProvider);
@@ -1563,11 +1560,6 @@ class _MapScreenState extends State<MapScreen> {
     final showWaypointNames = settingsService.settings.mapShowWaypointNames;
     final showContactPaths = settingsService.settings.mapShowContactPaths;
 
-    final telemetryConfigured = settingsService.settings.telemetryEnabled &&
-        (settingsService.settings.telemetryChannelHash?.isNotEmpty ?? false);
-    final telemetryActive = telemetryConfigured && connectionVM.isConnected;
-    final campModeEnabled = settingsService.settings.campModeEnabled;
-
     final wantsCompanion =
         settingsService.settings.locationSource == LocationSource.companion;
     final companionFixTime = connectionVM.companionGpsFixTime;
@@ -1578,11 +1570,7 @@ class _MapScreenState extends State<MapScreen> {
     final usingCompanionGps =
         wantsCompanion && connectionVM.isConnected && hasRecentCompanionFix;
 
-    final gpsSourceLine = usingCompanionGps
-        ? 'Companion GPS'
-        : wantsCompanion
-            ? 'Phone GPS (fallback)'
-            : 'Phone GPS';
+    final hasPhoneFix = _userLocation != null;
 
     // Keep local state in sync with persisted settings and connection state.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1607,108 +1595,24 @@ class _MapScreenState extends State<MapScreen> {
       appBar: AppBar(
         centerTitle: false,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Map'),
-                Text(
-                  gpsSourceLine,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isNighttime ? NightColors.onSurfaceVariant : Colors.white70,
-                    height: 1.1,
-                  ),
+                _buildGpsSourceRow(
+                  usingCompanionGps: usingCompanionGps,
+                  hasPhoneFix: hasPhoneFix,
+                  isNighttime: isNighttime,
                 ),
               ],
             ),
-            const Spacer(),
-            if (isNighttime) const NightClock(),
-            Tooltip(
-              message: telemetryActive
-                  ? 'Sharing location'
-                  : telemetryConfigured
-                      ? 'Location sharing enabled (not connected)'
-                      : 'Location sharing off',
-              child: Icon(
-                Icons.sensors,
-                size: 22,
-                color: isNighttime
-                    ? (telemetryActive ? NightColors.primary : NightColors.dimmer)
-                    : (telemetryActive ? Colors.green : Colors.red),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Builder(builder: (context) {
-              final activeHops = forwardingPolicy.lastAppliedMaxHops;
-              final forwardingActive = activeHops != null && activeHops > 0;
-              final tooltipMsg = forwardingActive && campModeEnabled
-                  ? 'Camp mode – forwarding active ($activeHops hop${activeHops == 1 ? '' : 's'})'
-                  : forwardingActive
-                      ? 'Policy engine: forwarding active ($activeHops hop${activeHops == 1 ? '' : 's'})'
-                      : campModeEnabled
-                          ? 'Forwarding mode: camp'
-                          : 'Forwarding mode: full mesh';
-              final iconColor = isNighttime
-                  ? NightColors.onSurfaceVariant
-                  : Colors.lightGreenAccent;
-              final label = campModeEnabled
-                  ? (forwardingActive ? 'C$activeHops' : 'C')
-                  : forwardingActive
-                      ? '$activeHops'
-                      : null;
-              final showDouble = forwardingActive || campModeEnabled;
-              return Tooltip(
-                message: tooltipMsg,
-                child: showDouble
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 22,
-                            height: 18,
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  left: 0,
-                                  child: Icon(
-                                    Icons.check,
-                                    size: 18,
-                                    color: iconColor,
-                                  ),
-                                ),
-                                Positioned(
-                                  left: 5,
-                                  child: Icon(
-                                    Icons.check,
-                                    size: 18,
-                                    color: iconColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (label != null) ...[
-                            const SizedBox(width: 2),
-                            Text(
-                              label,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: iconColor,
-                              ),
-                            ),
-                          ],
-                        ],
-                      )
-                    : Icon(
-                        Icons.check,
-                        size: 20,
-                        color: iconColor,
-                      ),
-              );
-            }),
+            if (isNighttime) ...[
+              const SizedBox(width: 12),
+              const NightClock(),
+            ],
           ],
         ),
         actions: [
@@ -1875,6 +1779,11 @@ class _MapScreenState extends State<MapScreen> {
               ];
             },
           ),
+          const SizedBox(
+            height: 24,
+            child: VerticalDivider(width: 16, thickness: 1),
+          ),
+          const NetworkStatusIcons(),
           const BtStatusIcon(),
           const AppMenuButton(),
         ],
@@ -2858,6 +2767,33 @@ class _MapScreenState extends State<MapScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGpsSourceRow({
+    required bool usingCompanionGps,
+    required bool hasPhoneFix,
+    required bool isNighttime,
+  }) {
+    final color = isNighttime ? NightColors.onSurfaceVariant : Colors.white70;
+    const size = 13.0;
+
+    if (usingCompanionGps) {
+      return Icon(Icons.location_on, size: size, color: color);
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          hasPhoneFix ? Icons.location_on : Icons.location_off,
+          size: size,
+          color: color,
+        ),
+        const SizedBox(width: 2),
+        Icon(Icons.smartphone, size: size, color: color),
+      ],
     );
   }
 }

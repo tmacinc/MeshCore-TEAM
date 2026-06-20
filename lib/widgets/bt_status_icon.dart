@@ -21,9 +21,15 @@ class BtStatusIcon extends StatelessWidget {
         ? (isConnected ? NightColors.statusConnected : NightColors.primary)
         : (isConnected ? Colors.blue : Colors.red);
 
-    return Icon(
-      isConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
-      color: color,
+    return Opacity(
+      opacity: 0.7,
+      child: Tooltip(
+        message: isConnected ? 'Connected' : 'Not connected',
+        child: Icon(
+          isConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
+          color: color,
+        ),
+      ),
     );
   }
 }

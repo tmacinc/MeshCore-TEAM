@@ -52,7 +52,12 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     super.didChangeDependencies();
     if (_bleManager == null) {
       _bleManager = context.read<BleConnectionManager>();
-      if (_discoveredDevices.isEmpty && !_bleManager!.isConnected) {
+      if (_bleManager!.isConnected &&
+          context.read<ConnectionViewModel>().syncStatus.isComplete) {
+        // Already synced before this screen opened — skip the flash.
+        _lastSyncWasComplete = true;
+        _hideSyncProgress = true;
+      } else if (_discoveredDevices.isEmpty && !_bleManager!.isConnected) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _startScan();
         });

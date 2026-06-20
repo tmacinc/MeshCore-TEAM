@@ -3,7 +3,6 @@
 
 import 'dart:io' show Platform;
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -13,7 +12,6 @@ import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 import 'package:meshcore_team/widgets/night_clock.dart';
-import 'package:meshcore_team/widgets/themed_dropdown.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -52,36 +50,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: Column(
               children: [
-                _buildSettingsCard(
-                  title: 'Location Source',
-                  subtitle: _locationSourceLabel(settings.settings.locationSource),
-                  leading: Icons.location_on,
-                  onTap: () => _showLocationSourceDialog(settings),
+                Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Text('Location Source',
+                            style: const TextStyle(fontWeight: FontWeight.w500)),
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('Phone GPS'),
+                        value: LocationSource.phone,
+                        groupValue: settings.settings.locationSource,
+                        onChanged: (v) => _setLocationSource(settings, v!),
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('Companion Radio GPS'),
+                        value: LocationSource.companion,
+                        groupValue: settings.settings.locationSource,
+                        onChanged: (v) => _setLocationSource(settings, v!),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 8),
-                _buildSettingsCard(
-                  title: 'Location Tracking',
-                  subtitle: settings.settings.telemetryEnabled
-                      ? (settings.settings.telemetryChannelName != null
-                          ? 'Enabled on: ${settings.settings.telemetryChannelName}'
-                          : 'Enabled (no channel)')
-                      : 'Disabled',
-                  leading: settings.settings.telemetryEnabled
-                      ? Icons.check_circle
-                      : Icons.location_off,
-                  onTap: () => _showTelemetryDialog(settings),
-                ),
+                _buildLocationTrackingCard(settings),
                 if (Platform.isIOS) ...[
                   const SizedBox(height: 8),
-                  _buildSettingsCard(
-                    title: 'Always On Location',
-                    subtitle: settings.settings.backgroundLocationEnabled
-                        ? 'Enabled — location updates continue in background'
-                        : 'Disabled',
-                    leading: settings.settings.backgroundLocationEnabled
-                        ? Icons.my_location
-                        : Icons.location_disabled,
-                    onTap: () => _showBackgroundLocationDialog(settings),
+                  Card(
+                    child: ListTile(
+                      onTap: () => _showBackgroundLocationDialog(settings),
+                      leading: Icon(settings.settings.backgroundLocationEnabled
+                          ? Icons.my_location
+                          : Icons.location_disabled),
+                      title: const Text('Always On Location',
+                          style: TextStyle(fontWeight: FontWeight.w500)),
+                      subtitle: Text(settings.settings.backgroundLocationEnabled
+                          ? 'Enabled — location updates continue in background'
+                          : 'Disabled'),
+                      trailing: const Icon(Icons.chevron_right),
+                    ),
                   ),
                 ],
                 const SizedBox(height: 16),
@@ -103,11 +112,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: Column(
               children: [
-                _buildSettingsCard(
-                  title: 'Theme',
-                  subtitle: _themeLabel(settings.settings.appTheme),
-                  leading: _themeIcon(settings.settings.appTheme),
-                  onTap: () => _showThemeDialog(settings),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(labelText: 'Theme'),
+                      value: settings.settings.appTheme,
+                      items: const [
+                        DropdownMenuItem(
+                          value: AppThemeMode.system,
+                          child: Row(children: [
+                            Icon(Icons.brightness_auto, size: 18),
+                            SizedBox(width: 8),
+                            Text('System default'),
+                          ]),
+                        ),
+                        DropdownMenuItem(
+                          value: AppThemeMode.light,
+                          child: Row(children: [
+                            Icon(Icons.light_mode, size: 18),
+                            SizedBox(width: 8),
+                            Text('Light'),
+                          ]),
+                        ),
+                        DropdownMenuItem(
+                          value: AppThemeMode.dark,
+                          child: Row(children: [
+                            Icon(Icons.dark_mode, size: 18),
+                            SizedBox(width: 8),
+                            Text('Dark'),
+                          ]),
+                        ),
+                        DropdownMenuItem(
+                          value: AppThemeMode.nighttime,
+                          child: Row(children: [
+                            Icon(Icons.nightlight_round, size: 18),
+                            SizedBox(width: 8),
+                            Text('Red Light Discipline'),
+                          ]),
+                        ),
+                      ],
+                      onChanged: (v) => settings.setAppTheme(v!),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -118,14 +165,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  String _locationSourceLabel(String source) {
-    switch (source) {
-      case LocationSource.phone:
-        return 'Phone GPS';
-      case LocationSource.companion:
-        return 'Companion Radio GPS';
-      default:
-        return 'Not set';
+  Future<void> _setLocationSource(SettingsService settingsService, String source) async {
+    await settingsService.setLocationSource(source);
+    final connectionVM = context.read<ConnectionViewModel>();
+    if (!connectionVM.isConnected) return;
+    final autonomousEnabled = connectionVM.currentAutonomousEnabled ?? false;
+    final needsGps = source == LocationSource.companion || autonomousEnabled;
+    final ok = await connectionVM.setGpsEnabled(needsGps);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not configure companion GPS — no GPS hardware?'),
+        duration: Duration(seconds: 3),
+      ));
     }
   }
 
@@ -138,331 +189,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return null;
   }
 
-  Future<void> _showLocationSourceDialog(SettingsService settingsService) async {
-    String selected = settingsService.settings.locationSource;
-    final connectionVM = context.read<ConnectionViewModel>();
+  Widget _buildLocationTrackingCard(SettingsService settings) {
+    final isConnected = context.select<ConnectionViewModel, bool>((vm) => vm.isConnected);
+    final s = settings.settings;
 
-    await showDialog<void>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Location Source'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RadioListTile<String>(
-                title: const Text('Phone GPS'),
-                value: LocationSource.phone,
-                groupValue: selected,
-                onChanged: (v) { if (v != null) setState(() => selected = v); },
-              ),
-              RadioListTile<String>(
-                title: const Text('Companion Radio GPS'),
-                value: LocationSource.companion,
-                groupValue: selected,
-                onChanged: (v) { if (v != null) setState(() => selected = v); },
-              ),
-            ],
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            title: const Text('Location Tracking',
+                style: TextStyle(fontWeight: FontWeight.w500)),
+            value: s.telemetryEnabled,
+            onChanged: (v) => settings.setTelemetryEnabled(v),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                await settingsService.setLocationSource(selected);
-                if (!context.mounted) return;
-                if (connectionVM.isConnected) {
-                  final autonomousEnabled = connectionVM.currentAutonomousEnabled ?? false;
-                  final needsGps = selected == LocationSource.companion || autonomousEnabled;
-                  final ok = await connectionVM.setGpsEnabled(needsGps);
-                  if (!ok && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Could not configure companion GPS — no GPS hardware?'),
-                      duration: Duration(seconds: 3),
-                    ));
-                  }
-                }
-                if (context.mounted) Navigator.of(context).pop();
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+          // Channel selection
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: isConnected
+                ? StreamBuilder<List<ChannelData>>(
+                    stream: context.read<ChannelRepository>().getAllChannels(),
+                    builder: (context, snapshot) {
+                      final privateChannels = (snapshot.data ?? [])
+                          .where((c) => !c.isPublic)
+                          .toList();
 
-  Future<void> _showTelemetryDialog(SettingsService settingsService) async {
-    final channelRepository = context.read<ChannelRepository>();
-    final connectionVM = context.read<ConnectionViewModel>();
-
-    final allChannels = await channelRepository.getAllChannels().first;
-    if (!mounted) return;
-    final privateChannels = allChannels.where((c) => !c.isPublic).toList();
-
-    bool enabled = settingsService.settings.telemetryEnabled;
-    String? selectedChannelHash = settingsService.settings.telemetryChannelHash;
-    int intervalSeconds =
-        ((settingsService.settings.telemetryIntervalSeconds / 10).round() * 10).clamp(30, 180);
-    int minDistanceMeters =
-        ((settingsService.settings.telemetryMinDistanceMeters / 10).round() * 10).clamp(50, 500);
-    bool isSaving = false;
-
-    final validHashes = privateChannels.map((c) => c.hash.toRadixString(16).toLowerCase()).toSet();
-    if (selectedChannelHash != null && !validHashes.contains(selectedChannelHash)) {
-      selectedChannelHash = null;
-    }
-    if (selectedChannelHash == null && privateChannels.isNotEmpty) {
-      selectedChannelHash = privateChannels.first.hash.toRadixString(16).toLowerCase();
-    }
-    if (selectedChannelHash != null &&
-        !privateChannels.any((c) =>
-            c.hash.toRadixString(16).toLowerCase() == selectedChannelHash!.toLowerCase())) {
-      selectedChannelHash = null;
-    }
-
-    String? channelNameForHash(String? hashHex) {
-      if (hashHex == null) return null;
-      return _findChannelNameByHashHex(privateChannels, hashHex.toLowerCase());
-    }
-
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: !isSaving,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Location Tracking'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Enable tracking'),
-                  value: enabled,
-                  onChanged: isSaving
-                      ? null
-                      : (v) {
-                          setState(() {
-                            enabled = v;
-                            if (enabled && selectedChannelHash == null && privateChannels.isNotEmpty) {
-                              selectedChannelHash =
-                                  privateChannels.first.hash.toRadixString(16).toLowerCase();
-                            }
-                          });
-                        },
-                ),
-                const SizedBox(height: 8),
-                if (privateChannels.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      'Connect to a companion to select a channel.',
-                      style: TextStyle(color: Colors.orange),
-                    ),
-                  )
-                else
-                  ThemedDropdown<String>(
-                    value: selectedChannelHash,
-                    decoration: const InputDecoration(labelText: 'Channel'),
-                    items: [
-                      const DropdownMenuItem<String>(value: null, child: Text('None')),
-                      for (final c in privateChannels)
-                        DropdownMenuItem<String>(
-                          value: c.hash.toRadixString(16).toLowerCase(),
-                          child: Text(c.name),
-                        ),
-                    ],
-                    onChanged: isSaving ? null : (v) => setState(() => selectedChannelHash = v),
-                  ),
-                const SizedBox(height: 12),
-                Text('Interval: ${intervalSeconds}s'),
-                Slider(
-                  value: intervalSeconds.toDouble(),
-                  min: 30,
-                  max: 180,
-                  divisions: 15,
-                  onChanged: isSaving
-                      ? null
-                      : (v) => setState(() => intervalSeconds = (v / 10).round() * 10),
-                ),
-                const SizedBox(height: 8),
-                Text('Minimum distance: ${minDistanceMeters}m'),
-                Slider(
-                  value: minDistanceMeters.toDouble(),
-                  min: 50,
-                  max: 500,
-                  divisions: 45,
-                  onChanged: isSaving
-                      ? null
-                      : (v) => setState(() => minDistanceMeters = (v / 10).round() * 10),
-                ),
-                if (enabled && selectedChannelHash == null)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Select a channel to enable tracking.',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-                if (enabled && selectedChannelHash != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Enabled on: ${channelNameForHash(selectedChannelHash) ?? selectedChannelHash}',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isSaving ? null : () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: isSaving
-                  ? null
-                  : () async {
-                      if (enabled && selectedChannelHash == null) return;
-                      setState(() => isSaving = true);
-
-                      await settingsService.setTelemetryEnabled(enabled);
-                      await settingsService.setTelemetryChannelHash(selectedChannelHash);
-                      await settingsService.setTelemetryChannelName(
-                          channelNameForHash(selectedChannelHash));
-                      await settingsService.setTelemetryIntervalSeconds(intervalSeconds);
-                      await settingsService.setTelemetryMinDistanceMeters(minDistanceMeters);
-
-                      final caps = connectionVM.deviceCapabilities;
-                      final supportsAutonomous =
-                          caps != null && caps.supportsAutonomous && caps.isCustomFirmware;
-                      if (supportsAutonomous && connectionVM.currentAutonomousEnabled == true) {
-                        ChannelData? channelForAuto;
-                        if (selectedChannelHash != null) {
-                          for (final c in privateChannels) {
-                            if (c.hash.toRadixString(16).toLowerCase() ==
-                                selectedChannelHash!.toLowerCase()) {
-                              channelForAuto = c;
-                              break;
-                            }
-                          }
-                        }
-                        channelForAuto ??= privateChannels.isNotEmpty ? privateChannels.first : null;
-                        final channelHashByte = channelForAuto != null
-                            ? sha256.convert(channelForAuto.sharedKey).bytes[0]
-                            : 0;
-                        await connectionVM.setAutonomousSettings(
-                          enabled: true,
-                          channelHash: channelHashByte,
-                          intervalSec: intervalSeconds.clamp(10, 3600),
-                          minDistanceMeters: minDistanceMeters.clamp(0, 5000),
-                        );
+                      String? currentHash = s.telemetryChannelHash;
+                      final validHashes = privateChannels
+                          .map((c) => c.hash.toRadixString(16).toLowerCase())
+                          .toSet();
+                      if (currentHash != null && !validHashes.contains(currentHash)) {
+                        currentHash = null;
                       }
 
-                      if (context.mounted) Navigator.of(context).pop();
+                      return DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(labelText: 'Channel'),
+                        value: currentHash,
+                        items: [
+                          const DropdownMenuItem<String>(
+                              value: null, child: Text('None')),
+                          for (final c in privateChannels)
+                            DropdownMenuItem<String>(
+                              value: c.hash.toRadixString(16).toLowerCase(),
+                              child: Text(c.name),
+                            ),
+                        ],
+                        onChanged: (v) async {
+                          await settings.setTelemetryChannelHash(v);
+                          final name = v == null
+                              ? null
+                              : _findChannelNameByHashHex(
+                                  privateChannels, v.toLowerCase());
+                          await settings.setTelemetryChannelName(name);
+                        },
+                      );
                     },
-              child: isSaving
-                  ? const SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingsCard({
-    required String title,
-    required String subtitle,
-    required IconData leading,
-    required VoidCallback? onTap,
-  }) {
-    return Card(
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(leading),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-      ),
-    );
-  }
-
-  String _themeLabel(String theme) {
-    switch (theme) {
-      case AppThemeMode.light:
-        return 'Light';
-      case AppThemeMode.dark:
-        return 'Dark';
-      case AppThemeMode.nighttime:
-        return 'Red Light Discipline';
-      default:
-        return 'System default';
-    }
-  }
-
-  IconData _themeIcon(String theme) {
-    switch (theme) {
-      case AppThemeMode.light:
-        return Icons.light_mode;
-      case AppThemeMode.dark:
-        return Icons.dark_mode;
-      case AppThemeMode.nighttime:
-        return Icons.nightlight_round;
-      default:
-        return Icons.brightness_auto;
-    }
-  }
-
-  Future<void> _showThemeDialog(SettingsService settings) async {
-    final current = settings.settings.appTheme;
-    await showDialog<void>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Theme'),
-        children: [
-          _themeOption(context, settings, AppThemeMode.system, 'System default',
-              Icons.brightness_auto, current),
-          _themeOption(context, settings, AppThemeMode.light, 'Light',
-              Icons.light_mode, current),
-          _themeOption(context, settings, AppThemeMode.dark, 'Dark',
-              Icons.dark_mode, current),
-          _themeOption(context, settings, AppThemeMode.nighttime,
-              'Red Light Discipline', Icons.nightlight_round, current),
-        ],
-      ),
-    );
-  }
-
-  Widget _themeOption(
-    BuildContext context,
-    SettingsService settings,
-    String value,
-    String label,
-    IconData icon,
-    String current,
-  ) {
-    return SimpleDialogOption(
-      onPressed: () {
-        settings.setAppTheme(value);
-        Navigator.of(context).pop();
-      },
-      child: Row(
-        children: [
-          Icon(icon),
-          const SizedBox(width: 12),
-          Expanded(child: Text(label)),
-          if (current == value) const Icon(Icons.check, size: 18),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s.telemetryChannelName != null
+                            ? 'Will share on: ${s.telemetryChannelName}'
+                            : 'No channel selected',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Connect to a device to select a channel.',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+          ),
+          _TelemetrySliders(settings: settings),
+          const SizedBox(height: 8),
         ],
       ),
     );
@@ -541,5 +345,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     }
+  }
+}
+
+class _TelemetrySliders extends StatefulWidget {
+  final SettingsService settings;
+  const _TelemetrySliders({required this.settings});
+
+  @override
+  State<_TelemetrySliders> createState() => _TelemetrySlidersState();
+}
+
+class _TelemetrySlidersState extends State<_TelemetrySliders> {
+  late double _interval;
+  late double _distance;
+
+  @override
+  void initState() {
+    super.initState();
+    _interval = widget.settings.settings.telemetryIntervalSeconds.toDouble().clamp(30, 180);
+    _distance = widget.settings.settings.telemetryMinDistanceMeters.toDouble().clamp(50, 500);
+  }
+
+  @override
+  void didUpdateWidget(_TelemetrySliders old) {
+    super.didUpdateWidget(old);
+    _interval = widget.settings.settings.telemetryIntervalSeconds.toDouble().clamp(30, 180);
+    _distance = widget.settings.settings.telemetryMinDistanceMeters.toDouble().clamp(50, 500);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: Text('Interval: ${_interval.round()}s'),
+        ),
+        Slider(
+          value: _interval,
+          min: 30,
+          max: 180,
+          divisions: 15,
+          onChanged: (v) => setState(() => _interval = (v / 10).round() * 10.0),
+          onChangeEnd: (v) => widget.settings
+              .setTelemetryIntervalSeconds(((v / 10).round() * 10).clamp(30, 180)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: Text('Min distance: ${_distance.round()}m'),
+        ),
+        Slider(
+          value: _distance,
+          min: 50,
+          max: 500,
+          divisions: 45,
+          onChanged: (v) => setState(() => _distance = (v / 10).round() * 10.0),
+          onChangeEnd: (v) => widget.settings
+              .setTelemetryMinDistanceMeters(((v / 10).round() * 10).clamp(50, 500)),
+        ),
+      ],
+    );
   }
 }
