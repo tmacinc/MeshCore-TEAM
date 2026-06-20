@@ -324,10 +324,11 @@ void _handleNotificationTap(
           );
           return;
         }
-        navigatorKey.currentState?.push(
+        navigatorKey.currentState?.pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => DirectMessageScreen(contact: contact),
           ),
+          (route) => route.isFirst,
         );
         print('✅ Navigated to DM with ${contact.name}');
       }
@@ -338,10 +339,11 @@ void _handleNotificationTap(
 
       final channel = await database.channelsDao.getChannelByHash(channelHash);
       if (channel != null) {
-        navigatorKey.currentState?.push(
+        navigatorKey.currentState?.pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (context) => ChannelChatScreen(channel: channel),
           ),
+          (route) => route.isFirst,
         );
         print('✅ Navigated to channel ${channel.name}');
       }
