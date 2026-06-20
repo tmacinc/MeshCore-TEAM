@@ -62,6 +62,7 @@ class TelemetrySendService extends ChangeNotifier {
   String _currentLocationSource = LocationSource.phone;
 
   bool _started = false;
+  bool _syncWasComplete = false;
 
   TelemetrySendService({
     required SettingsService settings,
@@ -109,6 +110,16 @@ class TelemetrySendService extends ChangeNotifier {
   }
 
   void _onBatteryChanged() {
+    // Re-apply config when sync first completes — channel lookup may have
+    // failed at connect time because channels weren't synced yet.
+    final syncNowComplete = _connectionViewModel.syncStatus.isComplete;
+    if (syncNowComplete && !_syncWasComplete) {
+      _syncWasComplete = true;
+      _applyConfigAndMaybeStart();
+    } else if (!syncNowComplete) {
+      _syncWasComplete = false;
+    }
+
     final voltage = _connectionViewModel.companionBatteryVoltage;
     if (voltage != null) {
       final mv = (voltage * 1000).round();

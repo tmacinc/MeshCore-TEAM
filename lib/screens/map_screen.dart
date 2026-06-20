@@ -31,6 +31,8 @@ import 'package:meshcore_team/services/map_tile_cache_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
+import 'package:meshcore_team/widgets/app_menu_button.dart';
+import 'package:meshcore_team/widgets/bt_status_icon.dart';
 import 'package:meshcore_team/widgets/night_clock.dart';
 import 'package:meshcore_team/widgets/offline_map_download_dialog.dart';
 import 'package:meshcore_team/widgets/waypoint_create_dialog.dart';
@@ -1873,6 +1875,8 @@ class _MapScreenState extends State<MapScreen> {
               ];
             },
           ),
+          const BtStatusIcon(),
+          const AppMenuButton(),
         ],
       ),
       body: Stack(

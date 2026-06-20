@@ -28,7 +28,6 @@ import 'package:meshcore_team/models/map_tile_providers.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 /// Connection Screen
 /// Provides device scanning, connection, and sync progress UI
@@ -48,20 +47,17 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   Timer? _hideSyncTimer;
   bool _hideSyncProgress = false;
   bool _lastSyncWasComplete = false;
-  String _appVersion = '';
-
-  @override
-  void initState() {
-    super.initState();
-    PackageInfo.fromPlatform().then((info) {
-      if (mounted) setState(() => _appVersion = info.version);
-    });
-  }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _bleManager ??= context.read<BleConnectionManager>();
+    if (_bleManager == null) {
+      _bleManager = context.read<BleConnectionManager>();
+      if (_discoveredDevices.isEmpty && !_bleManager!.isConnected) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _startScan();
+        });
+      }
+    }
   }
 
   void _updateSyncProgressVisibility({
@@ -127,20 +123,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('MeshCore TEAM'),
-            if (_appVersion.isNotEmpty)
-              Text(
-                'v$_appVersion',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                    ),
-              ),
-          ],
-        ),
+        title: const Text('Connection'),
         actions: [
           if (context.watch<SettingsService>().settings.appTheme ==
               AppThemeMode.nighttime)
@@ -711,12 +694,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         final allChannels = snapshot.data ?? const <ChannelData>[];
         final privateChannels = allChannels.where((c) => !c.isPublic).toList();
 
-        final telemetryChannelHash =
-            settingsService.settings.telemetryChannelHash?.toLowerCase();
-        final telemetryChannelName = telemetryChannelHash == null
-            ? null
-            : _findChannelNameByHashHex(privateChannels, telemetryChannelHash);
-
         return ListView(
           children: [
             Padding(
@@ -745,32 +722,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                         : 'Not set',
                     leading: Icons.edit,
                     onTap: () => _showDeviceNameDialog(connectionVM),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildSettingsCard(
-                    title: 'Location Source',
-                    subtitle: _locationSourceLabel(
-                        settingsService.settings.locationSource),
-                    leading: Icons.location_on,
-                    onTap: () => _showLocationSourceDialog(
-                        settingsService, connectionVM),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildSettingsCard(
-                    title: 'Location Tracking',
-                    subtitle: settingsService.settings.telemetryEnabled
-                        ? (telemetryChannelName != null
-                            ? 'Enabled on: $telemetryChannelName'
-                            : 'Enabled (no channel)')
-                        : 'Disabled',
-                    leading: settingsService.settings.telemetryEnabled
-                        ? Icons.check_circle
-                        : Icons.location_off,
-                    onTap: () => _showTelemetryDialog(
-                      settingsService: settingsService,
-                      privateChannels: privateChannels,
-                      connectionVM: connectionVM,
-                    ),
                   ),
                   const SizedBox(height: 8),
                   _buildSettingsCard(
@@ -824,17 +775,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     );
   }
 
-  String _locationSourceLabel(String source) {
-    switch (source) {
-      case LocationSource.phone:
-        return 'Phone GPS';
-      case LocationSource.companion:
-        return 'Companion Radio GPS';
-      default:
-        return 'Not set';
-    }
-  }
-
   String _radioSettingsSubtitle(ConnectionViewModel connectionVM) {
     final caps = connectionVM.deviceCapabilities;
     if (caps == null) return 'Loading…';
@@ -843,15 +783,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         'SF${caps.spreadingFactor} • '
         'CR4/${caps.codingRate} • '
         '${caps.txPower} dBm';
-  }
-
-  String? _findChannelNameByHashHex(
-      List<ChannelData> channels, String hashHexLower) {
-    for (final channel in channels) {
-      final hex = channel.hash.toRadixString(16).toLowerCase();
-      if (hex == hashHexLower) return channel.name;
-    }
-    return null;
   }
 
   int? _tryParseChannelHash(String? hashHex) {
@@ -941,309 +872,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     );
   }
 
-  Future<void> _showLocationSourceDialog(
-      SettingsService settingsService, ConnectionViewModel connectionVM) async {
-    String selected = settingsService.settings.locationSource;
-
-    await showDialog<void>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Location Source'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  RadioListTile<String>(
-                    title: const Text('Phone GPS'),
-                    value: LocationSource.phone,
-                    groupValue: selected,
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setState(() => selected = v);
-                    },
-                  ),
-                  RadioListTile<String>(
-                    title: const Text('Companion Radio GPS'),
-                    value: LocationSource.companion,
-                    groupValue: selected,
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setState(() => selected = v);
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    await settingsService.setLocationSource(selected);
-                    if (!context.mounted) return;
-                    // Enable GPS when companion source selected; disable only if
-                    // autonomous mode is also off.
-                    if (connectionVM.isConnected) {
-                      final autonomousEnabled =
-                          connectionVM.currentAutonomousEnabled ?? false;
-                      final needsGps = selected == LocationSource.companion ||
-                          autonomousEnabled;
-                      final ok = await connectionVM.setGpsEnabled(needsGps);
-                      if (!ok && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                'Could not configure companion GPS — no GPS hardware?'),
-                            duration: Duration(seconds: 3),
-                          ),
-                        );
-                      }
-                    }
-                    if (context.mounted) Navigator.of(context).pop();
-                  },
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _showTelemetryDialog({
-    required SettingsService settingsService,
-    required List<ChannelData> privateChannels,
-    required ConnectionViewModel connectionVM,
-  }) async {
-    bool enabled = settingsService.settings.telemetryEnabled;
-    String? selectedChannelHash = settingsService.settings.telemetryChannelHash;
-    int intervalSeconds =
-        ((settingsService.settings.telemetryIntervalSeconds / 10).round() * 10)
-            .clamp(30, 180);
-    int minDistanceMeters =
-        ((settingsService.settings.telemetryMinDistanceMeters / 10).round() *
-                10)
-            .clamp(50, 500);
-    bool isSaving = false;
-
-    // Validate saved hash still exists in current channel list.
-    final validHashes = privateChannels
-        .map((c) => c.hash.toRadixString(16).toLowerCase())
-        .toSet();
-    if (selectedChannelHash != null &&
-        !validHashes.contains(selectedChannelHash)) {
-      selectedChannelHash = null;
-    }
-
-    // TEAM-like behavior: if no channel selected, pick the first available private channel.
-    if (selectedChannelHash == null && privateChannels.isNotEmpty) {
-      selectedChannelHash =
-          privateChannels.first.hash.toRadixString(16).toLowerCase();
-    }
-
-    // Reset to null if the stored hash doesn't match any available private channel,
-    // otherwise the DropdownButtonFormField will fail an assertion.
-    if (selectedChannelHash != null &&
-        !privateChannels.any((c) =>
-            c.hash.toRadixString(16).toLowerCase() ==
-            selectedChannelHash!.toLowerCase())) {
-      selectedChannelHash = null;
-    }
-
-    String? channelNameForHash(String? hashHex) {
-      if (hashHex == null) return null;
-      return _findChannelNameByHashHex(privateChannels, hashHex.toLowerCase());
-    }
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: !isSaving,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Location Tracking'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Enable tracking'),
-                      value: enabled,
-                      onChanged: isSaving
-                          ? null
-                          : (v) {
-                              setState(() {
-                                enabled = v;
-                                if (enabled &&
-                                    selectedChannelHash == null &&
-                                    privateChannels.isNotEmpty) {
-                                  selectedChannelHash = privateChannels
-                                      .first.hash
-                                      .toRadixString(16)
-                                      .toLowerCase();
-                                }
-                              });
-                            },
-                    ),
-                    const SizedBox(height: 8),
-                    ThemedDropdown<String>(
-                      value: selectedChannelHash,
-                      decoration: const InputDecoration(
-                        labelText: 'Channel',
-                      ),
-                      items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Text('None'),
-                        ),
-                        for (final c in privateChannels)
-                          DropdownMenuItem<String>(
-                            value: c.hash.toRadixString(16).toLowerCase(),
-                            child: Text(c.name),
-                          ),
-                      ],
-                      onChanged: isSaving
-                          ? null
-                          : (v) {
-                              setState(() => selectedChannelHash = v);
-                            },
-                    ),
-                    const SizedBox(height: 12),
-                    Text('Interval: ${intervalSeconds}s'),
-                    Slider(
-                      value: intervalSeconds.toDouble(),
-                      min: 30,
-                      max: 180,
-                      divisions: 15,
-                      onChanged: isSaving
-                          ? null
-                          : (v) {
-                              setState(() =>
-                                  intervalSeconds = (v / 10).round() * 10);
-                            },
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Minimum distance: ${minDistanceMeters}m'),
-                    Slider(
-                      value: minDistanceMeters.toDouble(),
-                      min: 50,
-                      max: 500,
-                      divisions: 45,
-                      onChanged: isSaving
-                          ? null
-                          : (v) {
-                              setState(() =>
-                                  minDistanceMeters = (v / 10).round() * 10);
-                            },
-                    ),
-                    if (enabled && selectedChannelHash == null)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Text(
-                          'Select a channel to enable tracking.',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    if (enabled && selectedChannelHash != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          'Enabled on: ${channelNameForHash(selectedChannelHash) ?? selectedChannelHash}',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed:
-                      isSaving ? null : () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          if (enabled && selectedChannelHash == null) {
-                            return;
-                          }
-
-                          setState(() => isSaving = true);
-
-                          await settingsService.setTelemetryEnabled(enabled);
-                          await settingsService
-                              .setTelemetryChannelHash(selectedChannelHash);
-                          await settingsService.setTelemetryChannelName(
-                            channelNameForHash(selectedChannelHash),
-                          );
-                          await settingsService
-                              .setTelemetryIntervalSeconds(intervalSeconds);
-                          await settingsService
-                              .setTelemetryMinDistanceMeters(minDistanceMeters);
-
-                          // If the companion is currently in autonomous mode,
-                          // push the updated tracking settings to the firmware now
-                          // so the user doesn't have to toggle autonomous off/on.
-                          final caps = connectionVM.deviceCapabilities;
-                          final supportsAutonomous = caps != null &&
-                              caps.supportsAutonomous &&
-                              caps.isCustomFirmware;
-                          if (supportsAutonomous &&
-                              connectionVM.currentAutonomousEnabled == true) {
-                            ChannelData? channelForAuto;
-                            if (selectedChannelHash != null) {
-                              for (final c in privateChannels) {
-                                if (c.hash.toRadixString(16).toLowerCase() ==
-                                    selectedChannelHash!.toLowerCase()) {
-                                  channelForAuto = c;
-                                  break;
-                                }
-                              }
-                            }
-                            channelForAuto ??= privateChannels.isNotEmpty
-                                ? privateChannels.first
-                                : null;
-                            final channelHashByte = channelForAuto != null
-                                ? sha256
-                                    .convert(channelForAuto.sharedKey)
-                                    .bytes[0]
-                                : 0;
-                            await connectionVM.setAutonomousSettings(
-                              enabled: true,
-                              channelHash: channelHashByte,
-                              intervalSec: intervalSeconds.clamp(10, 3600),
-                              minDistanceMeters:
-                                  minDistanceMeters.clamp(0, 5000),
-                            );
-                          }
-
-                          if (context.mounted) Navigator.of(context).pop();
-                        },
-                  child: isSaving
-                      ? const SizedBox(
-                          height: 16,
-                          width: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
 
   Future<void> _showRadioSettingsDialog(ConnectionViewModel connectionVM,
       List<ChannelData> privateChannels) async {

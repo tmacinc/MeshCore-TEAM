@@ -11,6 +11,8 @@ import 'package:meshcore_team/screens/qr_scan_screen.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
+import 'package:meshcore_team/widgets/app_menu_button.dart';
+import 'package:meshcore_team/widgets/bt_status_icon.dart';
 import 'package:meshcore_team/widgets/night_clock.dart';
 import 'channel_chat_screen.dart';
 
@@ -36,6 +38,8 @@ class ChannelsScreen extends StatelessWidget {
             tooltip: 'Add channel',
             onPressed: () => _showAddMenu(context, channelRepository),
           ),
+          const BtStatusIcon(),
+          const AppMenuButton(),
         ],
       ),
       body: StreamBuilder<List<ChannelWithUnread>>(

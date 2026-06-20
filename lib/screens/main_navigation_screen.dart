@@ -13,11 +13,9 @@ import 'package:meshcore_team/services/message_notification_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/repositories/contact_repository.dart';
-import 'connection_screen.dart';
 import 'contacts_screen.dart';
 import 'channels_screen.dart';
 import 'map_screen.dart';
-import 'settings_screen.dart';
 
 /// Main Navigation Screen with Bottom Navigation Bar
 class MainNavigationScreen extends StatefulWidget {
@@ -37,11 +35,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
       MethodChannel('com.meshcore.team/app_lifecycle');
 
   final List<Widget> _screens = [
-    const ConnectionScreen(),
     const ContactsScreen(),
     const ChannelsScreen(),
     const MapScreen(),
-    const SettingsScreen(),
   ];
 
   @override
@@ -81,22 +77,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     final contactRepository = context.watch<ContactRepository>();
     final isNighttime = context.watch<SettingsService>().settings.appTheme ==
         AppThemeMode.nighttime;
-    final isConnected = connectionVM.isConnected;
-    final btColor = isNighttime
-        ? (isConnected ? NightColors.statusConnected : NightColors.primary)
-        : (isConnected ? Colors.green : Colors.red);
     final navLocked = connectionVM.identityConfirmationRequired;
+    if (_currentIndex >= _screens.length) _currentIndex = 0;
     final shouldShowIdentityDialog =
         navLocked && connectionVM.syncStatus.phase == SyncPhase.complete;
-
-    if (navLocked && _currentIndex != 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        setState(() {
-          _currentIndex = 0;
-        });
-      });
-    }
 
     if (shouldShowIdentityDialog && !_identityDialogShowing) {
       _identityDialogShowing = true;
@@ -144,11 +128,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     },
               items: [
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.bluetooth, color: btColor),
-                  activeIcon: Icon(Icons.bluetooth, color: btColor),
-                  label: 'Connection',
-                ),
-                BottomNavigationBarItem(
                   icon: _buildBadgedIcon(
                     Icons.people,
                     contactsUnread,
@@ -167,10 +146,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 const BottomNavigationBarItem(
                   icon: Icon(Icons.map),
                   label: 'Map',
-                ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.settings),
-                  label: 'Settings',
                 ),
               ],
             );
