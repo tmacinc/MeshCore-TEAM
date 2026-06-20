@@ -3,7 +3,32 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:meshcore_team/models/app_settings.dart';
+import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
+
+/// AppBar title widget that shows the screen name and, in nighttime mode,
+/// the NightClock on a second line below it.
+class NightTitle extends StatelessWidget {
+  final String title;
+  const NightTitle({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    final isNighttime = context.watch<SettingsService>().settings.appTheme ==
+        AppThemeMode.nighttime;
+    if (!isNighttime) return Text(title);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title),
+        const NightClock(),
+      ],
+    );
+  }
+}
 
 class NightClock extends StatefulWidget {
   const NightClock({super.key});
@@ -45,16 +70,13 @@ class _NightClockState extends State<NightClock> {
   @override
   Widget build(BuildContext context) {
     final use24Hour = MediaQuery.alwaysUse24HourFormatOf(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Text(
-        _formatTime(use24Hour),
-        style: const TextStyle(
-          color: NightColors.onSurface,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 1.2,
-        ),
+    return Text(
+      _formatTime(use24Hour),
+      style: const TextStyle(
+        color: NightColors.onSurface,
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 1.2,
       ),
     );
   }

@@ -40,7 +40,7 @@ class NetworkStatusIcons extends StatelessWidget {
             ? 'Policy engine: forwarding active ($activeHops hop${activeHops == 1 ? '' : 's'})'
             : campModeEnabled
                 ? 'Forwarding mode: camp'
-                : 'Forwarding mode: full mesh';
+                : 'Default routing';
 
     final forwardingIconColor = isNighttime
         ? NightColors.onSurfaceVariant
@@ -61,11 +61,15 @@ class NetworkStatusIcons extends StatelessWidget {
         Tooltip(
           message: telemetryTooltip,
           child: Icon(
-            Icons.sensors,
+            telemetryConfigured ? Icons.sensors : Icons.sensors_off,
             size: 22,
             color: isNighttime
                 ? (telemetryActive ? NightColors.primary : NightColors.dimmer)
-                : (telemetryActive ? Colors.green : Colors.red),
+                : (telemetryActive
+                    ? Colors.green
+                    : telemetryConfigured
+                        ? Colors.orange
+                        : Colors.grey),
           ),
         ),
         const SizedBox(width: 8),

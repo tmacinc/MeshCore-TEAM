@@ -29,10 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         centerTitle: false,
         title: const Text('Settings'),
-        actions: [
-          if (settings.settings.appTheme == AppThemeMode.nighttime)
-            const NightClock(),
-        ],
+        actions: const [],
       ),
       body: ListView(
         children: [
@@ -66,7 +63,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onChanged: (v) => _setLocationSource(settings, v!),
                       ),
                       RadioListTile<String>(
-                        title: const Text('Companion Radio GPS'),
+                        title: const Text('Companion GPS'),
+                        subtitle: const Text('Phone fallback'),
                         value: LocationSource.companion,
                         groupValue: settings.settings.locationSource,
                         onChanged: (v) => _setLocationSource(settings, v!),

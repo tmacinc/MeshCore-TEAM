@@ -130,9 +130,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         centerTitle: false,
         title: const Text('Connection'),
         actions: [
-          if (context.watch<SettingsService>().settings.appTheme ==
-              AppThemeMode.nighttime)
-            const NightClock(),
           if (kDebugMode || isBetaBuild)
             IconButton(
               padding: EdgeInsets.zero,

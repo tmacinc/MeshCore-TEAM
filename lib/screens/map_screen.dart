@@ -1594,25 +1594,25 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Row(
+        title: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
+            const Text('Map'),
+            Row(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Map'),
                 _buildGpsSourceRow(
                   usingCompanionGps: usingCompanionGps,
                   hasPhoneFix: hasPhoneFix,
                   isNighttime: isNighttime,
                 ),
+                if (isNighttime) ...[
+                  const SizedBox(width: 10),
+                  const NightClock(),
+                ],
               ],
             ),
-            if (isNighttime) ...[
-              const SizedBox(width: 12),
-              const NightClock(),
-            ],
           ],
         ),
         actions: [

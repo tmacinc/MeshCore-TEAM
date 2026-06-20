@@ -29,11 +29,8 @@ class ChannelsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: const Text('Channels'),
+        title: NightTitle(title: 'Channels'),
         actions: [
-          if (context.watch<SettingsService>().settings.appTheme ==
-              AppThemeMode.nighttime)
-            const NightClock(),
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add channel',

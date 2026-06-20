@@ -27,11 +27,8 @@ class ContactsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: const Text('Contacts'),
+        title: NightTitle(title: 'Contacts'),
         actions: [
-          if (context.watch<SettingsService>().settings.appTheme ==
-              AppThemeMode.nighttime)
-            const NightClock(),
           const NetworkStatusIcons(),
           const BtStatusIcon(),
           const AppMenuButton(),
