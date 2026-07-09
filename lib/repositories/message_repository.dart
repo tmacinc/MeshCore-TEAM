@@ -215,10 +215,7 @@ class MessageRepository {
       }
 
       // Check for PUSH_ADVERT (0x80) - contact advertisement received
-      // Team parity:
-      // - When an advert is received, do a complete contact sync
-      // - If the sync increases contact count, send a reciprocal advert so the
-      //   new peer can also add us.
+      // Team parity: when an advert is received, do a complete contact sync.
       if (responseCode == BleConstants.pushCodeAdvert) {
         debugPrint('[🔍DISC] 📢 PUSH_ADVERT received - syncing contacts...');
 
@@ -269,10 +266,9 @@ class MessageRepository {
 
             if (countAfter > countBefore) {
               debugPrint(
-                  '[🔍DISC] 📤 New contact detected ($countBefore → $countAfter) - sending reciprocal advert');
-              await _bleService.sendSelfAdvert();
+                  '[🔍DISC] ✓ New contact detected ($countBefore → $countAfter)');
             } else {
-              debugPrint('[🔍DISC] ✓ Existing contact - no reciprocal needed');
+              debugPrint('[🔍DISC] ✓ Existing contact');
             }
           } catch (e) {
             debugPrint('[🔍DISC] ⚠️ Advert contact sync failed: $e');
