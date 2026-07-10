@@ -425,8 +425,8 @@ class BleResponseParser {
 
     int nullIndex = nameBytes.indexOf(0);
     final name = nullIndex >= 0
-        ? String.fromCharCodes(nameBytes.sublist(0, nullIndex))
-        : String.fromCharCodes(nameBytes).trim();
+        ? utf8.decode(nameBytes.sublist(0, nullIndex), allowMalformed: true)
+        : utf8.decode(nameBytes, allowMalformed: true).trim();
     debugPrint(
         '[Parser] 📝 Contact name parsed: "$name" (${name.length} chars) for key ${publicKeyHex.substring(0, 8)}');
 
