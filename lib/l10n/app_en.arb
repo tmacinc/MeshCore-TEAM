@@ -312,6 +312,7 @@
 
   "linkCopied": "Link copied",
   "copied": "Copied",
+  "couldNotOpenLink": "Could not open link",
 
   "debugLogsTitleWithCount": "Debug Logs ({count})",
   "@debugLogsTitleWithCount": {
