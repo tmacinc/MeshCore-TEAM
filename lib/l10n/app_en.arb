@@ -151,6 +151,14 @@
   "directMessagesDisabledForRepeaters": "Direct messages are disabled for repeaters",
   "typeAMessage": "Type a message...",
   "copyMessageText": "Copy message text",
+  "messagePath": "Message path",
+  "hopDirect": "Direct",
+  "hopsCount": "{count} {count, plural, one{hop} other{hops}}",
+  "@hopsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "notificationsMuted": "🔕 Muted",
   "notificationsSilent": "🔕 Silent",
   "channelNotifications": "Channel notifications",

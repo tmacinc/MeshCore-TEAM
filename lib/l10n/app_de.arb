@@ -151,6 +151,14 @@
   "directMessagesDisabledForRepeaters": "Direktnachrichten sind für Repeater deaktiviert",
   "typeAMessage": "Nachricht eingeben...",
   "copyMessageText": "Nachrichtentext kopieren",
+  "messagePath": "Nachrichtenpfad",
+  "hopDirect": "Direkt",
+  "hopsCount": "{count} {count, plural, one{Hop} other{Hops}}",
+  "@hopsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "notificationsMuted": "🔕 Stumm",
   "notificationsSilent": "🔕 Lautlos",
   "channelNotifications": "Kanal-Benachrichtigungen",

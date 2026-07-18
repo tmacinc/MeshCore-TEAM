@@ -409,6 +409,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copyMessageText => 'Copy message text';
 
   @override
+  String get messagePath => 'Message path';
+
+  @override
+  String get hopDirect => 'Direct';
+
+  @override
+  String hopsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'hops',
+      one: 'hop',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
   String get notificationsMuted => '🔕 Muted';
 
   @override

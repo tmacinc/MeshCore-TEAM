@@ -1547,6 +1547,17 @@ class $MessagesTable extends Messages
   late final GeneratedColumn<String> companionDeviceKey =
       GeneratedColumn<String>('companion_device_key', aliasedName, true,
           type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _hopCountMeta =
+      const VerificationMeta('hopCount');
+  @override
+  late final GeneratedColumn<int> hopCount = GeneratedColumn<int>(
+      'hop_count', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _snrMeta = const VerificationMeta('snr');
+  @override
+  late final GeneratedColumn<int> snr = GeneratedColumn<int>(
+      'snr', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1562,7 +1573,9 @@ class $MessagesTable extends Messages
         attempt,
         isSentByMe,
         isRead,
-        companionDeviceKey
+        companionDeviceKey,
+        hopCount,
+        snr
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1659,6 +1672,14 @@ class $MessagesTable extends Messages
           companionDeviceKey.isAcceptableOrUnknown(
               data['companion_device_key']!, _companionDeviceKeyMeta));
     }
+    if (data.containsKey('hop_count')) {
+      context.handle(_hopCountMeta,
+          hopCount.isAcceptableOrUnknown(data['hop_count']!, _hopCountMeta));
+    }
+    if (data.containsKey('snr')) {
+      context.handle(
+          _snrMeta, snr.isAcceptableOrUnknown(data['snr']!, _snrMeta));
+    }
     return context;
   }
 
@@ -1696,6 +1717,10 @@ class $MessagesTable extends Messages
           .read(DriftSqlType.bool, data['${effectivePrefix}is_read'])!,
       companionDeviceKey: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}companion_device_key']),
+      hopCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}hop_count']),
+      snr: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}snr']),
     );
   }
 
@@ -1720,6 +1745,8 @@ class MessageData extends DataClass implements Insertable<MessageData> {
   final bool isSentByMe;
   final bool isRead;
   final String? companionDeviceKey;
+  final int? hopCount;
+  final int? snr;
   const MessageData(
       {required this.id,
       required this.senderId,
@@ -1734,7 +1761,9 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       required this.attempt,
       required this.isSentByMe,
       required this.isRead,
-      this.companionDeviceKey});
+      this.companionDeviceKey,
+      this.hopCount,
+      this.snr});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1757,6 +1786,12 @@ class MessageData extends DataClass implements Insertable<MessageData> {
     map['is_read'] = Variable<bool>(isRead);
     if (!nullToAbsent || companionDeviceKey != null) {
       map['companion_device_key'] = Variable<String>(companionDeviceKey);
+    }
+    if (!nullToAbsent || hopCount != null) {
+      map['hop_count'] = Variable<int>(hopCount);
+    }
+    if (!nullToAbsent || snr != null) {
+      map['snr'] = Variable<int>(snr);
     }
     return map;
   }
@@ -1783,6 +1818,10 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       companionDeviceKey: companionDeviceKey == null && nullToAbsent
           ? const Value.absent()
           : Value(companionDeviceKey),
+      hopCount: hopCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hopCount),
+      snr: snr == null && nullToAbsent ? const Value.absent() : Value(snr),
     );
   }
 
@@ -1805,6 +1844,8 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       isRead: serializer.fromJson<bool>(json['isRead']),
       companionDeviceKey:
           serializer.fromJson<String?>(json['companionDeviceKey']),
+      hopCount: serializer.fromJson<int?>(json['hopCount']),
+      snr: serializer.fromJson<int?>(json['snr']),
     );
   }
   @override
@@ -1825,6 +1866,8 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       'isSentByMe': serializer.toJson<bool>(isSentByMe),
       'isRead': serializer.toJson<bool>(isRead),
       'companionDeviceKey': serializer.toJson<String?>(companionDeviceKey),
+      'hopCount': serializer.toJson<int?>(hopCount),
+      'snr': serializer.toJson<int?>(snr),
     };
   }
 
@@ -1842,7 +1885,9 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           int? attempt,
           bool? isSentByMe,
           bool? isRead,
-          Value<String?> companionDeviceKey = const Value.absent()}) =>
+          Value<String?> companionDeviceKey = const Value.absent(),
+          Value<int?> hopCount = const Value.absent(),
+          Value<int?> snr = const Value.absent()}) =>
       MessageData(
         id: id ?? this.id,
         senderId: senderId ?? this.senderId,
@@ -1860,6 +1905,8 @@ class MessageData extends DataClass implements Insertable<MessageData> {
         companionDeviceKey: companionDeviceKey.present
             ? companionDeviceKey.value
             : this.companionDeviceKey,
+        hopCount: hopCount.present ? hopCount.value : this.hopCount,
+        snr: snr.present ? snr.value : this.snr,
       );
   MessageData copyWithCompanion(MessagesCompanion data) {
     return MessageData(
@@ -1887,6 +1934,8 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       companionDeviceKey: data.companionDeviceKey.present
           ? data.companionDeviceKey.value
           : this.companionDeviceKey,
+      hopCount: data.hopCount.present ? data.hopCount.value : this.hopCount,
+      snr: data.snr.present ? data.snr.value : this.snr,
     );
   }
 
@@ -1906,7 +1955,9 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           ..write('attempt: $attempt, ')
           ..write('isSentByMe: $isSentByMe, ')
           ..write('isRead: $isRead, ')
-          ..write('companionDeviceKey: $companionDeviceKey')
+          ..write('companionDeviceKey: $companionDeviceKey, ')
+          ..write('hopCount: $hopCount, ')
+          ..write('snr: $snr')
           ..write(')'))
         .toString();
   }
@@ -1926,7 +1977,9 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       attempt,
       isSentByMe,
       isRead,
-      companionDeviceKey);
+      companionDeviceKey,
+      hopCount,
+      snr);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1944,7 +1997,9 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           other.attempt == this.attempt &&
           other.isSentByMe == this.isSentByMe &&
           other.isRead == this.isRead &&
-          other.companionDeviceKey == this.companionDeviceKey);
+          other.companionDeviceKey == this.companionDeviceKey &&
+          other.hopCount == this.hopCount &&
+          other.snr == this.snr);
 }
 
 class MessagesCompanion extends UpdateCompanion<MessageData> {
@@ -1962,6 +2017,8 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
   final Value<bool> isSentByMe;
   final Value<bool> isRead;
   final Value<String?> companionDeviceKey;
+  final Value<int?> hopCount;
+  final Value<int?> snr;
   final Value<int> rowid;
   const MessagesCompanion({
     this.id = const Value.absent(),
@@ -1978,6 +2035,8 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     this.isSentByMe = const Value.absent(),
     this.isRead = const Value.absent(),
     this.companionDeviceKey = const Value.absent(),
+    this.hopCount = const Value.absent(),
+    this.snr = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MessagesCompanion.insert({
@@ -1995,6 +2054,8 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     required bool isSentByMe,
     this.isRead = const Value.absent(),
     this.companionDeviceKey = const Value.absent(),
+    this.hopCount = const Value.absent(),
+    this.snr = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         senderId = Value(senderId),
@@ -2019,6 +2080,8 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     Expression<bool>? isSentByMe,
     Expression<bool>? isRead,
     Expression<String>? companionDeviceKey,
+    Expression<int>? hopCount,
+    Expression<int>? snr,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2037,6 +2100,8 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
       if (isRead != null) 'is_read': isRead,
       if (companionDeviceKey != null)
         'companion_device_key': companionDeviceKey,
+      if (hopCount != null) 'hop_count': hopCount,
+      if (snr != null) 'snr': snr,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2056,6 +2121,8 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
       Value<bool>? isSentByMe,
       Value<bool>? isRead,
       Value<String?>? companionDeviceKey,
+      Value<int?>? hopCount,
+      Value<int?>? snr,
       Value<int>? rowid}) {
     return MessagesCompanion(
       id: id ?? this.id,
@@ -2072,6 +2139,8 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
       isSentByMe: isSentByMe ?? this.isSentByMe,
       isRead: isRead ?? this.isRead,
       companionDeviceKey: companionDeviceKey ?? this.companionDeviceKey,
+      hopCount: hopCount ?? this.hopCount,
+      snr: snr ?? this.snr,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2121,6 +2190,12 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     if (companionDeviceKey.present) {
       map['companion_device_key'] = Variable<String>(companionDeviceKey.value);
     }
+    if (hopCount.present) {
+      map['hop_count'] = Variable<int>(hopCount.value);
+    }
+    if (snr.present) {
+      map['snr'] = Variable<int>(snr.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2144,6 +2219,8 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
           ..write('isSentByMe: $isSentByMe, ')
           ..write('isRead: $isRead, ')
           ..write('companionDeviceKey: $companionDeviceKey, ')
+          ..write('hopCount: $hopCount, ')
+          ..write('snr: $snr, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6533,6 +6610,8 @@ typedef $$MessagesTableCreateCompanionBuilder = MessagesCompanion Function({
   required bool isSentByMe,
   Value<bool> isRead,
   Value<String?> companionDeviceKey,
+  Value<int?> hopCount,
+  Value<int?> snr,
   Value<int> rowid,
 });
 typedef $$MessagesTableUpdateCompanionBuilder = MessagesCompanion Function({
@@ -6550,6 +6629,8 @@ typedef $$MessagesTableUpdateCompanionBuilder = MessagesCompanion Function({
   Value<bool> isSentByMe,
   Value<bool> isRead,
   Value<String?> companionDeviceKey,
+  Value<int?> hopCount,
+  Value<int?> snr,
   Value<int> rowid,
 });
 
@@ -6605,6 +6686,12 @@ class $$MessagesTableFilterComposer
   ColumnFilters<String> get companionDeviceKey => $composableBuilder(
       column: $table.companionDeviceKey,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get hopCount => $composableBuilder(
+      column: $table.hopCount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get snr => $composableBuilder(
+      column: $table.snr, builder: (column) => ColumnFilters(column));
 }
 
 class $$MessagesTableOrderingComposer
@@ -6660,6 +6747,12 @@ class $$MessagesTableOrderingComposer
   ColumnOrderings<String> get companionDeviceKey => $composableBuilder(
       column: $table.companionDeviceKey,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get hopCount => $composableBuilder(
+      column: $table.hopCount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get snr => $composableBuilder(
+      column: $table.snr, builder: (column) => ColumnOrderings(column));
 }
 
 class $$MessagesTableAnnotationComposer
@@ -6712,6 +6805,12 @@ class $$MessagesTableAnnotationComposer
 
   GeneratedColumn<String> get companionDeviceKey => $composableBuilder(
       column: $table.companionDeviceKey, builder: (column) => column);
+
+  GeneratedColumn<int> get hopCount =>
+      $composableBuilder(column: $table.hopCount, builder: (column) => column);
+
+  GeneratedColumn<int> get snr =>
+      $composableBuilder(column: $table.snr, builder: (column) => column);
 }
 
 class $$MessagesTableTableManager extends RootTableManager<
@@ -6751,6 +6850,8 @@ class $$MessagesTableTableManager extends RootTableManager<
             Value<bool> isSentByMe = const Value.absent(),
             Value<bool> isRead = const Value.absent(),
             Value<String?> companionDeviceKey = const Value.absent(),
+            Value<int?> hopCount = const Value.absent(),
+            Value<int?> snr = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               MessagesCompanion(
@@ -6768,6 +6869,8 @@ class $$MessagesTableTableManager extends RootTableManager<
             isSentByMe: isSentByMe,
             isRead: isRead,
             companionDeviceKey: companionDeviceKey,
+            hopCount: hopCount,
+            snr: snr,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -6785,6 +6888,8 @@ class $$MessagesTableTableManager extends RootTableManager<
             required bool isSentByMe,
             Value<bool> isRead = const Value.absent(),
             Value<String?> companionDeviceKey = const Value.absent(),
+            Value<int?> hopCount = const Value.absent(),
+            Value<int?> snr = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               MessagesCompanion.insert(
@@ -6802,6 +6907,8 @@ class $$MessagesTableTableManager extends RootTableManager<
             isSentByMe: isSentByMe,
             isRead: isRead,
             companionDeviceKey: companionDeviceKey,
+            hopCount: hopCount,
+            snr: snr,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

@@ -70,7 +70,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -161,7 +161,15 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               'ALTER TABLE channels ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0',
             );
-            print('[Migration] v7->v8: importedOverlayMaps, favorites, channel notification mode');
+            print(
+                '[Migration] v7->v8: importedOverlayMaps, favorites, channel notification mode');
+          }
+
+          // Migration from schema version 8 to 9: Add per-message hop count and SNR
+          if (from <= 8 && to >= 9) {
+            await m.addColumn(messages, messages.hopCount);
+            await m.addColumn(messages, messages.snr);
+            print('[Migration] v8->v9: added hopCount, snr to messages table');
           }
         },
       );

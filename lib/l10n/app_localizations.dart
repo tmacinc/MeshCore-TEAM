@@ -884,6 +884,24 @@ abstract class AppLocalizations {
   /// **'Copy message text'**
   String get copyMessageText;
 
+  /// No description provided for @messagePath.
+  ///
+  /// In en, this message translates to:
+  /// **'Message path'**
+  String get messagePath;
+
+  /// No description provided for @hopDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct'**
+  String get hopDirect;
+
+  /// No description provided for @hopsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, one{hop} other{hops}}'**
+  String hopsCount(int count);
+
   /// No description provided for @notificationsMuted.
   ///
   /// In en, this message translates to:

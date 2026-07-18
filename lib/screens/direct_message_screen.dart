@@ -17,6 +17,7 @@ import '../repositories/message_repository.dart';
 import '../services/message_notification_service.dart';
 import '../utils/message_time_format.dart';
 import '../widgets/chat_message_text.dart';
+import '../widgets/message_path_sheet.dart';
 import '../widgets/status_bar_actions.dart';
 
 /// Direct message chat screen for one-on-one conversations
@@ -200,11 +201,9 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                     padding: const EdgeInsets.all(16),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
-                      final message =
-                          _messages[_messages.length - 1 - index];
-                      final showUnreadDivider =
-                          _firstUnreadTimestamp != null &&
-                              message.timestamp == _firstUnreadTimestamp;
+                      final message = _messages[_messages.length - 1 - index];
+                      final showUnreadDivider = _firstUnreadTimestamp != null &&
+                          message.timestamp == _firstUnreadTimestamp;
 
                       return Column(
                         children: [
@@ -302,9 +301,11 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                           textInputAction: TextInputAction.send,
                           onSubmitted: (_) => _sendMessage(),
                           onChanged: (text) {
-                            if (text.isNotEmpty && _firstUnreadTimestamp != null) {
+                            if (text.isNotEmpty &&
+                                _firstUnreadTimestamp != null) {
                               _messageRepository.messagesDao
-                                  .markContactMessagesAsRead(widget.contact.hash);
+                                  .markContactMessagesAsRead(
+                                      widget.contact.hash);
                               setState(() {
                                 _firstUnreadTimestamp = null;
                               });
@@ -361,66 +362,79 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
           Flexible(
             child: GestureDetector(
               onLongPress: (Platform.isAndroid || Platform.isIOS)
-                  ? () => _showMessageActions(message)
+                  ? () => _showMessageActions(message, isFromMe)
                   : null,
               onSecondaryTapDown: (!Platform.isAndroid && !Platform.isIOS)
-                  ? (d) => _showMessageActions(message)
+                  ? (d) => _showMessageActions(message, isFromMe)
                   : null,
               child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              margin: EdgeInsets.only(
-                left: isFromMe ? 48 : 0,
-                right: isFromMe ? 0 : 48,
-              ),
-              decoration: BoxDecoration(
-                color: isFromMe
-                    ? theme.colorScheme.primaryContainer
-                    : theme.colorScheme.surfaceVariant,
-                borderRadius: BorderRadius.circular(18).copyWith(
-                  bottomRight: isFromMe ? const Radius.circular(4) : null,
-                  bottomLeft: !isFromMe ? const Radius.circular(4) : null,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                margin: EdgeInsets.only(
+                  left: isFromMe ? 48 : 0,
+                  right: isFromMe ? 0 : 48,
+                ),
+                decoration: BoxDecoration(
+                  color: isFromMe
+                      ? theme.colorScheme.primaryContainer
+                      : theme.colorScheme.surfaceVariant,
+                  borderRadius: BorderRadius.circular(18).copyWith(
+                    bottomRight: isFromMe ? const Radius.circular(4) : null,
+                    bottomLeft: !isFromMe ? const Radius.circular(4) : null,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ChatMessageText(
+                      text: message.content,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isFromMe
+                            ? theme.colorScheme.onPrimaryContainer
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!isFromMe && message.hopCount != null) ...[
+                          Text(
+                            message.hopCount == 0
+                                ? '(d)'
+                                : '(${message.hopCount})',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withOpacity(0.7),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        Text(
+                          formatMessageTime(timestamp),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: (isFromMe
+                                    ? theme.colorScheme.onPrimaryContainer
+                                    : theme.colorScheme.onSurfaceVariant)
+                                .withOpacity(0.7),
+                          ),
+                        ),
+                        if (isFromMe && message.deliveryStatus != null) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            _getStatusIcon(message.deliveryStatus!),
+                            size: 14,
+                            color: (isFromMe
+                                    ? theme.colorScheme.onPrimaryContainer
+                                    : theme.colorScheme.onSurfaceVariant)
+                                .withOpacity(0.7),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ChatMessageText(
-                    text: message.content,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: isFromMe
-                          ? theme.colorScheme.onPrimaryContainer
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        formatMessageTime(timestamp),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: (isFromMe
-                                  ? theme.colorScheme.onPrimaryContainer
-                                  : theme.colorScheme.onSurfaceVariant)
-                              .withOpacity(0.7),
-                        ),
-                      ),
-                      if (isFromMe && message.deliveryStatus != null) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          _getStatusIcon(message.deliveryStatus!),
-                          size: 14,
-                          color: (isFromMe
-                                  ? theme.colorScheme.onPrimaryContainer
-                                  : theme.colorScheme.onSurfaceVariant)
-                              .withOpacity(0.7),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
             ),
           ),
         ],
@@ -504,7 +518,8 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.directMessagesDisabledForRepeaters),
+            content: Text(AppLocalizations.of(context)!
+                .directMessagesDisabledForRepeaters),
           ),
         );
       }
@@ -558,7 +573,8 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.genericError(e.toString())),
+            content:
+                Text(AppLocalizations.of(context)!.genericError(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
@@ -566,7 +582,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
     }
   }
 
-  void _showMessageActions(MessageData message) {
+  void _showMessageActions(MessageData message, bool isFromMe) {
     showModalBottomSheet<void>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -587,6 +603,23 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                 );
               },
             ),
+            if (!isFromMe && message.hopCount != null)
+              ListTile(
+                leading: const Icon(Icons.alt_route),
+                title: Text(AppLocalizations.of(context)!.messagePath),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  showModalBottomSheet<void>(
+                    context: context,
+                    builder: (_) => MessagePathSheet(
+                      senderName: widget.contact.name ?? 'Unknown Contact',
+                      hopCount: message.hopCount!,
+                      timestamp: DateTime.fromMillisecondsSinceEpoch(
+                          message.timestamp),
+                    ),
+                  );
+                },
+              ),
           ],
         ),
       ),

@@ -666,6 +666,8 @@ class MessageRepository {
         deliveryStatus: 'DELIVERED',
         companionDeviceKey:
             drift.Value(_settingsService.settings.currentCompanionPublicKey),
+        hopCount: drift.Value(response.pathLength),
+        snr: drift.Value(response.snr),
       );
 
       // Insert message (async, fire-and-forget)
@@ -831,6 +833,8 @@ class MessageRepository {
         deliveryStatus: 'RECEIVED',
         companionDeviceKey:
             drift.Value(_settingsService.settings.currentCompanionPublicKey),
+        hopCount: drift.Value(response.pathLength),
+        snr: drift.Value(response.snr),
       );
 
       // Insert message
