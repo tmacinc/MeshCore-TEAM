@@ -16,6 +16,7 @@ import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'database/database.dart';
 import 'models/app_settings.dart';
@@ -46,6 +47,7 @@ import 'utils/notification_payload.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'widgets/deep_link_listener.dart';
 import 'services/debug_log_service.dart';
+import 'services/window_state_service.dart';
 
 // Global navigator key for deep linking
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -90,6 +92,11 @@ Future<void> _runAppStartup() async {
   print('🚀 TEAM Flutter starting...');
   print('✅ Flutter binding initialized');
 
+  final isDesktop = !Platform.isAndroid && !Platform.isIOS;
+  if (isDesktop) {
+    await windowManager.ensureInitialized();
+  }
+
   try {
     // Initialize the database
     print('📦 Initializing database...');
@@ -107,6 +114,12 @@ Future<void> _runAppStartup() async {
     );
     final settingsService = SettingsService(prefs);
     print('✅ Settings loaded');
+
+    if (isDesktop) {
+      final windowStateService = WindowStateService(prefs);
+      await windowStateService.restoreWindowState();
+      windowManager.addListener(windowStateService);
+    }
 
     // Initialize notification plugin
     print('🔔 Initializing notifications...');
@@ -329,7 +342,8 @@ Future<void> _runAppStartup() async {
 /// Handle notification tap to navigate to specific chat
 void _handleNotificationTap(
     NotificationResponse details, AppDatabase database) async {
-  print('📬 Notification tapped: ${details.payload} action=${details.actionId}');
+  print(
+      '📬 Notification tapped: ${details.payload} action=${details.actionId}');
 
   // Mesh-connection "Stop" action button, or a swipe-dismiss of the persistent
   // mesh notification → fully stop the service (kills a stuck reconnect).
@@ -376,7 +390,8 @@ void _handleNotificationTap(
         if (contact.isRepeater) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)!.directMessagesDisabledForRepeaters),
+              content: Text(AppLocalizations.of(context)!
+                  .directMessagesDisabledForRepeaters),
             ),
           );
           return;
@@ -505,7 +520,9 @@ class TeamFlutterApp extends StatelessWidget {
           final appTheme = settings.settings.appTheme;
           final isNighttime = appTheme == AppThemeMode.nighttime;
           SystemChrome.setEnabledSystemUIMode(
-            isNighttime ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+            isNighttime
+                ? SystemUiMode.immersiveSticky
+                : SystemUiMode.edgeToEdge,
           );
           return MaterialApp(
             navigatorKey: navigatorKey,
@@ -530,21 +547,24 @@ class TeamFlutterApp extends StatelessWidget {
               ),
               useMaterial3: true,
             ),
-            darkTheme: isNighttime ? _nighttimeTheme() : ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.blue,
-                brightness: Brightness.dark,
-              ),
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-              ),
-              bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-                selectedItemColor: Colors.blue,
-                unselectedItemColor: Colors.grey,
-              ),
-              useMaterial3: true,
-            ),
+            darkTheme: isNighttime
+                ? _nighttimeTheme()
+                : ThemeData(
+                    colorScheme: ColorScheme.fromSeed(
+                      seedColor: Colors.blue,
+                      brightness: Brightness.dark,
+                    ),
+                    appBarTheme: const AppBarTheme(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                    ),
+                    bottomNavigationBarTheme:
+                        const BottomNavigationBarThemeData(
+                      selectedItemColor: Colors.blue,
+                      unselectedItemColor: Colors.grey,
+                    ),
+                    useMaterial3: true,
+                  ),
             themeMode: switch (appTheme) {
               AppThemeMode.light => ThemeMode.light,
               AppThemeMode.dark => ThemeMode.dark,
@@ -568,7 +588,6 @@ class TeamFlutterApp extends StatelessWidget {
     );
   }
 }
-
 
 ThemeData _nighttimeTheme() {
   final base = ColorScheme.fromSeed(
@@ -604,18 +623,18 @@ ThemeData _nighttimeTheme() {
     iconTheme: const IconThemeData(color: NightColors.onSurface),
     hintColor: NightColors.onSurfaceVariant,
     switchTheme: SwitchThemeData(
-      trackColor: WidgetStateProperty.resolveWith((states) => states
-              .contains(WidgetState.selected)
-          ? NightColors.primary
-          : NightColors.dimmest),
-      thumbColor: WidgetStateProperty.resolveWith((states) => states
-              .contains(WidgetState.selected)
-          ? NightColors.onSurface
-          : NightColors.dim),
-      trackOutlineColor: WidgetStateProperty.resolveWith((states) => states
-              .contains(WidgetState.selected)
-          ? Colors.transparent
-          : NightColors.dim),
+      trackColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.selected)
+              ? NightColors.primary
+              : NightColors.dimmest),
+      thumbColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.selected)
+              ? NightColors.onSurface
+              : NightColors.dim),
+      trackOutlineColor: WidgetStateProperty.resolveWith((states) =>
+          states.contains(WidgetState.selected)
+              ? Colors.transparent
+              : NightColors.dim),
     ),
     sliderTheme: const SliderThemeData(
       activeTrackColor: NightColors.primary,
