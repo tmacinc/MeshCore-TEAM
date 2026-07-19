@@ -56,11 +56,18 @@ class _ResolvedPath {
 
 class _MessagePathSheetState extends State<MessagePathSheet> {
   List<_ResolvedPath>? _resolvedPaths;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -95,63 +102,79 @@ class _MessagePathSheetState extends State<MessagePathSheet> {
     final resolved = _resolvedPaths;
 
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: resolved == null
-            ? const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(l10n.messagePath,
-                          style: theme.textTheme.titleMedium),
-                      if (resolved.length > 1) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '(${formatHopCountsBadge(resolved.map((p) => decodePathByte(p.raw.pathByte).hopCount).toList())})',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: theme.colorScheme.primary,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: resolved == null
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : Scrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    child: Padding(
+                      // Leave room so content doesn't sit under the scrollbar.
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(l10n.messagePath,
+                                  style: theme.textTheme.titleMedium),
+                              if (resolved.length > 1) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  '(${formatHopCountsBadge(resolved.map((p) => decodePathByte(p.raw.pathByte).hopCount).toList())})',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    formatMessageTime(widget.timestamp),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                          const SizedBox(height: 4),
+                          Text(
+                            formatMessageTime(widget.timestamp),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          if (resolved.isEmpty)
+                            _SinglePathTimeline(
+                              senderName: widget.senderName,
+                              hopCount: widget.hopCount,
+                            )
+                          else
+                            for (var i = 0; i < resolved.length; i++) ...[
+                              if (i > 0) const SizedBox(height: 20),
+                              if (resolved.length > 1)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Text(
+                                    l10n.pathNumber(i + 1),
+                                    style: theme.textTheme.labelLarge,
+                                  ),
+                                ),
+                              _ResolvedPathTimeline(
+                                senderName: widget.senderName,
+                                path: resolved[i],
+                              ),
+                            ],
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  if (resolved.isEmpty)
-                    _SinglePathTimeline(
-                      senderName: widget.senderName,
-                      hopCount: widget.hopCount,
-                    )
-                  else
-                    for (var i = 0; i < resolved.length; i++) ...[
-                      if (i > 0) const SizedBox(height: 20),
-                      if (resolved.length > 1)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(
-                            l10n.pathNumber(i + 1),
-                            style: theme.textTheme.labelLarge,
-                          ),
-                        ),
-                      _ResolvedPathTimeline(
-                        senderName: widget.senderName,
-                        path: resolved[i],
-                      ),
-                    ],
-                ],
-              ),
+                ),
+        ),
       ),
     );
   }
