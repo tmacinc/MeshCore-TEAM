@@ -1508,12 +1508,6 @@ abstract class AppLocalizations {
   /// **'Copied'**
   String get copied;
 
-  /// No description provided for @couldNotOpenLink.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not open link'**
-  String get couldNotOpenLink;
-
   /// No description provided for @debugLogsTitleWithCount.
   ///
   /// In en, this message translates to:

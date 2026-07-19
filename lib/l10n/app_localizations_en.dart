@@ -766,9 +766,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copied => 'Copied';
 
   @override
-  String get couldNotOpenLink => 'Could not open link';
-
-  @override
   String debugLogsTitleWithCount(int count) {
     return 'Debug Logs ($count)';
   }
