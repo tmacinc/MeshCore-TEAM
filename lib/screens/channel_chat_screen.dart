@@ -20,6 +20,7 @@ import '../repositories/channel_repository.dart';
 import '../repositories/message_repository.dart';
 import '../services/message_notification_service.dart';
 import '../widgets/chat_message_text.dart';
+import '../widgets/message_hop_badge.dart';
 import '../widgets/message_path_sheet.dart';
 import '../widgets/status_bar_actions.dart';
 import '../models/app_settings.dart';
@@ -540,10 +541,9 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                           ),
                           if (message.hopCount != null) ...[
                             const SizedBox(width: 4),
-                            Text(
-                              message.hopCount == 0
-                                  ? '(d)'
-                                  : '(${message.hopCount})',
+                            MessageHopBadge(
+                              messageId: message.id,
+                              fallbackHopCount: message.hopCount!,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color:
                                     theme.colorScheme.primary.withOpacity(0.6),
@@ -650,6 +650,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                   showModalBottomSheet<void>(
                     context: context,
                     builder: (_) => MessagePathSheet(
+                      messageId: message.id,
                       senderName: senderName,
                       hopCount: message.hopCount!,
                       timestamp: DateTime.fromMillisecondsSinceEpoch(

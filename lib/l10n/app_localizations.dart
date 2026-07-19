@@ -902,6 +902,42 @@ abstract class AppLocalizations {
   /// **'{count} {count, plural, one{hop} other{hops}}'**
   String hopsCount(int count);
 
+  /// No description provided for @pathNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Path {number}'**
+  String pathNumber(int number);
+
+  /// No description provided for @snrValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} dB SNR'**
+  String snrValue(String value);
+
+  /// No description provided for @rssiValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} dBm RSSI'**
+  String rssiValue(int value);
+
+  /// No description provided for @hopLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hop {number}: {name}'**
+  String hopLabel(int number, String name);
+
+  /// No description provided for @hopLabelWithSignal.
+  ///
+  /// In en, this message translates to:
+  /// **'Hop {number}: {name} — {signal}'**
+  String hopLabelWithSignal(int number, String name, String signal);
+
+  /// No description provided for @ambiguousHop.
+  ///
+  /// In en, this message translates to:
+  /// **'{names} (ambiguous)'**
+  String ambiguousHop(String names);
+
   /// No description provided for @notificationsMuted.
   ///
   /// In en, this message translates to:

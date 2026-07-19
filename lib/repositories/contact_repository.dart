@@ -434,7 +434,8 @@ class ContactRepository {
       if (companionKey != null && companionKey.isNotEmpty) {
         final query = _contactsDao.selectOnly(_contactsDao.contacts)
           ..addColumns([_contactsDao.contacts.hash.count()])
-          ..where(_contactsDao.contacts.companionDeviceKey.equals(companionKey));
+          ..where(
+              _contactsDao.contacts.companionDeviceKey.equals(companionKey));
         return query
             .watchSingle()
             .map((row) => row.read(_contactsDao.contacts.hash.count()) ?? 0)
@@ -464,6 +465,21 @@ class ContactRepository {
     return _contactsDao.setFavorite(publicKey, isFavorite);
   }
 
+  /// All contacts matching a short public-key prefix (e.g. a raw radio path
+  /// hop hash, 1-3 bytes). Unlike a single-match lookup, this surfaces
+  /// ambiguity when a short prefix collides between multiple contacts.
+  Future<List<ContactData>> getContactsByPublicKeyPrefix(
+    Uint8List prefix, {
+    int prefixLength = 6,
+    String? companionKey,
+  }) {
+    return _contactsDao.getContactsByPublicKeyPrefix(
+      prefix,
+      prefixLength: prefixLength,
+      companionKey: companionKey,
+    );
+  }
+
   /// Delete a single contact from the local DB and from the companion (if connected).
   /// A "not found" response from the companion is not an error.
   Future<void> deleteContact(ContactData contact) async {
@@ -481,19 +497,18 @@ class ContactRepository {
         .millisecondsSinceEpoch;
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final stale = (await _contactsDao.getAllContacts())
-        .where((c) {
-          // Clamp future timestamps to now (companion clock may be ahead).
-          final effectiveLastSeen = c.lastSeen > nowMs ? nowMs : c.lastSeen;
-          return effectiveLastSeen < cutoffMs && !c.isFavorite;
-        })
-        .toList();
+    final stale = (await _contactsDao.getAllContacts()).where((c) {
+      // Clamp future timestamps to now (companion clock may be ahead).
+      final effectiveLastSeen = c.lastSeen > nowMs ? nowMs : c.lastSeen;
+      return effectiveLastSeen < cutoffMs && !c.isFavorite;
+    }).toList();
 
     for (final contact in stale) {
       await deleteContact(contact);
     }
 
-    debugPrint('[ContactPurge] Removed ${stale.length} contacts older than $days days');
+    debugPrint(
+        '[ContactPurge] Removed ${stale.length} contacts older than $days days');
     return stale.length;
   }
 

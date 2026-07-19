@@ -150,6 +150,13 @@ class MessageRepository {
   // TODO: Remove this after migrating all screens to use repository methods
   MessagesDao get messagesDao => _messagesDao;
 
+  /// All observed radio paths for a message (see MessagePaths table doc),
+  /// oldest first. Empty if correlation never matched a raw frame to this
+  /// message -- callers should fall back to Messages.hopCount/snr.
+  Future<List<MessagePathData>> getMessagePaths(String messageId) {
+    return _database.messagePathsDao.getPathsByMessage(messageId);
+  }
+
   /// Watch messages for a channel, automatically filtered by current companion
   /// Auto-switches when currentCompanionPublicKey changes
   /// Matches Android MessageRepository.getMessagesByChannel()

@@ -17,6 +17,7 @@ import '../repositories/message_repository.dart';
 import '../services/message_notification_service.dart';
 import '../utils/message_time_format.dart';
 import '../widgets/chat_message_text.dart';
+import '../widgets/message_hop_badge.dart';
 import '../widgets/message_path_sheet.dart';
 import '../widgets/status_bar_actions.dart';
 
@@ -399,10 +400,9 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (!isFromMe && message.hopCount != null) ...[
-                          Text(
-                            message.hopCount == 0
-                                ? '(d)'
-                                : '(${message.hopCount})',
+                          MessageHopBadge(
+                            messageId: message.id,
+                            fallbackHopCount: message.hopCount!,
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant
                                   .withOpacity(0.7),
@@ -612,6 +612,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                   showModalBottomSheet<void>(
                     context: context,
                     builder: (_) => MessagePathSheet(
+                      messageId: message.id,
                       senderName: widget.contact.name ?? 'Unknown Contact',
                       hopCount: message.hopCount!,
                       timestamp: DateTime.fromMillisecondsSinceEpoch(

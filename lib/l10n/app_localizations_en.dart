@@ -426,6 +426,36 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String pathNumber(int number) {
+    return 'Path $number';
+  }
+
+  @override
+  String snrValue(String value) {
+    return '$value dB SNR';
+  }
+
+  @override
+  String rssiValue(int value) {
+    return '$value dBm RSSI';
+  }
+
+  @override
+  String hopLabel(int number, String name) {
+    return 'Hop $number: $name';
+  }
+
+  @override
+  String hopLabelWithSignal(int number, String name, String signal) {
+    return 'Hop $number: $name — $signal';
+  }
+
+  @override
+  String ambiguousHop(String names) {
+    return '$names (ambiguous)';
+  }
+
+  @override
   String get notificationsMuted => '🔕 Muted';
 
   @override
