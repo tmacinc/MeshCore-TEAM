@@ -47,7 +47,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _inputFocusNode = FocusNode();
-  int? _firstUnreadTimestamp;
+  String? _firstUnreadMessageId;
   List<String> _mentionSuggestions = [];
   StreamSubscription<List<MessageData>>? _messagesSub;
   late final Stream<List<MessageData>> _messagesStream;
@@ -98,15 +98,15 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
     MessageNotificationService.activeChannelHash = widget.channel.hash;
 
     // Get first unread timestamp for divider
-    _loadFirstUnreadTimestamp();
+    _loadFirstUnreadSequence();
   }
 
-  Future<void> _loadFirstUnreadTimestamp() async {
-    final timestamp = await _messageRepository.messagesDao
-        .getFirstUnreadTimestampByChannel(widget.channel.hash);
+  Future<void> _loadFirstUnreadSequence() async {
+    final messageId = await _messageRepository.messagesDao
+        .getFirstUnreadMessageIdByChannel(widget.channel.hash);
     if (!mounted) return;
     setState(() {
-      _firstUnreadTimestamp = timestamp;
+      _firstUnreadMessageId = messageId;
     });
     // Mark as read now, while this screen is still visible, so the channel
     // list is already sorted correctly by the time the user navigates back.
@@ -229,8 +229,8 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final message = _messages[_messages.length - 1 - index];
-                      final showUnreadDivider = _firstUnreadTimestamp != null &&
-                          message.timestamp == _firstUnreadTimestamp;
+                      final showUnreadDivider = _firstUnreadMessageId != null &&
+                          message.id == _firstUnreadMessageId;
 
                       return Column(
                         children: [
@@ -338,12 +338,12 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                           onChanged: (text) {
                             // Mark as read when user starts typing
                             if (text.isNotEmpty &&
-                                _firstUnreadTimestamp != null) {
+                                _firstUnreadMessageId != null) {
                               _messageRepository.messagesDao
                                   .markChannelMessagesAsRead(
                                       widget.channel.hash);
                               setState(() {
-                                _firstUnreadTimestamp = null;
+                                _firstUnreadMessageId = null;
                               });
                             }
                             _updateMentionSuggestions(text);
@@ -489,7 +489,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
 
   Widget _buildMessageBubble(MessageData message, ThemeData theme) {
     final isFromMe = message.isSentByMe ?? false;
-    final timestamp = DateTime.fromMillisecondsSinceEpoch(message.timestamp);
+    final timestamp = DateTime.fromMillisecondsSinceEpoch(message.receivedAt);
     final senderName = isFromMe
         ? 'You'
         : (message.senderName ?? _getSenderName(message.senderId));
@@ -654,7 +654,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                       senderName: senderName,
                       hopCount: message.hopCount!,
                       timestamp: DateTime.fromMillisecondsSinceEpoch(
-                          message.timestamp),
+                          message.receivedAt),
                     ),
                   );
                 },

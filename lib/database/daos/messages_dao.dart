@@ -19,14 +19,17 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
     with _$MessagesDaoMixin {
   MessagesDao(super.db);
 
-  /// Get all messages for a channel, ordered by timestamp
+  /// Strict local receive order. Messages has no INTEGER PRIMARY KEY, so
+  /// SQLite maintains an implicit rowid that's atomically assigned in
+  /// insertion order -- immune to the sender-embedded (and untrusted)
+  /// `timestamp` column, with no app-side bookkeeping required.
+  static const Expression<int> _rowid = CustomExpression<int>('rowid');
+
+  /// Get all messages for a channel, in local receive order
   Future<List<MessageData>> getMessagesByChannel(int channelHash) {
     return (select(messages)
           ..where((t) => t.channelHash.equals(channelHash))
-          ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc),
-          ]))
+          ..orderBy([(t) => OrderingTerm(expression: _rowid)]))
         .get();
   }
 
@@ -37,10 +40,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
           ..where((t) =>
               t.channelHash.equals(channelHash) &
               t.companionDeviceKey.equals(companionKey))
-          ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc),
-          ]))
+          ..orderBy([(t) => OrderingTerm(expression: _rowid)]))
         .get();
   }
 
@@ -50,10 +50,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
     return (select(messages)
           ..where((t) =>
               t.isPrivate.equals(true) & t.channelHash.equals(contactHash))
-          ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc),
-          ]))
+          ..orderBy([(t) => OrderingTerm(expression: _rowid)]))
         .get();
   }
 
@@ -65,10 +62,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
               t.isPrivate.equals(true) &
               t.channelHash.equals(contactHash) &
               t.companionDeviceKey.equals(companionKey))
-          ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc),
-          ]))
+          ..orderBy([(t) => OrderingTerm(expression: _rowid)]))
         .get();
   }
 
@@ -77,10 +71,16 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
     return (select(messages)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
-  /// Insert a new message and return the inserted data
+  /// Insert a new message and return the inserted data.
+  ///
+  /// `receivedAt` (this device's own clock) is always assigned here, not by
+  /// callers -- ordering itself comes from SQLite's rowid, assigned
+  /// atomically by the single INSERT below.
   Future<MessageData?> insertMessage(MessagesCompanion message) async {
     try {
-      await into(messages).insert(message);
+      await into(messages).insert(message.copyWith(
+        receivedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ));
       // Query the inserted message by ID
       return await getMessageById(message.id.value);
     } catch (e) {
@@ -143,8 +143,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
     return (select(messages)
           ..where((t) => t.deliveryStatus.equals('SENDING'))
           ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc),
+            (t) => OrderingTerm(expression: _rowid),
           ]))
         .get();
   }
@@ -154,8 +153,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
     return (select(messages)
           ..where((t) => t.isSentByMe.equals(true))
           ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.desc),
+            (t) => OrderingTerm(expression: _rowid, mode: OrderingMode.desc),
           ]))
         .get();
   }
@@ -200,8 +198,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
     return (select(messages)
           ..where((t) => t.channelHash.equals(channelHash))
           ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc),
+            (t) => OrderingTerm(expression: _rowid),
           ]))
         .watch();
   }
@@ -214,8 +211,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
               t.channelHash.equals(channelHash) &
               t.companionDeviceKey.equals(companionKey))
           ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc),
+            (t) => OrderingTerm(expression: _rowid),
           ]))
         .watch();
   }
@@ -227,8 +223,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
           ..where((t) =>
               t.isPrivate.equals(true) & t.channelHash.equals(contactHash))
           ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc),
+            (t) => OrderingTerm(expression: _rowid),
           ]))
         .watch();
   }
@@ -242,8 +237,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
               t.channelHash.equals(contactHash) &
               t.companionDeviceKey.equals(companionKey))
           ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc),
+            (t) => OrderingTerm(expression: _rowid),
           ]))
         .watch();
   }
@@ -259,8 +253,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
     return (select(messages)
           ..where((t) => t.deliveryStatus.equals('SENDING'))
           ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc),
+            (t) => OrderingTerm(expression: _rowid),
           ]))
         .watch();
   }
@@ -270,8 +263,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
   Stream<List<MessageData>> watchAllMessages() {
     return (select(messages)
           ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.timestamp, mode: OrderingMode.desc),
+            (t) => OrderingTerm(expression: _rowid, mode: OrderingMode.desc),
           ]))
         .watch();
   }
@@ -448,38 +440,34 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
     ));
   }
 
-  /// Get the first unread message timestamp for a channel (for divider)
-  Future<int?> getFirstUnreadTimestampByChannel(int channelHash) async {
+  /// Get the ID of the first unread message for a channel (for divider)
+  Future<String?> getFirstUnreadMessageIdByChannel(int channelHash) async {
     final query = select(messages)
       ..where((t) =>
           t.channelHash.equals(channelHash) &
           t.isPrivate.equals(false) &
           t.isRead.equals(false) &
           t.isSentByMe.equals(false))
-      ..orderBy([
-        (t) => OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc)
-      ])
+      ..orderBy([(t) => OrderingTerm(expression: _rowid)])
       ..limit(1);
 
     final result = await query.getSingleOrNull();
-    return result?.timestamp;
+    return result?.id;
   }
 
-  /// Get the first unread message timestamp for a contact (for divider)
-  Future<int?> getFirstUnreadTimestampByContact(int contactHash) async {
+  /// Get the ID of the first unread message for a contact (for divider)
+  Future<String?> getFirstUnreadMessageIdByContact(int contactHash) async {
     final query = select(messages)
       ..where((t) =>
           t.channelHash.equals(contactHash) &
           t.isPrivate.equals(true) &
           t.isRead.equals(false) &
           t.isSentByMe.equals(false))
-      ..orderBy([
-        (t) => OrderingTerm(expression: t.timestamp, mode: OrderingMode.asc)
-      ])
+      ..orderBy([(t) => OrderingTerm(expression: _rowid)])
       ..limit(1);
 
     final result = await query.getSingleOrNull();
-    return result?.timestamp;
+    return result?.id;
   }
 
   /// Get total unread count across all channels

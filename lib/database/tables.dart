@@ -93,6 +93,8 @@ class Messages extends Table {
       .nullable()(); // Relay hops for this specific message (null = unknown, 0 = direct)
   IntColumn get snr =>
       integer().nullable()(); // Signal-to-noise ratio for this message
+  IntColumn get receivedAt => integer().withDefault(const Constant(
+      0))(); // Local device clock at receive time (ms) -- primary display time; ordering itself uses SQLite's implicit rowid. `timestamp` remains the untrusted sender-embedded value
 
   @override
   Set<Column> get primaryKey => {id};

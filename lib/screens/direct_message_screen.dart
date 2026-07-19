@@ -39,7 +39,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _inputFocusNode = FocusNode();
-  int? _firstUnreadTimestamp;
+  String? _firstUnreadMessageId;
   StreamSubscription<List<MessageData>>? _messagesSub;
   late final Stream<List<MessageData>> _messagesStream;
   List<MessageData> _allMessages = const [];
@@ -88,14 +88,14 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
     MessageNotificationService.activeContactHash = widget.contact.hash;
 
     // Get first unread timestamp for divider
-    _loadFirstUnreadTimestamp();
+    _loadFirstUnreadSequence();
   }
 
-  Future<void> _loadFirstUnreadTimestamp() async {
-    final timestamp = await _messageRepository.messagesDao
-        .getFirstUnreadTimestampByContact(widget.contact.hash);
+  Future<void> _loadFirstUnreadSequence() async {
+    final messageId = await _messageRepository.messagesDao
+        .getFirstUnreadMessageIdByContact(widget.contact.hash);
     setState(() {
-      _firstUnreadTimestamp = timestamp;
+      _firstUnreadMessageId = messageId;
     });
   }
 
@@ -203,8 +203,8 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final message = _messages[_messages.length - 1 - index];
-                      final showUnreadDivider = _firstUnreadTimestamp != null &&
-                          message.timestamp == _firstUnreadTimestamp;
+                      final showUnreadDivider = _firstUnreadMessageId != null &&
+                          message.id == _firstUnreadMessageId;
 
                       return Column(
                         children: [
@@ -303,12 +303,12 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                           onSubmitted: (_) => _sendMessage(),
                           onChanged: (text) {
                             if (text.isNotEmpty &&
-                                _firstUnreadTimestamp != null) {
+                                _firstUnreadMessageId != null) {
                               _messageRepository.messagesDao
                                   .markContactMessagesAsRead(
                                       widget.contact.hash);
                               setState(() {
-                                _firstUnreadTimestamp = null;
+                                _firstUnreadMessageId = null;
                               });
                             }
                           },
@@ -351,7 +351,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
 
   Widget _buildMessageBubble(MessageData message, ThemeData theme) {
     final isFromMe = message.isSentByMe ?? false;
-    final timestamp = DateTime.fromMillisecondsSinceEpoch(message.timestamp);
+    final timestamp = DateTime.fromMillisecondsSinceEpoch(message.receivedAt);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -616,7 +616,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                       senderName: widget.contact.name ?? 'Unknown Contact',
                       hopCount: message.hopCount!,
                       timestamp: DateTime.fromMillisecondsSinceEpoch(
-                          message.timestamp),
+                          message.receivedAt),
                     ),
                   );
                 },

@@ -169,13 +169,22 @@ class AppDatabase extends _$AppDatabase {
           }
 
           // Migration from schema version 8 to 9: per-message hop count/SNR,
-          // and the message_paths table for multi-path routing detail.
+          // the message_paths table for multi-path routing detail, and a
+          // local receivedAt display time independent of the untrusted
+          // sender-embedded timestamp. Ordering uses SQLite's implicit
+          // rowid, not a dedicated column.
           if (from <= 8 && to >= 9) {
             await m.addColumn(messages, messages.hopCount);
             await m.addColumn(messages, messages.snr);
+            await m.addColumn(messages, messages.receivedAt);
             await m.createTable(messagePaths);
+            // True historical receive time isn't recoverable for existing
+            // rows -- best-effort backfill from the existing (untrusted)
+            // timestamp. Only affects rows inserted before this migration.
+            await customStatement(
+                'UPDATE messages SET received_at = timestamp');
             print(
-                '[Migration] v8->v9: added hopCount/snr to messages, created message_paths table');
+                '[Migration] v8->v9: added hopCount/snr/receivedAt to messages, created message_paths table');
           }
         },
       );

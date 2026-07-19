@@ -1558,6 +1558,14 @@ class $MessagesTable extends Messages
   late final GeneratedColumn<int> snr = GeneratedColumn<int>(
       'snr', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _receivedAtMeta =
+      const VerificationMeta('receivedAt');
+  @override
+  late final GeneratedColumn<int> receivedAt = GeneratedColumn<int>(
+      'received_at', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1575,7 +1583,8 @@ class $MessagesTable extends Messages
         isRead,
         companionDeviceKey,
         hopCount,
-        snr
+        snr,
+        receivedAt
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1680,6 +1689,12 @@ class $MessagesTable extends Messages
       context.handle(
           _snrMeta, snr.isAcceptableOrUnknown(data['snr']!, _snrMeta));
     }
+    if (data.containsKey('received_at')) {
+      context.handle(
+          _receivedAtMeta,
+          receivedAt.isAcceptableOrUnknown(
+              data['received_at']!, _receivedAtMeta));
+    }
     return context;
   }
 
@@ -1721,6 +1736,8 @@ class $MessagesTable extends Messages
           .read(DriftSqlType.int, data['${effectivePrefix}hop_count']),
       snr: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}snr']),
+      receivedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}received_at'])!,
     );
   }
 
@@ -1747,6 +1764,7 @@ class MessageData extends DataClass implements Insertable<MessageData> {
   final String? companionDeviceKey;
   final int? hopCount;
   final int? snr;
+  final int receivedAt;
   const MessageData(
       {required this.id,
       required this.senderId,
@@ -1763,7 +1781,8 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       required this.isRead,
       this.companionDeviceKey,
       this.hopCount,
-      this.snr});
+      this.snr,
+      required this.receivedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1793,6 +1812,7 @@ class MessageData extends DataClass implements Insertable<MessageData> {
     if (!nullToAbsent || snr != null) {
       map['snr'] = Variable<int>(snr);
     }
+    map['received_at'] = Variable<int>(receivedAt);
     return map;
   }
 
@@ -1822,6 +1842,7 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           ? const Value.absent()
           : Value(hopCount),
       snr: snr == null && nullToAbsent ? const Value.absent() : Value(snr),
+      receivedAt: Value(receivedAt),
     );
   }
 
@@ -1846,6 +1867,7 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           serializer.fromJson<String?>(json['companionDeviceKey']),
       hopCount: serializer.fromJson<int?>(json['hopCount']),
       snr: serializer.fromJson<int?>(json['snr']),
+      receivedAt: serializer.fromJson<int>(json['receivedAt']),
     );
   }
   @override
@@ -1868,6 +1890,7 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       'companionDeviceKey': serializer.toJson<String?>(companionDeviceKey),
       'hopCount': serializer.toJson<int?>(hopCount),
       'snr': serializer.toJson<int?>(snr),
+      'receivedAt': serializer.toJson<int>(receivedAt),
     };
   }
 
@@ -1887,7 +1910,8 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           bool? isRead,
           Value<String?> companionDeviceKey = const Value.absent(),
           Value<int?> hopCount = const Value.absent(),
-          Value<int?> snr = const Value.absent()}) =>
+          Value<int?> snr = const Value.absent(),
+          int? receivedAt}) =>
       MessageData(
         id: id ?? this.id,
         senderId: senderId ?? this.senderId,
@@ -1907,6 +1931,7 @@ class MessageData extends DataClass implements Insertable<MessageData> {
             : this.companionDeviceKey,
         hopCount: hopCount.present ? hopCount.value : this.hopCount,
         snr: snr.present ? snr.value : this.snr,
+        receivedAt: receivedAt ?? this.receivedAt,
       );
   MessageData copyWithCompanion(MessagesCompanion data) {
     return MessageData(
@@ -1936,6 +1961,8 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           : this.companionDeviceKey,
       hopCount: data.hopCount.present ? data.hopCount.value : this.hopCount,
       snr: data.snr.present ? data.snr.value : this.snr,
+      receivedAt:
+          data.receivedAt.present ? data.receivedAt.value : this.receivedAt,
     );
   }
 
@@ -1957,7 +1984,8 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           ..write('isRead: $isRead, ')
           ..write('companionDeviceKey: $companionDeviceKey, ')
           ..write('hopCount: $hopCount, ')
-          ..write('snr: $snr')
+          ..write('snr: $snr, ')
+          ..write('receivedAt: $receivedAt')
           ..write(')'))
         .toString();
   }
@@ -1979,7 +2007,8 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       isRead,
       companionDeviceKey,
       hopCount,
-      snr);
+      snr,
+      receivedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1999,7 +2028,8 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           other.isRead == this.isRead &&
           other.companionDeviceKey == this.companionDeviceKey &&
           other.hopCount == this.hopCount &&
-          other.snr == this.snr);
+          other.snr == this.snr &&
+          other.receivedAt == this.receivedAt);
 }
 
 class MessagesCompanion extends UpdateCompanion<MessageData> {
@@ -2019,6 +2049,7 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
   final Value<String?> companionDeviceKey;
   final Value<int?> hopCount;
   final Value<int?> snr;
+  final Value<int> receivedAt;
   final Value<int> rowid;
   const MessagesCompanion({
     this.id = const Value.absent(),
@@ -2037,6 +2068,7 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     this.companionDeviceKey = const Value.absent(),
     this.hopCount = const Value.absent(),
     this.snr = const Value.absent(),
+    this.receivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MessagesCompanion.insert({
@@ -2056,6 +2088,7 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     this.companionDeviceKey = const Value.absent(),
     this.hopCount = const Value.absent(),
     this.snr = const Value.absent(),
+    this.receivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         senderId = Value(senderId),
@@ -2082,6 +2115,7 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     Expression<String>? companionDeviceKey,
     Expression<int>? hopCount,
     Expression<int>? snr,
+    Expression<int>? receivedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2102,6 +2136,7 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
         'companion_device_key': companionDeviceKey,
       if (hopCount != null) 'hop_count': hopCount,
       if (snr != null) 'snr': snr,
+      if (receivedAt != null) 'received_at': receivedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2123,6 +2158,7 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
       Value<String?>? companionDeviceKey,
       Value<int?>? hopCount,
       Value<int?>? snr,
+      Value<int>? receivedAt,
       Value<int>? rowid}) {
     return MessagesCompanion(
       id: id ?? this.id,
@@ -2141,6 +2177,7 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
       companionDeviceKey: companionDeviceKey ?? this.companionDeviceKey,
       hopCount: hopCount ?? this.hopCount,
       snr: snr ?? this.snr,
+      receivedAt: receivedAt ?? this.receivedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2196,6 +2233,9 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     if (snr.present) {
       map['snr'] = Variable<int>(snr.value);
     }
+    if (receivedAt.present) {
+      map['received_at'] = Variable<int>(receivedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2221,6 +2261,7 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
           ..write('companionDeviceKey: $companionDeviceKey, ')
           ..write('hopCount: $hopCount, ')
           ..write('snr: $snr, ')
+          ..write('receivedAt: $receivedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6993,6 +7034,7 @@ typedef $$MessagesTableCreateCompanionBuilder = MessagesCompanion Function({
   Value<String?> companionDeviceKey,
   Value<int?> hopCount,
   Value<int?> snr,
+  Value<int> receivedAt,
   Value<int> rowid,
 });
 typedef $$MessagesTableUpdateCompanionBuilder = MessagesCompanion Function({
@@ -7012,6 +7054,7 @@ typedef $$MessagesTableUpdateCompanionBuilder = MessagesCompanion Function({
   Value<String?> companionDeviceKey,
   Value<int?> hopCount,
   Value<int?> snr,
+  Value<int> receivedAt,
   Value<int> rowid,
 });
 
@@ -7073,6 +7116,9 @@ class $$MessagesTableFilterComposer
 
   ColumnFilters<int> get snr => $composableBuilder(
       column: $table.snr, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get receivedAt => $composableBuilder(
+      column: $table.receivedAt, builder: (column) => ColumnFilters(column));
 }
 
 class $$MessagesTableOrderingComposer
@@ -7134,6 +7180,9 @@ class $$MessagesTableOrderingComposer
 
   ColumnOrderings<int> get snr => $composableBuilder(
       column: $table.snr, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get receivedAt => $composableBuilder(
+      column: $table.receivedAt, builder: (column) => ColumnOrderings(column));
 }
 
 class $$MessagesTableAnnotationComposer
@@ -7192,6 +7241,9 @@ class $$MessagesTableAnnotationComposer
 
   GeneratedColumn<int> get snr =>
       $composableBuilder(column: $table.snr, builder: (column) => column);
+
+  GeneratedColumn<int> get receivedAt => $composableBuilder(
+      column: $table.receivedAt, builder: (column) => column);
 }
 
 class $$MessagesTableTableManager extends RootTableManager<
@@ -7233,6 +7285,7 @@ class $$MessagesTableTableManager extends RootTableManager<
             Value<String?> companionDeviceKey = const Value.absent(),
             Value<int?> hopCount = const Value.absent(),
             Value<int?> snr = const Value.absent(),
+            Value<int> receivedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               MessagesCompanion(
@@ -7252,6 +7305,7 @@ class $$MessagesTableTableManager extends RootTableManager<
             companionDeviceKey: companionDeviceKey,
             hopCount: hopCount,
             snr: snr,
+            receivedAt: receivedAt,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -7271,6 +7325,7 @@ class $$MessagesTableTableManager extends RootTableManager<
             Value<String?> companionDeviceKey = const Value.absent(),
             Value<int?> hopCount = const Value.absent(),
             Value<int?> snr = const Value.absent(),
+            Value<int> receivedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               MessagesCompanion.insert(
@@ -7290,6 +7345,7 @@ class $$MessagesTableTableManager extends RootTableManager<
             companionDeviceKey: companionDeviceKey,
             hopCount: hopCount,
             snr: snr,
+            receivedAt: receivedAt,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
