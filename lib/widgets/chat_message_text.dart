@@ -4,14 +4,18 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
 import '../repositories/channel_repository.dart';
 
-/// Renders a chat message with tappable [#hashtag] links and styled [@mention]s.
+/// Renders a chat message with tappable [#hashtag] links, tappable URLs, and
+/// styled [@mention]s.
 ///
 /// Tapping a #hashtag presents a confirmation dialog that joins the channel
 /// whose PSK is derived from the name alone — no QR exchange needed.
+///
+/// Tapping a URL opens it in the device's default browser.
 ///
 /// @mentions are highlighted in the secondary colour but are not currently
 /// interactive (the exact mention format may vary by firmware version).
@@ -29,8 +33,33 @@ class ChatMessageText extends StatefulWidget {
 }
 
 class _ChatMessageTextState extends State<ChatMessageText> {
-  /// Matches #hashtag (alphanumeric, underscore, hyphen) and @mention (non-whitespace).
-  static final _tokenPattern = RegExp(r'(#[a-zA-Z0-9_-]+|@\[[^\]]+\])');
+  /// Matches #hashtag (alphanumeric, underscore, hyphen), @mention
+  /// (non-whitespace), and http(s)/www URLs.
+  static final _tokenPattern = RegExp(
+    r'(#[a-zA-Z0-9_-]+|@\[[^\]]+\]|https?://\S+|www\.\S+)',
+  );
+
+  /// Trailing characters trimmed off a matched URL so sentence punctuation
+  /// immediately after a link (e.g. "see https://example.com.") isn't
+  /// swallowed into the tappable span.
+  static const _urlTrailingPunctuation = '.,;:!?\'")]}';
+
+  static bool _isUrl(String token) =>
+      token.startsWith('http://') ||
+      token.startsWith('https://') ||
+      token.startsWith('www.');
+
+  /// End offset of [match] with any trailing punctuation trimmed off, for
+  /// URL tokens only (other token types are returned unchanged).
+  int _effectiveEnd(RegExpMatch match) {
+    if (!_isUrl(match.group(0)!)) return match.end;
+    var end = match.end;
+    while (end > match.start &&
+        _urlTrailingPunctuation.contains(widget.text[end - 1])) {
+      end--;
+    }
+    return end;
+  }
 
   // Recognizers and matches are built once and reused across rebuilds.
   // Rebuilt only in didUpdateWidget when widget.text changes, which never
@@ -74,6 +103,10 @@ class _ChatMessageTextState extends State<ChatMessageText> {
       if (token.startsWith('#')) {
         _recognizers.add(TapGestureRecognizer()
           ..onTap = () => _onHashtagTapped(context, token));
+      } else if (_isUrl(token)) {
+        final url = widget.text.substring(match.start, _effectiveEnd(match));
+        _recognizers.add(
+            TapGestureRecognizer()..onTap = () => _onUrlTapped(context, url));
       }
     }
   }
@@ -106,6 +139,23 @@ class _ChatMessageTextState extends State<ChatMessageText> {
           ),
           recognizer: _recognizers[recIdx++],
         ));
+      } else if (_isUrl(token)) {
+        final urlEnd = _effectiveEnd(match);
+        spans.add(TextSpan(
+          text: widget.text.substring(match.start, urlEnd),
+          style: baseStyle?.copyWith(
+            color: theme.colorScheme.primary,
+            decoration: TextDecoration.underline,
+            decorationColor: theme.colorScheme.primary,
+          ),
+          recognizer: _recognizers[recIdx++],
+        ));
+        if (urlEnd < match.end) {
+          spans.add(TextSpan(
+            text: widget.text.substring(urlEnd, match.end),
+            style: baseStyle,
+          ));
+        }
       } else {
         // @mention — visual highlight only (format TBD by firmware)
         spans.add(TextSpan(
@@ -128,6 +178,19 @@ class _ChatMessageTextState extends State<ChatMessageText> {
     }
 
     return RichText(text: TextSpan(children: spans));
+  }
+
+  Future<void> _onUrlTapped(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url.startsWith('http') ? url : 'https://$url');
+    final l10n = AppLocalizations.of(context)!;
+    if (uri == null ||
+        !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.couldNotOpenLink)),
+        );
+      }
+    }
   }
 
   Future<void> _onHashtagTapped(BuildContext context, String tag) async {
