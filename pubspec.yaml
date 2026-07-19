@@ -64,6 +64,7 @@ dependencies:
 
   # Utilities
   crypto: ^3.0.3
+  url_launcher: ^6.3.2
   http: ^1.2.0
   package_info_plus: ^8.0.0
   battery_plus: ^6.2.0

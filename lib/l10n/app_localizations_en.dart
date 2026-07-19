@@ -138,6 +138,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get about => 'About';
 
   @override
+  String get reportBug => 'Report Bug';
+
+  @override
+  String get couldNotOpenLink => 'Could not open link';
+
+  @override
   String get appSettings => 'App Settings';
 
   @override

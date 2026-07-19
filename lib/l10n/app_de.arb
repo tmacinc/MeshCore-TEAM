@@ -45,6 +45,8 @@
 
   "settings": "Einstellungen",
   "about": "Über",
+  "reportBug": "Fehler melden",
+  "couldNotOpenLink": "Link konnte nicht geöffnet werden",
   "appSettings": "App-Einstellungen",
   "theme": "Design",
   "themeLight": "Hell",

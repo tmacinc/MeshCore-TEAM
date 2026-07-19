@@ -356,6 +356,18 @@ abstract class AppLocalizations {
   /// **'About'**
   String get about;
 
+  /// No description provided for @reportBug.
+  ///
+  /// In en, this message translates to:
+  /// **'Report Bug'**
+  String get reportBug;
+
+  /// No description provided for @couldNotOpenLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open link'**
+  String get couldNotOpenLink;
+
   /// No description provided for @appSettings.
   ///
   /// In en, this message translates to:

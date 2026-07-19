@@ -138,6 +138,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get about => 'Über';
 
   @override
+  String get reportBug => 'Fehler melden';
+
+  @override
+  String get couldNotOpenLink => 'Link konnte nicht geöffnet werden';
+
+  @override
   String get appSettings => 'App-Einstellungen';
 
   @override

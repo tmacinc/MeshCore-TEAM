@@ -45,6 +45,8 @@
 
   "settings": "Settings",
   "about": "About",
+  "reportBug": "Report Bug",
+  "couldNotOpenLink": "Could not open link",
   "appSettings": "App Settings",
   "theme": "Theme",
   "themeLight": "Light",
