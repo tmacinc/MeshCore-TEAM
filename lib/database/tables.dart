@@ -98,6 +98,35 @@ class Messages extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Message paths table - one row per distinct radio path a message was
+/// observed on (direct, or via one or more relays), correlated from raw
+/// PUSH_LOG_RX_DATA frames. A message with no rows here just falls back to
+/// Messages.hopCount/snr (the single-path summary firmware already gives us).
+/// Stored raw/undecoded on purpose -- this is on-demand display data, not
+/// queried in bulk, so decoding pathByte/pathBytes into hop count, hash
+/// size, and per-hop identifiers happens lazily in the UI layer.
+@DataClassName('MessagePathData')
+class MessagePaths extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get messageId => text()(); // References Messages.id
+  IntColumn get pathByte =>
+      integer()(); // Raw wire path_length byte (hash-size mode + hop count packed)
+  BlobColumn get pathBytes =>
+      blob()(); // Raw hop-hash bytes, hop_count * hash_size long (empty = direct)
+  IntColumn get snr => integer().nullable()(); // From this specific raw frame
+  IntColumn get rssi => integer().nullable()(); // From this specific raw frame
+  IntColumn get receivedAt => integer()(); // Unix timestamp ms of the raw frame
+
+  // Correlation can run concurrently for the same message (delivered via
+  // PUSH and then again via a later sync -- an existing pattern elsewhere
+  // in this app). This constraint makes de-duplication atomic at the DB
+  // layer instead of racy application-side check-then-insert.
+  @override
+  List<Set<Column>> get uniqueKeys => [
+        {messageId, pathBytes},
+      ];
+}
+
 /// Waypoints table - stores GPS waypoints for map markers
 /// Matches Android Waypoint entity
 @DataClassName('WaypointData')

@@ -15,6 +15,7 @@ import 'tables.dart';
 import 'daos/contacts_dao.dart';
 import 'daos/channels_dao.dart';
 import 'daos/messages_dao.dart';
+import 'daos/message_paths_dao.dart';
 import 'daos/waypoints_dao.dart';
 import 'daos/ack_records_dao.dart';
 import 'daos/companion_devices_dao.dart';
@@ -44,6 +45,7 @@ typedef AckRecord = AckRecordData;
     Contacts,
     Channels,
     Messages,
+    MessagePaths,
     Waypoints,
     CompanionDevices,
     ContactDisplayStates,
@@ -56,6 +58,7 @@ typedef AckRecord = AckRecordData;
     ContactsDao,
     ChannelsDao,
     MessagesDao,
+    MessagePathsDao,
     WaypointsDao,
     AckRecordsDao,
     CompanionDevicesDao,
@@ -165,11 +168,14 @@ class AppDatabase extends _$AppDatabase {
                 '[Migration] v7->v8: importedOverlayMaps, favorites, channel notification mode');
           }
 
-          // Migration from schema version 8 to 9: Add per-message hop count and SNR
+          // Migration from schema version 8 to 9: per-message hop count/SNR,
+          // and the message_paths table for multi-path routing detail.
           if (from <= 8 && to >= 9) {
             await m.addColumn(messages, messages.hopCount);
             await m.addColumn(messages, messages.snr);
-            print('[Migration] v8->v9: added hopCount, snr to messages table');
+            await m.createTable(messagePaths);
+            print(
+                '[Migration] v8->v9: added hopCount/snr to messages, created message_paths table');
           }
         },
       );

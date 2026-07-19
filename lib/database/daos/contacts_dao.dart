@@ -112,6 +112,49 @@ class ContactsDao extends DatabaseAccessor<AppDatabase>
     return null;
   }
 
+  /// Get all contacts matching the first [prefixLength] bytes of their
+  /// public key, unlike [getContactByPublicKeyPrefix] which only returns
+  /// the first match. Used to detect and surface ambiguity when resolving
+  /// a short raw path-hop hash (1-3 bytes) against known contacts, since a
+  /// short prefix can legitimately collide between multiple contacts.
+  Future<List<ContactData>> getContactsByPublicKeyPrefix(
+    Uint8List prefix, {
+    int prefixLength = 6,
+    String? companionKey,
+  }) async {
+    if (prefix.isEmpty) return const [];
+    if (prefixLength <= 0) return const [];
+
+    final effectivePrefixLength =
+        prefixLength > prefix.length ? prefix.length : prefixLength;
+
+    final query = select(contacts);
+    if (companionKey != null && companionKey.isNotEmpty) {
+      query.where((t) => t.companionDeviceKey.equals(companionKey));
+    }
+
+    final allContacts = await query.get();
+    final matches = <ContactData>[];
+    for (final contact in allContacts) {
+      final pk = contact.publicKey;
+      if (pk.length < effectivePrefixLength) continue;
+
+      bool isMatch = true;
+      for (int i = 0; i < effectivePrefixLength; i++) {
+        if (pk[i] != prefix[i]) {
+          isMatch = false;
+          break;
+        }
+      }
+
+      if (isMatch) {
+        matches.add(contact);
+      }
+    }
+
+    return matches;
+  }
+
   /// Get a single contact by hash (derived from full public key)
   /// Returns first match if multiple contacts have same hash
   Future<ContactData?> getContactByHash(int hash) {
@@ -433,8 +476,7 @@ class ContactsDao extends DatabaseAccessor<AppDatabase>
     );
 
     final controller = StreamController<void>();
-    final contactsSub =
-        watchContactsByCompanion(companionKey).listen((_) {
+    final contactsSub = watchContactsByCompanion(companionKey).listen((_) {
       if (!controller.isClosed) controller.add(null);
     });
     final messagesSub = db.messagesDao.watchMessageCount().listen((_) {
