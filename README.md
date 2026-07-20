@@ -378,7 +378,7 @@ Location tracking sends periodic location updates to the mesh via a **private ch
 4. **Set preferences** — choose interval, minimum-distance thresholds, and the location source (**phone GPS** or **companion radio GPS**).
 5. **Verify** — once all members are configured, the map should begin to populate with user locations as telemetry packets are received.
 
-When tracking is enabled, the app broadcasts your position on the selected channel. Other TEAM users on the same channel will see your marker on their map. When tracking is disabled, contact markers are hidden from the map.
+When tracking is enabled, the app broadcasts your position on the selected channel. Other TEAM users on the same channel will see your marker on their map. Your position is broadcast when either the selected interval has elapsed or your position has changed more than the selected minimum-distance. When tracking is disabled, your position isn't broadcast and contact markers are hidden from the map.
 
 #### Requirements
 
