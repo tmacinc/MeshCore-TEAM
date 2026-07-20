@@ -40,10 +40,12 @@ Core user-facing features that are already implemented:
 - BLE scan/connect/disconnect with sync progress (contacts/channels/messages)
 - Identity/name prompt (set how you appear on the mesh)
 - Localization — translatable UI that follows the device language (English and German included)
+- Appearance themes — system/light/dark, plus a **night mode** ("Red Light Discipline") that dims the entire UI to red and red-filters map tiles to preserve dark-adapted vision in the field
 - Contacts list with unread badges + direct messages (repeaters are read-only)
 	- Search by name or public-key hash
 	- Filter, sort, and favorite contacts
 	- Delete contacts, with optional auto-purge of stale contacts after a set number of days
+	- Battery level per contact (companion and phone), carried in telemetry so you can see who's running low
 - Channels list with unread badges
 	- Create private channels
 	- Import via link/QR
@@ -59,6 +61,7 @@ Core user-facing features that are already implemented:
 - Status icons and app menu on every screen, with network-bar shortcuts to toggle tracking and disconnect/reconnect
 - Map screen
 	- Phone location + optional "track-up" mode
+	- Toggle name labels for tracked users and waypoints/routes to declutter the map
 	- Contact markers (when location tracking is enabled)
 		- Contact path history (dotted trail showing recent GPS fixes per contact)
 		- Waypoints (create/edit/manage)
@@ -81,6 +84,7 @@ Core user-facing features that are already implemented:
 	- Offline sharing — serve configs over a local hotspot with QR code download (no internet required)
 - Wipe Local Data — selectively clear channels (from firmware too), waypoints/routes, and offline maps with double confirmation
 - Foreground service for background BLE stability (Android)
+- Keep-screen-on / show-over-lock-screen option (Android) so the map and chat stay glanceable without unlocking
 - iOS BLE lifecycle handling with deferred reconnect and stale connection cleanup
 
 ## Custom firmware
@@ -94,6 +98,8 @@ TEAM is designed to work with the [custom MeshCore firmware](https://github.com/
 | Radio settings UI | Basic frequency/power | Smart Forwarding toggle, Autonomous Mode toggle |
 
 The app detects custom firmware automatically via the `RESP_SELF_INFO` capability bitmask on connect. When stock firmware is detected, custom-only UI elements (forwarding toggles, autonomous mode) are hidden and the forwarding policy engine stays inactive. The connected device tile on the Connection screen shows the firmware type and supported capabilities (`FW: Custom • FWD ✓ • AUTO ✓`).
+
+That bitmask only tells you about *your own* radio. To learn what *other* members are running, each node broadcasts a `#CAP:` capability advertisement on the telemetry channel announcing its own flags (custom firmware, forwarding, autonomous). Nodes publish shortly after they discover a new contact, or a minute or so after their capabilities change (a firmware reconnect or a relevant settings change) — there's no periodic keepalive, so a peer whose `#CAP:` is missing or older than 12 hours is assumed to be on stock firmware. This is what lets cooperative features like smart forwarding know which neighbors can actually participate.
 
 For flashing instructions, supported boards, and build guides, see the [MeshCore firmware repo](https://github.com/tmacinc/MeshCore).
 
@@ -387,7 +393,21 @@ When tracking is enabled, the app broadcasts your position on the selected chann
 
 #### Automatic contact discovery
 
-When a telemetry packet arrives on the private channel from an unknown user, the app forces an advert request to discover and add the new contact. This works network-wide — new members should be validated and appear on the map after a couple of telemetry intervals.
+Contact discovery works in two directions, so new members appear on everyone's map without manually exchanging keys:
+
+- **Announcing yourself** — when a telemetry packet arrives on the private channel from a sender you don't yet have as a contact, the app broadcasts a flood (multi-hop) self-advert. That advert propagates across the mesh so every radio that hears it — including the unknown sender's — can add you.
+- **Learning about others** — whenever your companion radio receives an advert, the app runs a contact sync (incremental first, falling back to a full sync) to pull in the new or updated contact. It deliberately does **not** reply with a reciprocal advert; answering every advert with another advert would flood the mesh with duplicate traffic.
+
+This works network-wide — new members should be validated and appear on the map after a couple of telemetry intervals.
+
+### 10) App settings (appearance, theme, and device options)
+
+Open the **☰ hamburger menu** on any main screen and choose **App Settings** for options that aren't tied to a specific companion radio:
+
+- **Location** — location source (phone vs companion GPS) and the same Location Tracking controls exposed on the Connection screen.
+- **Appearance → Theme** — choose **System**, **Light**, **Dark**, or **Night mode** ("Red Light Discipline"). Night mode tints the whole interface a dim red, red-filters the map tiles, hides the system bars, and shows a clock in the app bar. It exists so you can read the app after dark without ruining your night-adapted vision or lighting yourself up — useful for field and tactical use.
+- **Data → Auto-purge contacts** — automatically remove contacts not heard from within a chosen number of days (off by default). This keeps the contact list from filling with stale nodes that have left the area.
+- **Android → Keep screen on** — keeps the display awake and visible over the lock screen so the map or an open chat stays glanceable without unlocking the phone. (iOS instead exposes an **Always-on location** toggle here for background tracking.)
 
 ## iOS support
 
