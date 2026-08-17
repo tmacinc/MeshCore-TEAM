@@ -14,6 +14,8 @@ import 'package:meshcore_team/ble/ble_connection_manager.dart';
 import 'package:meshcore_team/ble/ble_constants.dart';
 import 'package:meshcore_team/ble/ble_responses.dart';
 import 'package:meshcore_team/ble/ble_service.dart';
+import 'package:meshcore_team/ble/raw_packet_log.dart';
+import 'package:meshcore_team/services/channel_crypto.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/database/daos/messages_dao.dart';
 import 'package:meshcore_team/database/daos/channels_dao.dart';
@@ -93,6 +95,15 @@ class MessageRepository {
   static const Duration _recentTelemetryTtl = Duration(seconds: 5);
   final Map<String, int> _recentTelemetryKeysMs = <String, int>{};
 
+  // Recent raw radio packets, used to correlate real per-hop path data with
+  // decoded channel messages (see _correlateChannelMessagePaths).
+  final RawPacketLog _rawPacketLog = RawPacketLog();
+
+  // Recently-decoded channel messages, kept briefly so a multi-path sibling
+  // raw frame that arrives *after* a message was already processed can
+  // still be matched against it (see _tryCorrelateNewFrame).
+  final List<_RecentChannelMessage> _recentChannelMessages = [];
+
   // Broadcast stream of parsed #TEL events.
   final StreamController<TelemetryEvent> _telemetryStreamController =
       StreamController<TelemetryEvent>.broadcast();
@@ -138,6 +149,13 @@ class MessageRepository {
   // Expose messagesDao for backward compatibility
   // TODO: Remove this after migrating all screens to use repository methods
   MessagesDao get messagesDao => _messagesDao;
+
+  /// All observed radio paths for a message (see MessagePaths table doc),
+  /// oldest first. Empty if correlation never matched a raw frame to this
+  /// message -- callers should fall back to Messages.hopCount/snr.
+  Future<List<MessagePathData>> getMessagePaths(String messageId) {
+    return _database.messagePathsDao.getPathsByMessage(messageId);
+  }
 
   /// Watch messages for a channel, automatically filtered by current companion
   /// Auto-switches when currentCompanionPublicKey changes
@@ -208,6 +226,16 @@ class MessageRepository {
       if (responseCode == BleConstants.pushCodeLogRxData) {
         debugPrint(
             '[MessageSync] 📡 PUSH_LOG_RX_DATA received - triggering message sync');
+        // Buffer the raw packet too -- used to correlate real per-hop path
+        // data with the decoded message this push precedes (see
+        // _correlateChannelMessagePaths). Parsing failure here is silent by
+        // design: the raw frame is a best-effort enhancement layered on top
+        // of the sync flow below, never a dependency of it.
+        final rawFrame = parseRawPacketLogFrame(frame);
+        if (rawFrame != null) {
+          _rawPacketLog.add(rawFrame);
+          unawaited(_tryCorrelateNewFrame(rawFrame));
+        }
         // Small delay to let firmware queue the message
         _requestMessageSync(
             delay: const Duration(milliseconds: 100),
@@ -666,6 +694,8 @@ class MessageRepository {
         deliveryStatus: 'DELIVERED',
         companionDeviceKey:
             drift.Value(_settingsService.settings.currentCompanionPublicKey),
+        hopCount: drift.Value(response.pathLength),
+        snr: drift.Value(response.snr),
       );
 
       // Insert message (async, fire-and-forget)
@@ -831,6 +861,8 @@ class MessageRepository {
         deliveryStatus: 'RECEIVED',
         companionDeviceKey:
             drift.Value(_settingsService.settings.currentCompanionPublicKey),
+        hopCount: drift.Value(response.pathLength),
+        snr: drift.Value(response.snr),
       );
 
       // Insert message
@@ -853,18 +885,176 @@ class MessageRepository {
               '[MessageSync] 🔔 Notification shown for channel message in ${channel.name}');
         }
       } catch (e) {
-        // Silently ignore duplicate key errors (message already saved)
+        // Silently ignore duplicate key errors (message already saved) --
+        // but still attempt path correlation below, since a "duplicate"
+        // here means this is a second (or Nth) physical reception of the
+        // same logical message via a different radio path, which is
+        // exactly the case we want to capture, not discard.
         if (!e.toString().contains('UNIQUE constraint')) {
           rethrow;
         } else {
           debugPrint(
               '[MessageSync] 🔄 Duplicate channel message ignored (already saved)');
-          return;
         }
       }
+
+      unawaited(_correlateChannelMessagePaths(
+        messageId: messageId,
+        channelSecret: channel.sharedKey,
+        response: response,
+      ));
     } catch (e) {
       debugPrint('[MessageSync] ⚠️ Error handling channel message: $e');
     }
+  }
+
+  /// Correlate a decoded channel message with the raw radio packet(s) it was
+  /// physically received on, to capture real per-hop path data (RSSI, and
+  /// which repeaters relayed it) that firmware's decoded message response
+  /// never exposes -- only a bare hop count.
+  ///
+  /// We already know this message's exact plaintext and its channel's PSK,
+  /// so instead of decrypting raw frames (which would require reimplementing
+  /// MeshCore's full crypto/channel-matching), we re-encrypt the known
+  /// plaintext and look for an exact ciphertext match among recently
+  /// buffered raw frames. An exact multi-byte match is unambiguous -- no
+  /// heuristics, no guessing. The over-the-air plaintext packs a 2-bit
+  /// `attempt` retry counter that firmware's V3 response doesn't expose to
+  /// us, so all 4 possible values are tried.
+  ///
+  /// Once one raw frame matches, every other buffered frame sharing its
+  /// packetHash (payload_type + ciphertext, independent of path) is a
+  /// multi-path sibling -- the same logical packet, heard via another route.
+  /// Best-effort only: if no raw frame matches (aged out of the buffer, or
+  /// this is a message type we don't attempt here), this is a no-op and the
+  /// existing Messages.hopCount/snr summary remains the sole source of
+  /// truth for that message, unaffected.
+  Future<void> _correlateChannelMessagePaths({
+    required String messageId,
+    required Uint8List channelSecret,
+    required ChannelMessageReceivedResponse response,
+  }) async {
+    // Flood-relayed siblings of the same packet can arrive as separate raw
+    // frames several hundred ms to seconds apart (direct reception, then a
+    // repeater's relay) -- often *after* this message has already been
+    // decoded and correlated once. Remember it so a later-arriving frame
+    // (see _tryCorrelateNewFrame) can still be matched against it, not just
+    // frames already buffered right now.
+    _recentChannelMessages.add(_RecentChannelMessage(
+      messageId: messageId,
+      channelSecret: channelSecret,
+      timestamp: response.timestamp,
+      txtType: response.txtType,
+      text: response.text,
+      insertedAtMs: DateTime.now().millisecondsSinceEpoch,
+    ));
+    _pruneRecentChannelMessages();
+
+    await _tryCorrelate(
+      messageId: messageId,
+      channelSecret: channelSecret,
+      timestamp: response.timestamp,
+      txtType: response.txtType,
+      text: response.text,
+      candidates: _rawPacketLog.byPayloadType(payloadTypeGrpTxt),
+    );
+  }
+
+  /// Re-checks a newly-arrived raw frame against recently-decoded channel
+  /// messages, for the case where a multi-path sibling frame arrives after
+  /// its message was already processed (see _correlateChannelMessagePaths).
+  Future<void> _tryCorrelateNewFrame(RawPacketFrame frame) async {
+    if (frame.payloadType != payloadTypeGrpTxt) return;
+    _pruneRecentChannelMessages();
+    for (final recent in _recentChannelMessages) {
+      await _tryCorrelate(
+        messageId: recent.messageId,
+        channelSecret: recent.channelSecret,
+        timestamp: recent.timestamp,
+        txtType: recent.txtType,
+        text: recent.text,
+        candidates: [frame],
+      );
+    }
+  }
+
+  /// Core correlation: try to match [text] (re-encrypted with all 4 possible
+  /// `attempt` values) against any of [candidates]' ciphertext. On a match,
+  /// record every raw frame sharing that match's packetHash as an observed
+  /// path for [messageId] -- see class docs on _correlateChannelMessagePaths
+  /// for why this is unambiguous.
+  Future<void> _tryCorrelate({
+    required String messageId,
+    required Uint8List channelSecret,
+    required int timestamp,
+    required int txtType,
+    required String text,
+    required List<RawPacketFrame> candidates,
+  }) async {
+    if (candidates.isEmpty) return;
+    try {
+      RawPacketFrame? matched;
+      for (var attempt = 0; attempt < 4 && matched == null; attempt++) {
+        final expected = encryptChannelMessage(
+          channelSecret: channelSecret,
+          timestamp: timestamp,
+          attempt: attempt,
+          txtType: txtType,
+          text: text,
+        );
+        for (final candidate in candidates) {
+          // GRP_TXT payload is [chan_hash:1][mac:2][ciphertext:N] -- strip
+          // the 3-byte prefix before comparing against our re-encrypted
+          // plaintext, which is ciphertext only.
+          if (candidate.payload.length < 3) continue;
+          final ciphertext = candidate.payload.sublist(3);
+          if (_bytesEqual(ciphertext, expected)) {
+            matched = candidate;
+            break;
+          }
+        }
+      }
+
+      if (matched == null) return;
+
+      final siblings = _rawPacketLog.byPacketHash(matched.packetHash);
+      // Correlation can run more than once for the same message (delivered
+      // via PUSH and then again via a later sync, same as other message
+      // types already handle elsewhere in this file; plus this method is
+      // now called both on message-arrival and on new-frame-arrival).
+      // insertPath() ignores conflicts on the (messageId, pathBytes) unique
+      // constraint, so this is safe even if run concurrently -- no need for
+      // an application-side check-then-insert here.
+      for (final frame in siblings) {
+        await _database.messagePathsDao.insertPath(MessagePathsCompanion.insert(
+          messageId: messageId,
+          pathByte: frame.pathByte,
+          pathBytes: frame.pathBytes,
+          snr: drift.Value(frame.snr),
+          rssi: drift.Value(frame.rssi),
+          receivedAt: frame.receivedAtMs,
+        ));
+      }
+      debugPrint(
+          '[MessagePath] ✅ Correlated $messageId with ${siblings.length} path(s)');
+    } catch (e) {
+      debugPrint('[MessagePath] ⚠️ Correlation error: $e');
+    }
+  }
+
+  void _pruneRecentChannelMessages() {
+    final cutoff = DateTime.now()
+        .subtract(const Duration(seconds: 60))
+        .millisecondsSinceEpoch;
+    _recentChannelMessages.removeWhere((m) => m.insertedAtMs < cutoff);
+  }
+
+  bool _bytesEqual(Uint8List a, Uint8List b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 
   static const double _duplicateWaypointLocationRadiusMeters = 20;
@@ -2104,6 +2294,27 @@ class MessageRepository {
     _telemetryStreamController.close();
     _topologyStreamController.close();
   }
+}
+
+/// A recently-decoded channel message, remembered briefly so a multi-path
+/// sibling raw frame arriving after the fact can still be correlated --
+/// see MessageRepository._tryCorrelateNewFrame.
+class _RecentChannelMessage {
+  final String messageId;
+  final Uint8List channelSecret;
+  final int timestamp;
+  final int txtType;
+  final String text;
+  final int insertedAtMs;
+
+  _RecentChannelMessage({
+    required this.messageId,
+    required this.channelSecret,
+    required this.timestamp,
+    required this.txtType,
+    required this.text,
+    required this.insertedAtMs,
+  });
 }
 
 /// Tracks in-flight retry state for a single direct message.

@@ -45,6 +45,8 @@
 
   "settings": "Settings",
   "about": "About",
+  "reportBug": "Report Bug",
+  "couldNotOpenLink": "Could not open link",
   "appSettings": "App Settings",
   "theme": "Theme",
   "themeLight": "Light",
@@ -151,6 +153,53 @@
   "directMessagesDisabledForRepeaters": "Direct messages are disabled for repeaters",
   "typeAMessage": "Type a message...",
   "copyMessageText": "Copy message text",
+  "messagePath": "Message path",
+  "hopDirect": "Direct",
+  "hopsCount": "{count} {count, plural, one{hop} other{hops}}",
+  "@hopsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "pathNumber": "Path {number}",
+  "@pathNumber": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+  "snrValue": "{value} dB SNR",
+  "@snrValue": {
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "rssiValue": "{value} dBm RSSI",
+  "@rssiValue": {
+    "placeholders": {
+      "value": { "type": "int" }
+    }
+  },
+  "hopLabel": "Hop {number}: {name}",
+  "@hopLabel": {
+    "placeholders": {
+      "number": { "type": "int" },
+      "name": { "type": "String" }
+    }
+  },
+  "hopLabelWithSignal": "Hop {number}: {name} — {signal}",
+  "@hopLabelWithSignal": {
+    "placeholders": {
+      "number": { "type": "int" },
+      "name": { "type": "String" },
+      "signal": { "type": "String" }
+    }
+  },
+  "ambiguousHop": "{names} (ambiguous)",
+  "@ambiguousHop": {
+    "placeholders": {
+      "names": { "type": "String" }
+    }
+  },
   "notificationsMuted": "🔕 Muted",
   "notificationsSilent": "🔕 Silent",
   "channelNotifications": "Channel notifications",

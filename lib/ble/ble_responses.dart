@@ -156,6 +156,11 @@ class ChannelMessageReceivedResponse extends BleResponse {
   final String text;
   final int snr;
   final int pathLength;
+
+  /// Wire txt_type from the V3 response -- also packed into the original
+  /// over-the-air ciphertext's plaintext header, needed to reconstruct that
+  /// plaintext exactly for raw-frame correlation (see channel_crypto.dart).
+  final int txtType;
   final bool isFromSelf;
 
   ChannelMessageReceivedResponse({
@@ -166,6 +171,7 @@ class ChannelMessageReceivedResponse extends BleResponse {
     required this.text,
     required this.snr,
     required this.pathLength,
+    required this.txtType,
     required this.isFromSelf,
   }) : super(BleConstants.respChannelMsgRecvV3);
 }
@@ -529,7 +535,7 @@ class BleResponseParser {
     reader.readByte(); // reserved2
     final channelIndex = reader.readByte();
     final pathLength = reader.readByte() & 0x3F; // bits 5–0 are hop count
-    final txtType = reader.readByte(); // txt_type (ignored for now)
+    final txtType = reader.readByte();
     final timestamp = reader.readUInt32LE();
 
     // Read remaining bytes as text
@@ -543,6 +549,7 @@ class BleResponseParser {
       text: text,
       snr: snr,
       pathLength: pathLength,
+      txtType: txtType,
       isFromSelf: false, // V3 doesn't indicate this
     );
   }

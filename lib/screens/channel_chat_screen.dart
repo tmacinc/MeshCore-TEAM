@@ -20,6 +20,8 @@ import '../repositories/channel_repository.dart';
 import '../repositories/message_repository.dart';
 import '../services/message_notification_service.dart';
 import '../widgets/chat_message_text.dart';
+import '../widgets/message_hop_badge.dart';
+import '../widgets/message_path_sheet.dart';
 import '../widgets/status_bar_actions.dart';
 import '../models/app_settings.dart';
 import '../services/settings_service.dart';
@@ -45,7 +47,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _inputFocusNode = FocusNode();
-  int? _firstUnreadTimestamp;
+  String? _firstUnreadMessageId;
   List<String> _mentionSuggestions = [];
   StreamSubscription<List<MessageData>>? _messagesSub;
   late final Stream<List<MessageData>> _messagesStream;
@@ -96,15 +98,15 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
     MessageNotificationService.activeChannelHash = widget.channel.hash;
 
     // Get first unread timestamp for divider
-    _loadFirstUnreadTimestamp();
+    _loadFirstUnreadSequence();
   }
 
-  Future<void> _loadFirstUnreadTimestamp() async {
-    final timestamp = await _messageRepository.messagesDao
-        .getFirstUnreadTimestampByChannel(widget.channel.hash);
+  Future<void> _loadFirstUnreadSequence() async {
+    final messageId = await _messageRepository.messagesDao
+        .getFirstUnreadMessageIdByChannel(widget.channel.hash);
     if (!mounted) return;
     setState(() {
-      _firstUnreadTimestamp = timestamp;
+      _firstUnreadMessageId = messageId;
     });
     // Mark as read now, while this screen is still visible, so the channel
     // list is already sorted correctly by the time the user navigates back.
@@ -140,7 +142,9 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
           children: [
             Text(widget.channel.name),
             Text(
-              widget.channel.isPublic ? l10n.publicChannel : l10n.privateChannel,
+              widget.channel.isPublic
+                  ? l10n.publicChannel
+                  : l10n.privateChannel,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -224,11 +228,9 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                     padding: const EdgeInsets.all(16),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
-                      final message =
-                          _messages[_messages.length - 1 - index];
-                      final showUnreadDivider =
-                          _firstUnreadTimestamp != null &&
-                              message.timestamp == _firstUnreadTimestamp;
+                      final message = _messages[_messages.length - 1 - index];
+                      final showUnreadDivider = _firstUnreadMessageId != null &&
+                          message.id == _firstUnreadMessageId;
 
                       return Column(
                         children: [
@@ -265,8 +267,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                               Text(
                                 '$_newMessageCount new ${_newMessageCount == 1 ? 'message' : 'messages'}',
                                 style: theme.textTheme.labelMedium?.copyWith(
-                                  color:
-                                      theme.colorScheme.onPrimaryContainer,
+                                  color: theme.colorScheme.onPrimaryContainer,
                                 ),
                               ),
                               const SizedBox(width: 4),
@@ -337,12 +338,12 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                           onChanged: (text) {
                             // Mark as read when user starts typing
                             if (text.isNotEmpty &&
-                                _firstUnreadTimestamp != null) {
+                                _firstUnreadMessageId != null) {
                               _messageRepository.messagesDao
                                   .markChannelMessagesAsRead(
                                       widget.channel.hash);
                               setState(() {
-                                _firstUnreadTimestamp = null;
+                                _firstUnreadMessageId = null;
                               });
                             }
                             _updateMentionSuggestions(text);
@@ -432,7 +433,9 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                 await Clipboard.setData(ClipboardData(text: link));
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(AppLocalizations.of(context)!.linkCopied)),
+                    SnackBar(
+                        content:
+                            Text(AppLocalizations.of(context)!.linkCopied)),
                   );
                 }
               },
@@ -486,7 +489,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
 
   Widget _buildMessageBubble(MessageData message, ThemeData theme) {
     final isFromMe = message.isSentByMe ?? false;
-    final timestamp = DateTime.fromMillisecondsSinceEpoch(message.timestamp);
+    final timestamp = DateTime.fromMillisecondsSinceEpoch(message.receivedAt);
     final senderName = isFromMe
         ? 'You'
         : (message.senderName ?? _getSenderName(message.senderId));
@@ -507,70 +510,87 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                   ? (d) => _showMessageActions(message, senderName, isFromMe)
                   : null,
               child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              margin: EdgeInsets.only(
-                left: isFromMe ? 48 : 0,
-                right: isFromMe ? 0 : 48,
-              ),
-              decoration: BoxDecoration(
-                color: isFromMe
-                    ? theme.colorScheme.primaryContainer
-                    : theme.colorScheme.surfaceVariant,
-                borderRadius: BorderRadius.circular(18).copyWith(
-                  bottomRight: isFromMe ? const Radius.circular(4) : null,
-                  bottomLeft: !isFromMe ? const Radius.circular(4) : null,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                margin: EdgeInsets.only(
+                  left: isFromMe ? 48 : 0,
+                  right: isFromMe ? 0 : 48,
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!isFromMe) ...[
-                    Text(
-                      senderName,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
+                decoration: BoxDecoration(
+                  color: isFromMe
+                      ? theme.colorScheme.primaryContainer
+                      : theme.colorScheme.surfaceVariant,
+                  borderRadius: BorderRadius.circular(18).copyWith(
+                    bottomRight: isFromMe ? const Radius.circular(4) : null,
+                    bottomLeft: !isFromMe ? const Radius.circular(4) : null,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!isFromMe) ...[
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            senderName,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (message.hopCount != null) ...[
+                            const SizedBox(width: 4),
+                            MessageHopBadge(
+                              messageId: message.id,
+                              fallbackHopCount: message.hopCount!,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color:
+                                    theme.colorScheme.primary.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    ChatMessageText(
+                      text: message.content,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isFromMe
+                            ? theme.colorScheme.onPrimaryContainer
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 4),
-                  ],
-                  ChatMessageText(
-                    text: message.content,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: isFromMe
-                          ? theme.colorScheme.onPrimaryContainer
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        formatMessageTime(timestamp),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: (isFromMe
-                                  ? theme.colorScheme.onPrimaryContainer
-                                  : theme.colorScheme.onSurfaceVariant)
-                              .withOpacity(0.7),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          formatMessageTime(timestamp),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: (isFromMe
+                                    ? theme.colorScheme.onPrimaryContainer
+                                    : theme.colorScheme.onSurfaceVariant)
+                                .withOpacity(0.7),
+                          ),
                         ),
-                      ),
-                      if (isFromMe && message.deliveryStatus != null) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          _getStatusIcon(message.deliveryStatus!),
-                          size: 14,
-                          color: (isFromMe
-                                  ? theme.colorScheme.onPrimaryContainer
-                                  : theme.colorScheme.onSurfaceVariant)
-                              .withOpacity(0.7),
-                        ),
+                        if (isFromMe && message.deliveryStatus != null) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            _getStatusIcon(message.deliveryStatus!),
+                            size: 14,
+                            color: (isFromMe
+                                    ? theme.colorScheme.onPrimaryContainer
+                                    : theme.colorScheme.onSurfaceVariant)
+                                .withOpacity(0.7),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
             ),
           ),
         ],
@@ -590,7 +610,8 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
     _inputFocusNode.requestFocus();
   }
 
-  void _showMessageActions(MessageData message, String senderName, bool isFromMe) {
+  void _showMessageActions(
+      MessageData message, String senderName, bool isFromMe) {
     showModalBottomSheet<void>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -618,6 +639,24 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                 onTap: () {
                   Navigator.pop(ctx);
                   _seedReply(senderName);
+                },
+              ),
+            if (!isFromMe && message.hopCount != null)
+              ListTile(
+                leading: const Icon(Icons.alt_route),
+                title: Text(AppLocalizations.of(context)!.messagePath),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  showModalBottomSheet<void>(
+                    context: context,
+                    builder: (_) => MessagePathSheet(
+                      messageId: message.id,
+                      senderName: senderName,
+                      hopCount: message.hopCount!,
+                      timestamp: DateTime.fromMillisecondsSinceEpoch(
+                          message.receivedAt),
+                    ),
+                  );
                 },
               ),
           ],
@@ -761,7 +800,10 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
 
     // Clear input immediately
     _messageController.clear();
-    setState(() { _mentionSuggestions = []; _messages = _allMessages; });
+    setState(() {
+      _mentionSuggestions = [];
+      _messages = _allMessages;
+    });
     if (!Platform.isAndroid && !Platform.isIOS) _inputFocusNode.requestFocus();
 
     // Scroll to bottom
@@ -801,7 +843,8 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.genericError(e.toString())),
+            content:
+                Text(AppLocalizations.of(context)!.genericError(e.toString())),
             backgroundColor: Colors.red,
           ),
         );

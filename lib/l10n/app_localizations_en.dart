@@ -138,6 +138,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get about => 'About';
 
   @override
+  String get reportBug => 'Report Bug';
+
+  @override
+  String get couldNotOpenLink => 'Could not open link';
+
+  @override
   String get appSettings => 'App Settings';
 
   @override
@@ -407,6 +413,53 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copyMessageText => 'Copy message text';
+
+  @override
+  String get messagePath => 'Message path';
+
+  @override
+  String get hopDirect => 'Direct';
+
+  @override
+  String hopsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'hops',
+      one: 'hop',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String pathNumber(int number) {
+    return 'Path $number';
+  }
+
+  @override
+  String snrValue(String value) {
+    return '$value dB SNR';
+  }
+
+  @override
+  String rssiValue(int value) {
+    return '$value dBm RSSI';
+  }
+
+  @override
+  String hopLabel(int number, String name) {
+    return 'Hop $number: $name';
+  }
+
+  @override
+  String hopLabelWithSignal(int number, String name, String signal) {
+    return 'Hop $number: $name — $signal';
+  }
+
+  @override
+  String ambiguousHop(String names) {
+    return '$names (ambiguous)';
+  }
 
   @override
   String get notificationsMuted => '🔕 Muted';

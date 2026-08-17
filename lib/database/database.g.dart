@@ -1547,6 +1547,25 @@ class $MessagesTable extends Messages
   late final GeneratedColumn<String> companionDeviceKey =
       GeneratedColumn<String>('companion_device_key', aliasedName, true,
           type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _hopCountMeta =
+      const VerificationMeta('hopCount');
+  @override
+  late final GeneratedColumn<int> hopCount = GeneratedColumn<int>(
+      'hop_count', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _snrMeta = const VerificationMeta('snr');
+  @override
+  late final GeneratedColumn<int> snr = GeneratedColumn<int>(
+      'snr', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _receivedAtMeta =
+      const VerificationMeta('receivedAt');
+  @override
+  late final GeneratedColumn<int> receivedAt = GeneratedColumn<int>(
+      'received_at', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1562,7 +1581,10 @@ class $MessagesTable extends Messages
         attempt,
         isSentByMe,
         isRead,
-        companionDeviceKey
+        companionDeviceKey,
+        hopCount,
+        snr,
+        receivedAt
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1659,6 +1681,20 @@ class $MessagesTable extends Messages
           companionDeviceKey.isAcceptableOrUnknown(
               data['companion_device_key']!, _companionDeviceKeyMeta));
     }
+    if (data.containsKey('hop_count')) {
+      context.handle(_hopCountMeta,
+          hopCount.isAcceptableOrUnknown(data['hop_count']!, _hopCountMeta));
+    }
+    if (data.containsKey('snr')) {
+      context.handle(
+          _snrMeta, snr.isAcceptableOrUnknown(data['snr']!, _snrMeta));
+    }
+    if (data.containsKey('received_at')) {
+      context.handle(
+          _receivedAtMeta,
+          receivedAt.isAcceptableOrUnknown(
+              data['received_at']!, _receivedAtMeta));
+    }
     return context;
   }
 
@@ -1696,6 +1732,12 @@ class $MessagesTable extends Messages
           .read(DriftSqlType.bool, data['${effectivePrefix}is_read'])!,
       companionDeviceKey: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}companion_device_key']),
+      hopCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}hop_count']),
+      snr: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}snr']),
+      receivedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}received_at'])!,
     );
   }
 
@@ -1720,6 +1762,9 @@ class MessageData extends DataClass implements Insertable<MessageData> {
   final bool isSentByMe;
   final bool isRead;
   final String? companionDeviceKey;
+  final int? hopCount;
+  final int? snr;
+  final int receivedAt;
   const MessageData(
       {required this.id,
       required this.senderId,
@@ -1734,7 +1779,10 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       required this.attempt,
       required this.isSentByMe,
       required this.isRead,
-      this.companionDeviceKey});
+      this.companionDeviceKey,
+      this.hopCount,
+      this.snr,
+      required this.receivedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1758,6 +1806,13 @@ class MessageData extends DataClass implements Insertable<MessageData> {
     if (!nullToAbsent || companionDeviceKey != null) {
       map['companion_device_key'] = Variable<String>(companionDeviceKey);
     }
+    if (!nullToAbsent || hopCount != null) {
+      map['hop_count'] = Variable<int>(hopCount);
+    }
+    if (!nullToAbsent || snr != null) {
+      map['snr'] = Variable<int>(snr);
+    }
+    map['received_at'] = Variable<int>(receivedAt);
     return map;
   }
 
@@ -1783,6 +1838,11 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       companionDeviceKey: companionDeviceKey == null && nullToAbsent
           ? const Value.absent()
           : Value(companionDeviceKey),
+      hopCount: hopCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(hopCount),
+      snr: snr == null && nullToAbsent ? const Value.absent() : Value(snr),
+      receivedAt: Value(receivedAt),
     );
   }
 
@@ -1805,6 +1865,9 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       isRead: serializer.fromJson<bool>(json['isRead']),
       companionDeviceKey:
           serializer.fromJson<String?>(json['companionDeviceKey']),
+      hopCount: serializer.fromJson<int?>(json['hopCount']),
+      snr: serializer.fromJson<int?>(json['snr']),
+      receivedAt: serializer.fromJson<int>(json['receivedAt']),
     );
   }
   @override
@@ -1825,6 +1888,9 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       'isSentByMe': serializer.toJson<bool>(isSentByMe),
       'isRead': serializer.toJson<bool>(isRead),
       'companionDeviceKey': serializer.toJson<String?>(companionDeviceKey),
+      'hopCount': serializer.toJson<int?>(hopCount),
+      'snr': serializer.toJson<int?>(snr),
+      'receivedAt': serializer.toJson<int>(receivedAt),
     };
   }
 
@@ -1842,7 +1908,10 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           int? attempt,
           bool? isSentByMe,
           bool? isRead,
-          Value<String?> companionDeviceKey = const Value.absent()}) =>
+          Value<String?> companionDeviceKey = const Value.absent(),
+          Value<int?> hopCount = const Value.absent(),
+          Value<int?> snr = const Value.absent(),
+          int? receivedAt}) =>
       MessageData(
         id: id ?? this.id,
         senderId: senderId ?? this.senderId,
@@ -1860,6 +1929,9 @@ class MessageData extends DataClass implements Insertable<MessageData> {
         companionDeviceKey: companionDeviceKey.present
             ? companionDeviceKey.value
             : this.companionDeviceKey,
+        hopCount: hopCount.present ? hopCount.value : this.hopCount,
+        snr: snr.present ? snr.value : this.snr,
+        receivedAt: receivedAt ?? this.receivedAt,
       );
   MessageData copyWithCompanion(MessagesCompanion data) {
     return MessageData(
@@ -1887,6 +1959,10 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       companionDeviceKey: data.companionDeviceKey.present
           ? data.companionDeviceKey.value
           : this.companionDeviceKey,
+      hopCount: data.hopCount.present ? data.hopCount.value : this.hopCount,
+      snr: data.snr.present ? data.snr.value : this.snr,
+      receivedAt:
+          data.receivedAt.present ? data.receivedAt.value : this.receivedAt,
     );
   }
 
@@ -1906,7 +1982,10 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           ..write('attempt: $attempt, ')
           ..write('isSentByMe: $isSentByMe, ')
           ..write('isRead: $isRead, ')
-          ..write('companionDeviceKey: $companionDeviceKey')
+          ..write('companionDeviceKey: $companionDeviceKey, ')
+          ..write('hopCount: $hopCount, ')
+          ..write('snr: $snr, ')
+          ..write('receivedAt: $receivedAt')
           ..write(')'))
         .toString();
   }
@@ -1926,7 +2005,10 @@ class MessageData extends DataClass implements Insertable<MessageData> {
       attempt,
       isSentByMe,
       isRead,
-      companionDeviceKey);
+      companionDeviceKey,
+      hopCount,
+      snr,
+      receivedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1944,7 +2026,10 @@ class MessageData extends DataClass implements Insertable<MessageData> {
           other.attempt == this.attempt &&
           other.isSentByMe == this.isSentByMe &&
           other.isRead == this.isRead &&
-          other.companionDeviceKey == this.companionDeviceKey);
+          other.companionDeviceKey == this.companionDeviceKey &&
+          other.hopCount == this.hopCount &&
+          other.snr == this.snr &&
+          other.receivedAt == this.receivedAt);
 }
 
 class MessagesCompanion extends UpdateCompanion<MessageData> {
@@ -1962,6 +2047,9 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
   final Value<bool> isSentByMe;
   final Value<bool> isRead;
   final Value<String?> companionDeviceKey;
+  final Value<int?> hopCount;
+  final Value<int?> snr;
+  final Value<int> receivedAt;
   final Value<int> rowid;
   const MessagesCompanion({
     this.id = const Value.absent(),
@@ -1978,6 +2066,9 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     this.isSentByMe = const Value.absent(),
     this.isRead = const Value.absent(),
     this.companionDeviceKey = const Value.absent(),
+    this.hopCount = const Value.absent(),
+    this.snr = const Value.absent(),
+    this.receivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MessagesCompanion.insert({
@@ -1995,6 +2086,9 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     required bool isSentByMe,
     this.isRead = const Value.absent(),
     this.companionDeviceKey = const Value.absent(),
+    this.hopCount = const Value.absent(),
+    this.snr = const Value.absent(),
+    this.receivedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         senderId = Value(senderId),
@@ -2019,6 +2113,9 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     Expression<bool>? isSentByMe,
     Expression<bool>? isRead,
     Expression<String>? companionDeviceKey,
+    Expression<int>? hopCount,
+    Expression<int>? snr,
+    Expression<int>? receivedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2037,6 +2134,9 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
       if (isRead != null) 'is_read': isRead,
       if (companionDeviceKey != null)
         'companion_device_key': companionDeviceKey,
+      if (hopCount != null) 'hop_count': hopCount,
+      if (snr != null) 'snr': snr,
+      if (receivedAt != null) 'received_at': receivedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2056,6 +2156,9 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
       Value<bool>? isSentByMe,
       Value<bool>? isRead,
       Value<String?>? companionDeviceKey,
+      Value<int?>? hopCount,
+      Value<int?>? snr,
+      Value<int>? receivedAt,
       Value<int>? rowid}) {
     return MessagesCompanion(
       id: id ?? this.id,
@@ -2072,6 +2175,9 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
       isSentByMe: isSentByMe ?? this.isSentByMe,
       isRead: isRead ?? this.isRead,
       companionDeviceKey: companionDeviceKey ?? this.companionDeviceKey,
+      hopCount: hopCount ?? this.hopCount,
+      snr: snr ?? this.snr,
+      receivedAt: receivedAt ?? this.receivedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2121,6 +2227,15 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
     if (companionDeviceKey.present) {
       map['companion_device_key'] = Variable<String>(companionDeviceKey.value);
     }
+    if (hopCount.present) {
+      map['hop_count'] = Variable<int>(hopCount.value);
+    }
+    if (snr.present) {
+      map['snr'] = Variable<int>(snr.value);
+    }
+    if (receivedAt.present) {
+      map['received_at'] = Variable<int>(receivedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2144,7 +2259,387 @@ class MessagesCompanion extends UpdateCompanion<MessageData> {
           ..write('isSentByMe: $isSentByMe, ')
           ..write('isRead: $isRead, ')
           ..write('companionDeviceKey: $companionDeviceKey, ')
+          ..write('hopCount: $hopCount, ')
+          ..write('snr: $snr, ')
+          ..write('receivedAt: $receivedAt, ')
           ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MessagePathsTable extends MessagePaths
+    with TableInfo<$MessagePathsTable, MessagePathData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MessagePathsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _messageIdMeta =
+      const VerificationMeta('messageId');
+  @override
+  late final GeneratedColumn<String> messageId = GeneratedColumn<String>(
+      'message_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _pathByteMeta =
+      const VerificationMeta('pathByte');
+  @override
+  late final GeneratedColumn<int> pathByte = GeneratedColumn<int>(
+      'path_byte', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _pathBytesMeta =
+      const VerificationMeta('pathBytes');
+  @override
+  late final GeneratedColumn<Uint8List> pathBytes = GeneratedColumn<Uint8List>(
+      'path_bytes', aliasedName, false,
+      type: DriftSqlType.blob, requiredDuringInsert: true);
+  static const VerificationMeta _snrMeta = const VerificationMeta('snr');
+  @override
+  late final GeneratedColumn<int> snr = GeneratedColumn<int>(
+      'snr', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _rssiMeta = const VerificationMeta('rssi');
+  @override
+  late final GeneratedColumn<int> rssi = GeneratedColumn<int>(
+      'rssi', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _receivedAtMeta =
+      const VerificationMeta('receivedAt');
+  @override
+  late final GeneratedColumn<int> receivedAt = GeneratedColumn<int>(
+      'received_at', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, messageId, pathByte, pathBytes, snr, rssi, receivedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'message_paths';
+  @override
+  VerificationContext validateIntegrity(Insertable<MessagePathData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('message_id')) {
+      context.handle(_messageIdMeta,
+          messageId.isAcceptableOrUnknown(data['message_id']!, _messageIdMeta));
+    } else if (isInserting) {
+      context.missing(_messageIdMeta);
+    }
+    if (data.containsKey('path_byte')) {
+      context.handle(_pathByteMeta,
+          pathByte.isAcceptableOrUnknown(data['path_byte']!, _pathByteMeta));
+    } else if (isInserting) {
+      context.missing(_pathByteMeta);
+    }
+    if (data.containsKey('path_bytes')) {
+      context.handle(_pathBytesMeta,
+          pathBytes.isAcceptableOrUnknown(data['path_bytes']!, _pathBytesMeta));
+    } else if (isInserting) {
+      context.missing(_pathBytesMeta);
+    }
+    if (data.containsKey('snr')) {
+      context.handle(
+          _snrMeta, snr.isAcceptableOrUnknown(data['snr']!, _snrMeta));
+    }
+    if (data.containsKey('rssi')) {
+      context.handle(
+          _rssiMeta, rssi.isAcceptableOrUnknown(data['rssi']!, _rssiMeta));
+    }
+    if (data.containsKey('received_at')) {
+      context.handle(
+          _receivedAtMeta,
+          receivedAt.isAcceptableOrUnknown(
+              data['received_at']!, _receivedAtMeta));
+    } else if (isInserting) {
+      context.missing(_receivedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {messageId, pathBytes},
+      ];
+  @override
+  MessagePathData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MessagePathData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      messageId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}message_id'])!,
+      pathByte: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}path_byte'])!,
+      pathBytes: attachedDatabase.typeMapping
+          .read(DriftSqlType.blob, data['${effectivePrefix}path_bytes'])!,
+      snr: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}snr']),
+      rssi: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}rssi']),
+      receivedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}received_at'])!,
+    );
+  }
+
+  @override
+  $MessagePathsTable createAlias(String alias) {
+    return $MessagePathsTable(attachedDatabase, alias);
+  }
+}
+
+class MessagePathData extends DataClass implements Insertable<MessagePathData> {
+  final int id;
+  final String messageId;
+  final int pathByte;
+  final Uint8List pathBytes;
+  final int? snr;
+  final int? rssi;
+  final int receivedAt;
+  const MessagePathData(
+      {required this.id,
+      required this.messageId,
+      required this.pathByte,
+      required this.pathBytes,
+      this.snr,
+      this.rssi,
+      required this.receivedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['message_id'] = Variable<String>(messageId);
+    map['path_byte'] = Variable<int>(pathByte);
+    map['path_bytes'] = Variable<Uint8List>(pathBytes);
+    if (!nullToAbsent || snr != null) {
+      map['snr'] = Variable<int>(snr);
+    }
+    if (!nullToAbsent || rssi != null) {
+      map['rssi'] = Variable<int>(rssi);
+    }
+    map['received_at'] = Variable<int>(receivedAt);
+    return map;
+  }
+
+  MessagePathsCompanion toCompanion(bool nullToAbsent) {
+    return MessagePathsCompanion(
+      id: Value(id),
+      messageId: Value(messageId),
+      pathByte: Value(pathByte),
+      pathBytes: Value(pathBytes),
+      snr: snr == null && nullToAbsent ? const Value.absent() : Value(snr),
+      rssi: rssi == null && nullToAbsent ? const Value.absent() : Value(rssi),
+      receivedAt: Value(receivedAt),
+    );
+  }
+
+  factory MessagePathData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MessagePathData(
+      id: serializer.fromJson<int>(json['id']),
+      messageId: serializer.fromJson<String>(json['messageId']),
+      pathByte: serializer.fromJson<int>(json['pathByte']),
+      pathBytes: serializer.fromJson<Uint8List>(json['pathBytes']),
+      snr: serializer.fromJson<int?>(json['snr']),
+      rssi: serializer.fromJson<int?>(json['rssi']),
+      receivedAt: serializer.fromJson<int>(json['receivedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'messageId': serializer.toJson<String>(messageId),
+      'pathByte': serializer.toJson<int>(pathByte),
+      'pathBytes': serializer.toJson<Uint8List>(pathBytes),
+      'snr': serializer.toJson<int?>(snr),
+      'rssi': serializer.toJson<int?>(rssi),
+      'receivedAt': serializer.toJson<int>(receivedAt),
+    };
+  }
+
+  MessagePathData copyWith(
+          {int? id,
+          String? messageId,
+          int? pathByte,
+          Uint8List? pathBytes,
+          Value<int?> snr = const Value.absent(),
+          Value<int?> rssi = const Value.absent(),
+          int? receivedAt}) =>
+      MessagePathData(
+        id: id ?? this.id,
+        messageId: messageId ?? this.messageId,
+        pathByte: pathByte ?? this.pathByte,
+        pathBytes: pathBytes ?? this.pathBytes,
+        snr: snr.present ? snr.value : this.snr,
+        rssi: rssi.present ? rssi.value : this.rssi,
+        receivedAt: receivedAt ?? this.receivedAt,
+      );
+  MessagePathData copyWithCompanion(MessagePathsCompanion data) {
+    return MessagePathData(
+      id: data.id.present ? data.id.value : this.id,
+      messageId: data.messageId.present ? data.messageId.value : this.messageId,
+      pathByte: data.pathByte.present ? data.pathByte.value : this.pathByte,
+      pathBytes: data.pathBytes.present ? data.pathBytes.value : this.pathBytes,
+      snr: data.snr.present ? data.snr.value : this.snr,
+      rssi: data.rssi.present ? data.rssi.value : this.rssi,
+      receivedAt:
+          data.receivedAt.present ? data.receivedAt.value : this.receivedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MessagePathData(')
+          ..write('id: $id, ')
+          ..write('messageId: $messageId, ')
+          ..write('pathByte: $pathByte, ')
+          ..write('pathBytes: $pathBytes, ')
+          ..write('snr: $snr, ')
+          ..write('rssi: $rssi, ')
+          ..write('receivedAt: $receivedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, messageId, pathByte,
+      $driftBlobEquality.hash(pathBytes), snr, rssi, receivedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MessagePathData &&
+          other.id == this.id &&
+          other.messageId == this.messageId &&
+          other.pathByte == this.pathByte &&
+          $driftBlobEquality.equals(other.pathBytes, this.pathBytes) &&
+          other.snr == this.snr &&
+          other.rssi == this.rssi &&
+          other.receivedAt == this.receivedAt);
+}
+
+class MessagePathsCompanion extends UpdateCompanion<MessagePathData> {
+  final Value<int> id;
+  final Value<String> messageId;
+  final Value<int> pathByte;
+  final Value<Uint8List> pathBytes;
+  final Value<int?> snr;
+  final Value<int?> rssi;
+  final Value<int> receivedAt;
+  const MessagePathsCompanion({
+    this.id = const Value.absent(),
+    this.messageId = const Value.absent(),
+    this.pathByte = const Value.absent(),
+    this.pathBytes = const Value.absent(),
+    this.snr = const Value.absent(),
+    this.rssi = const Value.absent(),
+    this.receivedAt = const Value.absent(),
+  });
+  MessagePathsCompanion.insert({
+    this.id = const Value.absent(),
+    required String messageId,
+    required int pathByte,
+    required Uint8List pathBytes,
+    this.snr = const Value.absent(),
+    this.rssi = const Value.absent(),
+    required int receivedAt,
+  })  : messageId = Value(messageId),
+        pathByte = Value(pathByte),
+        pathBytes = Value(pathBytes),
+        receivedAt = Value(receivedAt);
+  static Insertable<MessagePathData> custom({
+    Expression<int>? id,
+    Expression<String>? messageId,
+    Expression<int>? pathByte,
+    Expression<Uint8List>? pathBytes,
+    Expression<int>? snr,
+    Expression<int>? rssi,
+    Expression<int>? receivedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (messageId != null) 'message_id': messageId,
+      if (pathByte != null) 'path_byte': pathByte,
+      if (pathBytes != null) 'path_bytes': pathBytes,
+      if (snr != null) 'snr': snr,
+      if (rssi != null) 'rssi': rssi,
+      if (receivedAt != null) 'received_at': receivedAt,
+    });
+  }
+
+  MessagePathsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? messageId,
+      Value<int>? pathByte,
+      Value<Uint8List>? pathBytes,
+      Value<int?>? snr,
+      Value<int?>? rssi,
+      Value<int>? receivedAt}) {
+    return MessagePathsCompanion(
+      id: id ?? this.id,
+      messageId: messageId ?? this.messageId,
+      pathByte: pathByte ?? this.pathByte,
+      pathBytes: pathBytes ?? this.pathBytes,
+      snr: snr ?? this.snr,
+      rssi: rssi ?? this.rssi,
+      receivedAt: receivedAt ?? this.receivedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (messageId.present) {
+      map['message_id'] = Variable<String>(messageId.value);
+    }
+    if (pathByte.present) {
+      map['path_byte'] = Variable<int>(pathByte.value);
+    }
+    if (pathBytes.present) {
+      map['path_bytes'] = Variable<Uint8List>(pathBytes.value);
+    }
+    if (snr.present) {
+      map['snr'] = Variable<int>(snr.value);
+    }
+    if (rssi.present) {
+      map['rssi'] = Variable<int>(rssi.value);
+    }
+    if (receivedAt.present) {
+      map['received_at'] = Variable<int>(receivedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MessagePathsCompanion(')
+          ..write('id: $id, ')
+          ..write('messageId: $messageId, ')
+          ..write('pathByte: $pathByte, ')
+          ..write('pathBytes: $pathBytes, ')
+          ..write('snr: $snr, ')
+          ..write('rssi: $rssi, ')
+          ..write('receivedAt: $receivedAt')
           ..write(')'))
         .toString();
   }
@@ -5863,6 +6358,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ContactsTable contacts = $ContactsTable(this);
   late final $ChannelsTable channels = $ChannelsTable(this);
   late final $MessagesTable messages = $MessagesTable(this);
+  late final $MessagePathsTable messagePaths = $MessagePathsTable(this);
   late final $WaypointsTable waypoints = $WaypointsTable(this);
   late final $CompanionDevicesTable companionDevices =
       $CompanionDevicesTable(this);
@@ -5878,6 +6374,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ContactsDao contactsDao = ContactsDao(this as AppDatabase);
   late final ChannelsDao channelsDao = ChannelsDao(this as AppDatabase);
   late final MessagesDao messagesDao = MessagesDao(this as AppDatabase);
+  late final MessagePathsDao messagePathsDao =
+      MessagePathsDao(this as AppDatabase);
   late final WaypointsDao waypointsDao = WaypointsDao(this as AppDatabase);
   late final AckRecordsDao ackRecordsDao = AckRecordsDao(this as AppDatabase);
   late final CompanionDevicesDao companionDevicesDao =
@@ -5894,6 +6392,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         contacts,
         channels,
         messages,
+        messagePaths,
         waypoints,
         companionDevices,
         contactDisplayStates,
@@ -6533,6 +7032,9 @@ typedef $$MessagesTableCreateCompanionBuilder = MessagesCompanion Function({
   required bool isSentByMe,
   Value<bool> isRead,
   Value<String?> companionDeviceKey,
+  Value<int?> hopCount,
+  Value<int?> snr,
+  Value<int> receivedAt,
   Value<int> rowid,
 });
 typedef $$MessagesTableUpdateCompanionBuilder = MessagesCompanion Function({
@@ -6550,6 +7052,9 @@ typedef $$MessagesTableUpdateCompanionBuilder = MessagesCompanion Function({
   Value<bool> isSentByMe,
   Value<bool> isRead,
   Value<String?> companionDeviceKey,
+  Value<int?> hopCount,
+  Value<int?> snr,
+  Value<int> receivedAt,
   Value<int> rowid,
 });
 
@@ -6605,6 +7110,15 @@ class $$MessagesTableFilterComposer
   ColumnFilters<String> get companionDeviceKey => $composableBuilder(
       column: $table.companionDeviceKey,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get hopCount => $composableBuilder(
+      column: $table.hopCount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get snr => $composableBuilder(
+      column: $table.snr, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get receivedAt => $composableBuilder(
+      column: $table.receivedAt, builder: (column) => ColumnFilters(column));
 }
 
 class $$MessagesTableOrderingComposer
@@ -6660,6 +7174,15 @@ class $$MessagesTableOrderingComposer
   ColumnOrderings<String> get companionDeviceKey => $composableBuilder(
       column: $table.companionDeviceKey,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get hopCount => $composableBuilder(
+      column: $table.hopCount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get snr => $composableBuilder(
+      column: $table.snr, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get receivedAt => $composableBuilder(
+      column: $table.receivedAt, builder: (column) => ColumnOrderings(column));
 }
 
 class $$MessagesTableAnnotationComposer
@@ -6712,6 +7235,15 @@ class $$MessagesTableAnnotationComposer
 
   GeneratedColumn<String> get companionDeviceKey => $composableBuilder(
       column: $table.companionDeviceKey, builder: (column) => column);
+
+  GeneratedColumn<int> get hopCount =>
+      $composableBuilder(column: $table.hopCount, builder: (column) => column);
+
+  GeneratedColumn<int> get snr =>
+      $composableBuilder(column: $table.snr, builder: (column) => column);
+
+  GeneratedColumn<int> get receivedAt => $composableBuilder(
+      column: $table.receivedAt, builder: (column) => column);
 }
 
 class $$MessagesTableTableManager extends RootTableManager<
@@ -6751,6 +7283,9 @@ class $$MessagesTableTableManager extends RootTableManager<
             Value<bool> isSentByMe = const Value.absent(),
             Value<bool> isRead = const Value.absent(),
             Value<String?> companionDeviceKey = const Value.absent(),
+            Value<int?> hopCount = const Value.absent(),
+            Value<int?> snr = const Value.absent(),
+            Value<int> receivedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               MessagesCompanion(
@@ -6768,6 +7303,9 @@ class $$MessagesTableTableManager extends RootTableManager<
             isSentByMe: isSentByMe,
             isRead: isRead,
             companionDeviceKey: companionDeviceKey,
+            hopCount: hopCount,
+            snr: snr,
+            receivedAt: receivedAt,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -6785,6 +7323,9 @@ class $$MessagesTableTableManager extends RootTableManager<
             required bool isSentByMe,
             Value<bool> isRead = const Value.absent(),
             Value<String?> companionDeviceKey = const Value.absent(),
+            Value<int?> hopCount = const Value.absent(),
+            Value<int?> snr = const Value.absent(),
+            Value<int> receivedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               MessagesCompanion.insert(
@@ -6802,6 +7343,9 @@ class $$MessagesTableTableManager extends RootTableManager<
             isSentByMe: isSentByMe,
             isRead: isRead,
             companionDeviceKey: companionDeviceKey,
+            hopCount: hopCount,
+            snr: snr,
+            receivedAt: receivedAt,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -6822,6 +7366,203 @@ typedef $$MessagesTableProcessedTableManager = ProcessedTableManager<
     $$MessagesTableUpdateCompanionBuilder,
     (MessageData, BaseReferences<_$AppDatabase, $MessagesTable, MessageData>),
     MessageData,
+    PrefetchHooks Function()>;
+typedef $$MessagePathsTableCreateCompanionBuilder = MessagePathsCompanion
+    Function({
+  Value<int> id,
+  required String messageId,
+  required int pathByte,
+  required Uint8List pathBytes,
+  Value<int?> snr,
+  Value<int?> rssi,
+  required int receivedAt,
+});
+typedef $$MessagePathsTableUpdateCompanionBuilder = MessagePathsCompanion
+    Function({
+  Value<int> id,
+  Value<String> messageId,
+  Value<int> pathByte,
+  Value<Uint8List> pathBytes,
+  Value<int?> snr,
+  Value<int?> rssi,
+  Value<int> receivedAt,
+});
+
+class $$MessagePathsTableFilterComposer
+    extends Composer<_$AppDatabase, $MessagePathsTable> {
+  $$MessagePathsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get messageId => $composableBuilder(
+      column: $table.messageId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get pathByte => $composableBuilder(
+      column: $table.pathByte, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<Uint8List> get pathBytes => $composableBuilder(
+      column: $table.pathBytes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get snr => $composableBuilder(
+      column: $table.snr, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get rssi => $composableBuilder(
+      column: $table.rssi, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get receivedAt => $composableBuilder(
+      column: $table.receivedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$MessagePathsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MessagePathsTable> {
+  $$MessagePathsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get messageId => $composableBuilder(
+      column: $table.messageId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get pathByte => $composableBuilder(
+      column: $table.pathByte, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<Uint8List> get pathBytes => $composableBuilder(
+      column: $table.pathBytes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get snr => $composableBuilder(
+      column: $table.snr, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get rssi => $composableBuilder(
+      column: $table.rssi, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get receivedAt => $composableBuilder(
+      column: $table.receivedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$MessagePathsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MessagePathsTable> {
+  $$MessagePathsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get messageId =>
+      $composableBuilder(column: $table.messageId, builder: (column) => column);
+
+  GeneratedColumn<int> get pathByte =>
+      $composableBuilder(column: $table.pathByte, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get pathBytes =>
+      $composableBuilder(column: $table.pathBytes, builder: (column) => column);
+
+  GeneratedColumn<int> get snr =>
+      $composableBuilder(column: $table.snr, builder: (column) => column);
+
+  GeneratedColumn<int> get rssi =>
+      $composableBuilder(column: $table.rssi, builder: (column) => column);
+
+  GeneratedColumn<int> get receivedAt => $composableBuilder(
+      column: $table.receivedAt, builder: (column) => column);
+}
+
+class $$MessagePathsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $MessagePathsTable,
+    MessagePathData,
+    $$MessagePathsTableFilterComposer,
+    $$MessagePathsTableOrderingComposer,
+    $$MessagePathsTableAnnotationComposer,
+    $$MessagePathsTableCreateCompanionBuilder,
+    $$MessagePathsTableUpdateCompanionBuilder,
+    (
+      MessagePathData,
+      BaseReferences<_$AppDatabase, $MessagePathsTable, MessagePathData>
+    ),
+    MessagePathData,
+    PrefetchHooks Function()> {
+  $$MessagePathsTableTableManager(_$AppDatabase db, $MessagePathsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MessagePathsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MessagePathsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MessagePathsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> messageId = const Value.absent(),
+            Value<int> pathByte = const Value.absent(),
+            Value<Uint8List> pathBytes = const Value.absent(),
+            Value<int?> snr = const Value.absent(),
+            Value<int?> rssi = const Value.absent(),
+            Value<int> receivedAt = const Value.absent(),
+          }) =>
+              MessagePathsCompanion(
+            id: id,
+            messageId: messageId,
+            pathByte: pathByte,
+            pathBytes: pathBytes,
+            snr: snr,
+            rssi: rssi,
+            receivedAt: receivedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required String messageId,
+            required int pathByte,
+            required Uint8List pathBytes,
+            Value<int?> snr = const Value.absent(),
+            Value<int?> rssi = const Value.absent(),
+            required int receivedAt,
+          }) =>
+              MessagePathsCompanion.insert(
+            id: id,
+            messageId: messageId,
+            pathByte: pathByte,
+            pathBytes: pathBytes,
+            snr: snr,
+            rssi: rssi,
+            receivedAt: receivedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$MessagePathsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $MessagePathsTable,
+    MessagePathData,
+    $$MessagePathsTableFilterComposer,
+    $$MessagePathsTableOrderingComposer,
+    $$MessagePathsTableAnnotationComposer,
+    $$MessagePathsTableCreateCompanionBuilder,
+    $$MessagePathsTableUpdateCompanionBuilder,
+    (
+      MessagePathData,
+      BaseReferences<_$AppDatabase, $MessagePathsTable, MessagePathData>
+    ),
+    MessagePathData,
     PrefetchHooks Function()>;
 typedef $$WaypointsTableCreateCompanionBuilder = WaypointsCompanion Function({
   required String id,
@@ -8611,6 +9352,8 @@ class $AppDatabaseManager {
       $$ChannelsTableTableManager(_db, _db.channels);
   $$MessagesTableTableManager get messages =>
       $$MessagesTableTableManager(_db, _db.messages);
+  $$MessagePathsTableTableManager get messagePaths =>
+      $$MessagePathsTableTableManager(_db, _db.messagePaths);
   $$WaypointsTableTableManager get waypoints =>
       $$WaypointsTableTableManager(_db, _db.waypoints);
   $$CompanionDevicesTableTableManager get companionDevices =>

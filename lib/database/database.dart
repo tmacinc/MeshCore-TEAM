@@ -15,6 +15,7 @@ import 'tables.dart';
 import 'daos/contacts_dao.dart';
 import 'daos/channels_dao.dart';
 import 'daos/messages_dao.dart';
+import 'daos/message_paths_dao.dart';
 import 'daos/waypoints_dao.dart';
 import 'daos/ack_records_dao.dart';
 import 'daos/companion_devices_dao.dart';
@@ -44,6 +45,7 @@ typedef AckRecord = AckRecordData;
     Contacts,
     Channels,
     Messages,
+    MessagePaths,
     Waypoints,
     CompanionDevices,
     ContactDisplayStates,
@@ -56,6 +58,7 @@ typedef AckRecord = AckRecordData;
     ContactsDao,
     ChannelsDao,
     MessagesDao,
+    MessagePathsDao,
     WaypointsDao,
     AckRecordsDao,
     CompanionDevicesDao,
@@ -70,7 +73,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -161,7 +164,27 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               'ALTER TABLE channels ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0',
             );
-            print('[Migration] v7->v8: importedOverlayMaps, favorites, channel notification mode');
+            print(
+                '[Migration] v7->v8: importedOverlayMaps, favorites, channel notification mode');
+          }
+
+          // Migration from schema version 8 to 9: per-message hop count/SNR,
+          // the message_paths table for multi-path routing detail, and a
+          // local receivedAt display time independent of the untrusted
+          // sender-embedded timestamp. Ordering uses SQLite's implicit
+          // rowid, not a dedicated column.
+          if (from <= 8 && to >= 9) {
+            await m.addColumn(messages, messages.hopCount);
+            await m.addColumn(messages, messages.snr);
+            await m.addColumn(messages, messages.receivedAt);
+            await m.createTable(messagePaths);
+            // True historical receive time isn't recoverable for existing
+            // rows -- best-effort backfill from the existing (untrusted)
+            // timestamp. Only affects rows inserted before this migration.
+            await customStatement(
+                'UPDATE messages SET received_at = timestamp');
+            print(
+                '[Migration] v8->v9: added hopCount/snr/receivedAt to messages, created message_paths table');
           }
         },
       );
