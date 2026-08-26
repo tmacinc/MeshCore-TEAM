@@ -17,6 +17,7 @@ dependencies:
 
   # Material Design
   material_ui: any
+  cupertino_ui: any
 
 
   # BLE Communication
