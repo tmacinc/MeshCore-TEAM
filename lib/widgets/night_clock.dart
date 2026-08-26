@@ -2,7 +2,7 @@
 // Licensed under CC BY-NC-SA 4.0
 
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
 
 class NightClock extends StatefulWidget {

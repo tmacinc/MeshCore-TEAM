@@ -157,7 +157,7 @@ Autonomous mode and app-side location tracking are independent — you can run b
 
 ### Prerequisites
 
-- Flutter SDK with Dart `>= 3.6` (see `pubspec.yaml`)
+- Flutter SDK with Dart `>= ^3.12.0` (see `pubspec.yaml`)
 - Android Studio (Android SDK + emulator) and/or Xcode (iOS, macOS only)
 - A MeshCore companion radio running [custom firmware](https://github.com/tmacinc/MeshCore) (recommended for end-to-end testing)
 

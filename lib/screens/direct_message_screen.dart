@@ -9,7 +9,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/services.dart';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import '../database/database.dart';
 import '../l10n/app_localizations.dart';

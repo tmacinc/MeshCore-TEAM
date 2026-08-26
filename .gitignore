@@ -64,3 +64,4 @@ lib/l10n/app_localizations.dart
 lib/l10n/app_localizations_*.dart
 windows/flutter/generated_plugins.cmake
 macos/Flutter/GeneratedPluginRegistrant.swift
+/notes/

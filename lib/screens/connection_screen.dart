@@ -4,7 +4,7 @@
 import 'dart:async';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:meshcore_team/main.dart' show isBetaBuild;
 import 'package:meshcore_team/ble/ble_commands.dart';

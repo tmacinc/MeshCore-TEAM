@@ -6,10 +6,11 @@
 // Non-commercial use only. See LICENSE file for details.
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'
+    hide GlobalMaterialLocalizations;
 import 'l10n/app_localizations.dart';
 import 'dart:async';
 import 'dart:io';
@@ -523,6 +524,7 @@ class TeamFlutterApp extends StatelessWidget {
             locale: _forceLocale.isNotEmpty ? Locale(_forceLocale) : null,
             localizationsDelegates: const [
               AppLocalizations.delegate,
+              // TODO: Investigate GlobalMaterialLocalizations.delegate and GlobalWidgetsLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,

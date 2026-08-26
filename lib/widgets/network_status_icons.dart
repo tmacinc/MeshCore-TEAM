@@ -1,7 +1,7 @@
 // Copyright (c) 2026 tmacinc
 // Licensed under CC BY-NC-SA 4.0
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/screens/settings_screen.dart';

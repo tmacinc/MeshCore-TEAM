@@ -7,7 +7,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:drift/drift.dart' hide Column;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:compassx/compassx.dart';
 import 'package:geolocator/geolocator.dart';

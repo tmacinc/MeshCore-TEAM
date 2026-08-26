@@ -6,7 +6,7 @@
 // Non-commercial use only. See LICENSE file for details.
 
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:meshcore_team/services/settings_service.dart';

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 tmacinc
 // Licensed under CC BY-NC-SA 4.0
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Color constants for nighttime mode.
 /// All values are dim reds that preserve dark-adapted vision.

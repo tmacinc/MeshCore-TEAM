@@ -1,7 +1,7 @@
 // Copyright (c) 2026 tmacinc
 // Licensed under CC BY-NC-SA 4.0
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class QrScanScreen extends StatefulWidget {
