@@ -10,8 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
+import 'package:flutter_localizations/flutter_localizations.dart' show GlobalWidgetsLocalizations;
 import 'l10n/app_localizations.dart';
 import 'dart:async';
 import 'dart:io';
@@ -116,9 +115,7 @@ Future<void> _runAppStartup() async {
     print('🔔 Initializing notifications...');
     final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-    const initializationSettingsAndroid = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
-    );
+    const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
     final initializationSettingsIOS = DarwinInitializationSettings(
       requestAlertPermission: false, // Request later
       requestBadgePermission: false,
@@ -143,8 +140,7 @@ Future<void> _runAppStartup() async {
       ],
     );
     const initializationSettingsLinux = LinuxInitializationSettings(
-      defaultActionName: 'Open notification',
-    );
+      defaultActionName: 'Open notification');
     final initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
@@ -322,8 +318,7 @@ Future<void> _runAppStartup() async {
         forwardingPolicyService: forwardingPolicyService,
         contactCapabilityService: contactCapabilityService,
         capabilityPublisher: capabilityPublisher,
-      ),
-    );
+      ));
     print('✅ App launched');
   } catch (e, stackTrace) {
     print('❌ ERROR during initialization: $e');
@@ -335,11 +330,7 @@ Future<void> _runAppStartup() async {
 /// Handle notification tap to navigate to specific chat
 void _handleNotificationTap(
   NotificationResponse details,
-  AppDatabase database,
-) async {
-  print(
-    '📬 Notification tapped: ${details.payload} action=${details.actionId}',
-  );
+  AppDatabase database) async {print('📬 Notification tapped: ${details.payload} action=${details.actionId}');
 
   // Mesh-connection "Stop" action button, or a swipe-dismiss of the persistent
   // mesh notification → fully stop the service (kills a stuck reconnect).
@@ -388,9 +379,7 @@ void _handleNotificationTap(
             SnackBar(
               content: Text(
                 AppLocalizations.of(
-                  context,
-                )!.directMessagesDisabledForRepeaters,
-              ),
+                  context,)!.directMessagesDisabledForRepeaters),
             ),
           );
           return;
@@ -497,19 +486,15 @@ class TeamFlutterApp extends StatelessWidget {
 
         // Connection ViewModel
         ChangeNotifierProvider<ConnectionViewModel>.value(
-          value: connectionViewModel,
-        ),
+          value: connectionViewModel),
 
         // Services
         Provider<MessageNotificationService>.value(
-          value: messageNotificationService,
-        ),
+          value: messageNotificationService),
         ChangeNotifierProvider<MeshConnectionService>.value(
-          value: meshConnectionService,
-        ),
+          value: meshConnectionService),
         ChangeNotifierProvider<ReconnectionManager>.value(
-          value: reconnectionManager,
-        ),
+          value: reconnectionManager),
 
         // Telemetry sender (no UI; driven by settings)
         ChangeNotifierProvider<TelemetrySendService>.value(
@@ -518,13 +503,11 @@ class TeamFlutterApp extends StatelessWidget {
 
         // Forwarding policy manager (no UI; runs while tracking/camp mode are active)
         ChangeNotifierProvider<ForwardingPolicyService>.value(
-          value: forwardingPolicyService,
-        ),
+          value: forwardingPolicyService),
 
         // Peer capability tracking (populated from #CAP: channel messages)
         ChangeNotifierProvider<ContactCapabilityService>.value(
-          value: contactCapabilityService,
-        ),
+          value: contactCapabilityService),
 
         // Capability publisher (sends #CAP: on discovery and settings change)
         Provider<CapabilityPublisher>.value(value: capabilityPublisher),
@@ -534,9 +517,7 @@ class TeamFlutterApp extends StatelessWidget {
           final appTheme = settings.settings.appTheme;
           final isNighttime = appTheme == AppThemeMode.nighttime;
           SystemChrome.setEnabledSystemUIMode(
-            isNighttime
-                ? SystemUiMode.immersiveSticky
-                : SystemUiMode.edgeToEdge,
+            isNighttime ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
           );
           return MaterialApp(
             navigatorKey: navigatorKey,
@@ -562,8 +543,7 @@ class TeamFlutterApp extends StatelessWidget {
               useMaterial3: true,
             ),
             darkTheme: isNighttime
-                ? _nighttimeTheme()
-                : ThemeData(
+                ? _nighttimeTheme() : ThemeData(
                     colorScheme: ColorScheme.fromSeed(
                       seedColor: Colors.blue,
                       brightness: Brightness.dark,
@@ -593,7 +573,8 @@ class TeamFlutterApp extends StatelessWidget {
               },
               child: child!,
             ),
-            home: const DeepLinkListener(child: _PermissionGate()),
+            home: const DeepLinkListener(child: _PermissionGate(),
+            ),
           );
         },
       ),
@@ -643,8 +624,7 @@ ThemeData _nighttimeTheme() {
       thumbColor: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.selected)
             ? NightColors.onSurface
-            : NightColors.dim,
-      ),
+            : NightColors.dim),
       trackOutlineColor: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.selected)
             ? Colors.transparent
@@ -671,7 +651,8 @@ ThemeData _nighttimeTheme() {
       hintStyle: TextStyle(color: NightColors.dim),
     ),
     disabledColor: NightColors.dimmer,
-    dialogTheme: const DialogThemeData(backgroundColor: NightColors.surface),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: NightColors.surface),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: NightColors.appBarBg,
       selectedItemColor: NightColors.onSurface,
@@ -766,8 +747,7 @@ class _PermissionGateState extends State<_PermissionGate>
       }
 
       debugPrint(
-        '🔐 Permissions check: ${allGranted ? "✅ Granted" : "❌ Not granted"}',
-      );
+        '🔐 Permissions check: ${allGranted ? "✅ Granted" : "❌ Not granted"}');
 
       if (allGranted) {
         unawaited(_startDeferredReconnect());
@@ -827,12 +807,18 @@ class _PermissionGateState extends State<_PermissionGate>
   Widget build(BuildContext context) {
     if (_isChecking) {
       // Show loading screen while checking permissions
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body:Center(
+          child: CircularProgressIndicator(),
+          ),
+          );
     }
 
     if (!_permissionsGranted) {
       // Show permissions screen if not granted
-      return PermissionsScreen(onPermissionsGranted: _onPermissionsGranted);
+      return PermissionsScreen(
+        onPermissionsGranted: _onPermissionsGranted,
+        );
     }
 
     // Show main app if permissions granted
