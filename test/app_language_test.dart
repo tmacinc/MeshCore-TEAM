@@ -16,7 +16,7 @@ void main() {
       // Regression: an Italian user reported the app coming up in German.
       // Flutter's default resolution returns supportedLocales.first, and
       // 'de' sorts first — so every untranslated locale landed on German.
-      for (final code in ['pl', 'ja', 'pt', 'cs', 'zz']) {
+      for (final code in ['pl', 'ja', 'sv', 'cs', 'zz']) {
         expect(AppLanguage.resolve(Locale(code), supported), const Locale('en'),
             reason: '$code should fall back to English');
       }
@@ -45,6 +45,10 @@ void main() {
           const Locale('es'));
       expect(AppLanguage.resolve(const Locale('it', 'CH'), supported),
           const Locale('it'));
+      // We ship European Portuguese under the generic 'pt' code, so Brazilian
+      // devices resolve to it rather than falling through to English.
+      expect(AppLanguage.resolve(const Locale('pt', 'BR'), supported),
+          const Locale('pt'));
     });
   });
 

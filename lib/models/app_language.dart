@@ -52,9 +52,18 @@ class AppLanguage {
     AppLanguage(code: 'fr', endonym: 'Français'),
     AppLanguage(code: 'it', endonym: 'Italiano'),
     AppLanguage(code: 'nl', endonym: 'Nederlands'),
+    AppLanguage(code: 'pt', endonym: 'Português'),
   ];
 
-  static const Set<String> codes = <String>{'en', 'de', 'es', 'fr', 'it', 'nl'};
+  static const Set<String> codes = <String>{
+    'en',
+    'de',
+    'es',
+    'fr',
+    'it',
+    'nl',
+    'pt',
+  };
 
   /// True when [code] is [systemDefault] or a language we translate.
   static bool isValidSetting(String? code) =>
