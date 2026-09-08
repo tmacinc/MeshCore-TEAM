@@ -169,6 +169,34 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     });
   }
 
+  /// Releases the camera locks that pin the map to our own position.
+  ///
+  /// Call this before moving the camera onto something that isn't us (a
+  /// contact, a waypoint, an imported map). Follow-me is dropped so the next
+  /// GPS fix doesn't snap the camera back, and track-up reverts to north-up
+  /// because our heading is no longer the reference for what's on screen.
+  Future<void> _releaseCameraLockForExternalTarget() async {
+    final wasHeadingUp = _isHeadingUp;
+    if (!_isFollowingUser && !wasHeadingUp) return;
+
+    if (wasHeadingUp) {
+      // Persist first so the post-frame settings sync doesn't flip
+      // _isHeadingUp back to true.
+      await context.read<SettingsService>().setMapTrackUpMode(false);
+      if (!mounted) return;
+    }
+
+    setState(() {
+      _isFollowingUser = false;
+      _isHeadingUp = false;
+      _isMovingForTrackUp = false;
+    });
+
+    if (wasHeadingUp) {
+      _mapController.rotate(0);
+    }
+  }
+
   /// Builds the list of [BaseOverlayImage]s to render.
   ///
   /// Strategy: try levels from highest to lowest. Pick the highest level
@@ -613,9 +641,11 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
               ListTile(
                 leading: const Icon(Icons.center_focus_strong_outlined),
                 title: Text(l10n.centerOnMap),
-                onTap: () {
+                onTap: () async {
                   Navigator.of(sheetContext).pop();
                   setState(() => _isGroupStatusOpen = false);
+                  await _releaseCameraLockForExternalTarget();
+                  if (!mounted) return;
                   _mapController.move(
                     LatLng(state.lastLatitude!, state.lastLongitude!),
                     _mapController.camera.zoom,
@@ -1896,6 +1926,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                   // Tapping a map in the list returns its extent so we can
                   // move the camera onto it.
                   if (mapResult is LatLngBounds) {
+                    await _releaseCameraLockForExternalTarget();
+                    if (!mounted) return;
                     _mapController.fitCamera(
                       CameraFit.bounds(
                         bounds: mapResult,
@@ -1912,6 +1944,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                   );
 
                   if (result is LatLng) {
+                    await _releaseCameraLockForExternalTarget();
+                    if (!mounted) return;
                     _mapController.move(result, _mapController.camera.zoom);
                   }
                   break;
