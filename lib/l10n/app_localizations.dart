@@ -2261,6 +2261,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Team members will no longer be able to download.'**
   String get teamMembersCanNoLongerDownload;
+
+  /// Divider label shown above the first unread message in a chat
+  ///
+  /// In en, this message translates to:
+  /// **'Unread Messages'**
+  String get unreadMessages;
+
+  /// Shows which channel location telemetry will be shared on
+  ///
+  /// In en, this message translates to:
+  /// **'Will share on: {channel}'**
+  String willShareOnChannel(String channel);
+
+  /// Shown when no telemetry channel has been picked
+  ///
+  /// In en, this message translates to:
+  /// **'No channel selected'**
+  String get noChannelSelected;
+
+  /// Hint shown when disconnected on the location tracking card
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to a device to select a channel.'**
+  String get connectToDeviceToSelectChannel;
+
+  /// Empty state title on the channels list
+  ///
+  /// In en, this message translates to:
+  /// **'No channels'**
+  String get noChannels;
+
+  /// Empty state body on the channels list
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to a device and sync to see channels'**
+  String get connectToDeviceToSeeChannels;
 }
 
 class _AppLocalizationsDelegate

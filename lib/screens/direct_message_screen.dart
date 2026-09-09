@@ -423,6 +423,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   }
 
   Widget _buildUnreadDivider(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
@@ -436,7 +437,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Unread Messages',
+              l10n.unreadMessages,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.error,
                 fontWeight: FontWeight.bold,

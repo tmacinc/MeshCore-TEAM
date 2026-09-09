@@ -157,12 +157,12 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                   Icon(Icons.chat_bubble_outline, size: 64, color: emptyColor),
                   const SizedBox(height: 16),
                   Text(
-                    'No channels',
+                    l10n.noChannels,
                     style: TextStyle(fontSize: 18, color: emptyColor),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Connect to a device and sync to see channels',
+                    l10n.connectToDeviceToSeeChannels,
                     style: TextStyle(color: emptyColor),
                     textAlign: TextAlign.center,
                   ),

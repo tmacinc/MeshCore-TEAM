@@ -689,5 +689,17 @@
     }
   },
   "trackingChannelNotConfigured": "Tracking-Kanal nicht konfiguriert",
-  "teamMembersCanNoLongerDownload": "Teammitglieder können nicht mehr herunterladen."
+  "teamMembersCanNoLongerDownload": "Teammitglieder können nicht mehr herunterladen.",
+  "unreadMessages": "Ungelesene Nachrichten",
+  "willShareOnChannel": "Wird geteilt auf: {channel}",
+  "@willShareOnChannel": {
+    "description": "Shows which channel location telemetry will be shared on",
+    "placeholders": {
+      "channel": { "type": "String" }
+    }
+  },
+  "noChannelSelected": "Kein Kanal ausgewählt",
+  "connectToDeviceToSelectChannel": "Verbinde ein Gerät, um einen Kanal auszuwählen.",
+  "noChannels": "Keine Kanäle",
+  "connectToDeviceToSeeChannels": "Verbinde ein Gerät und synchronisiere, um Kanäle zu sehen"
 }

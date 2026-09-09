@@ -381,5 +381,11 @@
   "locationEnabledBackground": "Ingeschakeld — locatie-updates gaan door op de achtergrond",
   "trackingChannelIndex": "Trackingkanaalindex: {index} • time-out: 12 u • zichtbare gebruikers: {count}",
   "trackingChannelNotConfigured": "Trackingkanaal niet geconfigureerd",
-  "teamMembersCanNoLongerDownload": "Teamleden kunnen niet langer downloaden."
+  "teamMembersCanNoLongerDownload": "Teamleden kunnen niet langer downloaden.",
+  "unreadMessages": "Ongelezen berichten",
+  "willShareOnChannel": "Wordt gedeeld op: {channel}",
+  "noChannelSelected": "Geen kanaal geselecteerd",
+  "connectToDeviceToSelectChannel": "Verbind met een apparaat om een kanaal te selecteren.",
+  "noChannels": "Geen kanalen",
+  "connectToDeviceToSeeChannels": "Verbind met een apparaat en synchroniseer om kanalen te zien"
 }

@@ -381,5 +381,11 @@
   "locationEnabledBackground": "Activé — les mises à jour de position continuent en arrière-plan",
   "trackingChannelIndex": "Index du canal de suivi : {index} • délai : 12 h • utilisateurs visibles : {count}",
   "trackingChannelNotConfigured": "Canal de suivi non configuré",
-  "teamMembersCanNoLongerDownload": "Les membres de l'équipe ne pourront plus télécharger."
+  "teamMembersCanNoLongerDownload": "Les membres de l'équipe ne pourront plus télécharger.",
+  "unreadMessages": "Messages non lus",
+  "willShareOnChannel": "Partagera sur : {channel}",
+  "noChannelSelected": "Aucun canal sélectionné",
+  "connectToDeviceToSelectChannel": "Connectez-vous à un appareil pour sélectionner un canal.",
+  "noChannels": "Aucun canal",
+  "connectToDeviceToSeeChannels": "Connectez-vous à un appareil et synchronisez pour voir les canaux"
 }

@@ -1268,4 +1268,26 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get teamMembersCanNoLongerDownload =>
       'Los miembros del equipo ya no podrán descargar.';
+
+  @override
+  String get unreadMessages => 'Mensajes no leídos';
+
+  @override
+  String willShareOnChannel(String channel) {
+    return 'Se compartirá en: $channel';
+  }
+
+  @override
+  String get noChannelSelected => 'Ningún canal seleccionado';
+
+  @override
+  String get connectToDeviceToSelectChannel =>
+      'Conéctate a un dispositivo para seleccionar un canal.';
+
+  @override
+  String get noChannels => 'Sin canales';
+
+  @override
+  String get connectToDeviceToSeeChannels =>
+      'Conéctate a un dispositivo y sincroniza para ver los canales';
 }

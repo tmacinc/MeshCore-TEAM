@@ -689,5 +689,32 @@
     }
   },
   "trackingChannelNotConfigured": "Tracking channel not configured",
-  "teamMembersCanNoLongerDownload": "Team members will no longer be able to download."
+  "teamMembersCanNoLongerDownload": "Team members will no longer be able to download.",
+  "unreadMessages": "Unread Messages",
+  "@unreadMessages": {
+    "description": "Divider label shown above the first unread message in a chat"
+  },
+  "willShareOnChannel": "Will share on: {channel}",
+  "@willShareOnChannel": {
+    "description": "Shows which channel location telemetry will be shared on",
+    "placeholders": {
+      "channel": { "type": "String" }
+    }
+  },
+  "noChannelSelected": "No channel selected",
+  "@noChannelSelected": {
+    "description": "Shown when no telemetry channel has been picked"
+  },
+  "connectToDeviceToSelectChannel": "Connect to a device to select a channel.",
+  "@connectToDeviceToSelectChannel": {
+    "description": "Hint shown when disconnected on the location tracking card"
+  },
+  "noChannels": "No channels",
+  "@noChannels": {
+    "description": "Empty state title on the channels list"
+  },
+  "connectToDeviceToSeeChannels": "Connect to a device and sync to see channels",
+  "@connectToDeviceToSeeChannels": {
+    "description": "Empty state body on the channels list"
+  }
 }

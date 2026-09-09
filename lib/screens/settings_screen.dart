@@ -425,13 +425,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         s.telemetryChannelName != null
-                            ? 'Will share on: ${s.telemetryChannelName}'
-                            : 'No channel selected',
+                            ? l10n.willShareOnChannel(s.telemetryChannelName!)
+                            : l10n.noChannelSelected,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Connect to a device to select a channel.',
+                        l10n.connectToDeviceToSelectChannel,
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
