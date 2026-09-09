@@ -17,6 +17,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sqlite3/sqlite3.dart';
+import 'package:meshcore_team/l10n/app_localizations.dart';
+import 'package:meshcore_team/models/app_language.dart';
 
 /// A read-only handle on an MBTiles file.
 ///
@@ -106,9 +108,9 @@ class MbtilesSource {
 
       final format = (meta['format'] ?? 'png').toLowerCase().trim();
       if (format == 'pbf' || format == 'mvt') {
-        throw const FormatException(
-          'This is a vector MBTiles file. Only raster MBTiles (PNG, JPG, or '
-          'WebP tiles) can be displayed.',
+        throw FormatException(
+          lookupAppLocalizations(AppLanguage.localeFor())
+          .mbtilesVectorNotSupported,
         );
       }
 

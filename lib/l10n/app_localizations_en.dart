@@ -1279,4 +1279,756 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get connectToDeviceToSeeChannels =>
       'Connect to a device and sync to see channels';
+
+  @override
+  String get bluetooth => 'Bluetooth';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get background => 'Background';
+
+  @override
+  String get permissionsIntro =>
+      'To connect to your mesh radio and share messages, MeshCore TEAM needs access to:';
+
+  @override
+  String get permissionBluetoothReason => 'Connect to your mesh radio';
+
+  @override
+  String get permissionLocationReason =>
+      'Required for maps: navigate and share your location with your team.';
+
+  @override
+  String get permissionNotificationsReason => 'Alert you when messages arrive';
+
+  @override
+  String get permissionBackgroundReason =>
+      'Keep your mesh connection and tracking running in the background.';
+
+  @override
+  String get changePermissionsLaterHint =>
+      'You can change these later in system settings.';
+
+  @override
+  String get requestingPermissions => 'Requesting permissions...';
+
+  @override
+  String get permissionsRequiredToFunction =>
+      'MeshCore TEAM requires Bluetooth and Location permissions to function. Please grant these permissions to continue.';
+
+  @override
+  String get batteryOptimizationExplanation =>
+      'To keep your mesh connection active in the background, we recommend disabling battery optimization for this app.\n\nThis will allow the app to maintain a stable Bluetooth connection to your radio even when the screen is off.';
+
+  @override
+  String errorRequestingPermissions(String error) {
+    return 'Error requesting permissions: $error';
+  }
+
+  @override
+  String requiredPermissionsDenied(String permissions) {
+    return 'Required permissions denied:\n$permissions';
+  }
+
+  @override
+  String get notificationChannelMessagesName => 'Channel Messages';
+
+  @override
+  String get notificationChannelMessagesDescription =>
+      'Notifications for channel messages on the mesh network';
+
+  @override
+  String get notificationChannelDirectName => 'Direct Messages';
+
+  @override
+  String get notificationChannelDirectDescription =>
+      'Notifications for direct messages on the mesh network';
+
+  @override
+  String get notificationChannelWaypointsName => 'Waypoint Notifications';
+
+  @override
+  String get notificationChannelWaypointsDescription =>
+      'Notifications for received waypoints on the mesh network';
+
+  @override
+  String directMessageNotificationTitle(String sender) {
+    return '$sender (Direct Message)';
+  }
+
+  @override
+  String get newMessagesTitle => 'New messages';
+
+  @override
+  String newMessagesBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'new messages',
+      one: 'new message',
+    );
+    return 'You have $count $_temp0';
+  }
+
+  @override
+  String newWaypointTitle(String name) {
+    return 'New Waypoint: $name';
+  }
+
+  @override
+  String get newWaypoint => 'New Waypoint';
+
+  @override
+  String waypointFromCreator(String type, String creator) {
+    return '$type from $creator';
+  }
+
+  @override
+  String get channelsWillBeClearedFromFirmware =>
+      'Channels will be cleared from the connected companion firmware.';
+
+  @override
+  String get thisCannotBeUndone => 'This cannot be undone.';
+
+  @override
+  String get bluetoothPermissionNotGranted =>
+      'Bluetooth permission not granted.';
+
+  @override
+  String get enableNearbyDevicesHint =>
+      'Enable \"Nearby devices\" permission, then return to the app.';
+
+  @override
+  String get bluetoothIsDisabled => 'Bluetooth is Disabled';
+
+  @override
+  String get turnOnBluetoothAndRetry => 'Turn on Bluetooth and tap Retry.';
+
+  @override
+  String get tapScanToSearchForRadios =>
+      'Tap the scan button to search for MeshCore companion radios';
+
+  @override
+  String get meshDevice => 'Mesh device';
+
+  @override
+  String get companionSettings => 'Companion Settings';
+
+  @override
+  String get notSet => 'Not set';
+
+  @override
+  String get campModeDescription =>
+      'Locks radio to camp-compatible presets and enables firmware repeat mode';
+
+  @override
+  String get smartForwardingDescription =>
+      'Use app-managed smart forwarding while camp mode is active';
+
+  @override
+  String get autonomousModeDescription =>
+      'Configures firmware autonomous tracking. Uses values from Location Tracking settings.';
+
+  @override
+  String get noGpsFixWarning =>
+      'No GPS fix yet. Telemetry will not be sent until the companion radio acquires a valid GPS position.';
+
+  @override
+  String txPowerWithMax(int power, int maxPower) {
+    return 'TX Power: $power dBm (max $maxPower)';
+  }
+
+  @override
+  String get invalidFrequency => 'Invalid frequency';
+
+  @override
+  String get selectACampPreset => 'Select a camp preset';
+
+  @override
+  String get autonomousRejectedNoGpsUnit =>
+      'Firmware rejected autonomous enable (ERR 6). This device does not have a GPS unit.';
+
+  @override
+  String get autonomousVerifyFailed =>
+      'Failed to verify autonomous settings after write. Check connection and retry.';
+
+  @override
+  String get autonomousSettingsDidNotStick =>
+      'Autonomous settings did not stick after write. Please retry.';
+
+  @override
+  String get failedToApplySettingsAutonomousHint =>
+      'Failed to apply settings. If enabling autonomous, ensure companion GPS is enabled and has a valid fix.';
+
+  @override
+  String get failedToApplyRadioSettings => 'Failed to apply radio settings.';
+
+  @override
+  String get sendAdvert => 'Send Advert';
+
+  @override
+  String connectedToDevice(String device) {
+    return 'Connected to $device';
+  }
+
+  @override
+  String failedToConnectToDevice(String device) {
+    return 'Failed to connect to $device';
+  }
+
+  @override
+  String get copyContactInfo => 'Copy contact info';
+
+  @override
+  String get contactInfoCopied => 'Contact info copied';
+
+  @override
+  String get labelHash => 'Hash';
+
+  @override
+  String get labelBattery => 'Battery';
+
+  @override
+  String get labelType => 'Type';
+
+  @override
+  String get nodeTypeRepeater => 'Repeater';
+
+  @override
+  String get nodeTypeRoomServer => 'Room Server';
+
+  @override
+  String get nodeTypeEndNode => 'End Node';
+
+  @override
+  String get justNow => 'Just now';
+
+  @override
+  String minutesAgo(int minutes) {
+    return '${minutes}m ago';
+  }
+
+  @override
+  String hoursAgo(int hours) {
+    return '${hours}h ago';
+  }
+
+  @override
+  String daysAgo(int days) {
+    return '${days}d ago';
+  }
+
+  @override
+  String get identityNameExplanation =>
+      'This name is how you will be identified on the mesh network.';
+
+  @override
+  String get nameCannotBeEmpty => 'Name cannot be empty';
+
+  @override
+  String get failedToApplyName => 'Failed to apply name. Please try again.';
+
+  @override
+  String get unknownContact => 'Unknown Contact';
+
+  @override
+  String get repeaterDirectMessagesDisabled =>
+      'This contact is a repeater. Direct messages are disabled.';
+
+  @override
+  String get channelLinkPasswordWarning =>
+      'Anyone with this link can join this private channel. Treat it like a password.';
+
+  @override
+  String get sameNameSameChannelHint =>
+      'Anyone who types the same name joins the same channel';
+
+  @override
+  String get unnamedChannel => 'Unnamed Channel';
+
+  @override
+  String latWithValue(String value) {
+    return 'Lat: $value';
+  }
+
+  @override
+  String lonWithValue(String value) {
+    return 'Lon: $value';
+  }
+
+  @override
+  String get hidePath => 'Hide Path';
+
+  @override
+  String get showPath => 'Show Path';
+
+  @override
+  String get editRoute => 'Edit Route';
+
+  @override
+  String get saveRoute => 'Save Route';
+
+  @override
+  String get routeColor => 'Route Color';
+
+  @override
+  String get editRoutePoints => 'Edit Route Points';
+
+  @override
+  String get editRouteInfo => 'Edit Route Info';
+
+  @override
+  String get waypointSharedToMesh => 'Waypoint shared to mesh';
+
+  @override
+  String get failedToShareWaypoint => 'Failed to share waypoint';
+
+  @override
+  String get deleteWaypointQuestion => 'Delete waypoint?';
+
+  @override
+  String deleteWaypointNamed(String name) {
+    return 'This will delete \"$name\".';
+  }
+
+  @override
+  String get deleteWaypointsQuestion => 'Delete waypoints?';
+
+  @override
+  String deleteWaypointsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'waypoints',
+      one: 'waypoint',
+    );
+    return 'This will delete $count $_temp0.';
+  }
+
+  @override
+  String get deleteReceivedWaypointsQuestion => 'Delete received waypoints?';
+
+  @override
+  String get deleteReceivedWaypointsBody =>
+      'This will delete all received waypoints from the device.';
+
+  @override
+  String get deleteLocalWaypointsQuestion => 'Delete local waypoints?';
+
+  @override
+  String get deleteLocalWaypointsBody =>
+      'This will delete all local waypoints you created on the device.';
+
+  @override
+  String sharedWaypointsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'waypoints',
+      one: 'waypoint',
+    );
+    return 'Shared $count $_temp0';
+  }
+
+  @override
+  String sharedWaypointsPartial(int okCount, int failCount) {
+    return 'Shared $okCount, failed $failCount';
+  }
+
+  @override
+  String get routeModeTapToAddFirstPoint =>
+      'Route mode: tap map to add first point';
+
+  @override
+  String routeModePointCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'points',
+      one: 'point',
+    );
+    return 'Route mode: $count $_temp0 (tap a point to move it)';
+  }
+
+  @override
+  String routeModeTapToMovePoint(int index) {
+    return 'Tap map to move point $index (tap point again to cancel)';
+  }
+
+  @override
+  String get tapWaypointsToSelect => 'Tap waypoints to select';
+
+  @override
+  String countSelected(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get selectWaypoints => 'Select Waypoints';
+
+  @override
+  String get importedWaypoint => 'Imported Waypoint';
+
+  @override
+  String get saveGpxFile => 'Save GPX file';
+
+  @override
+  String get garminKmz => 'Garmin KMZ';
+
+  @override
+  String get garminKmzDescription =>
+      'Raster map tiles from a Garmin Custom Map archive';
+
+  @override
+  String get mbtilesDescription =>
+      'Offline tile pyramid from QGIS, GDAL, or Mobile Atlas Creator';
+
+  @override
+  String get pleaseSelectMbtilesFile => 'Please select a .mbtiles file.';
+
+  @override
+  String get deleteMapQuestion => 'Delete map?';
+
+  @override
+  String deleteMapNamed(String name) {
+    return 'This will remove \"$name\" and its image files from the device.';
+  }
+
+  @override
+  String get noImportedMaps => 'No imported maps';
+
+  @override
+  String get noImportedMapsHint =>
+      'Import a Garmin-style KMZ file or an MBTiles archive to display a custom offline map on top of the base map.';
+
+  @override
+  String get hideOnMap => 'Hide on map';
+
+  @override
+  String get showOnMap => 'Show on map';
+
+  @override
+  String get deleteOfflineMapQuestion => 'Delete offline map?';
+
+  @override
+  String deleteOfflineMapNamed(String name) {
+    return 'This will remove downloaded tiles for \"$name\".';
+  }
+
+  @override
+  String get clearAllOfflineMapsQuestion => 'Clear all offline maps?';
+
+  @override
+  String get clearAllOfflineMapsBody =>
+      'This will remove all downloaded offline map areas and their tiles.';
+
+  @override
+  String get pleaseEnterAName => 'Please enter a name';
+
+  @override
+  String get downloadCancelled => 'Download cancelled';
+
+  @override
+  String downloadFailed(String error) {
+    return 'Download failed: $error';
+  }
+
+  @override
+  String downloadProgress(int completed, int total, int failed) {
+    return 'Progress: $completed/$total (failed: $failed)';
+  }
+
+  @override
+  String get connectBeforeImportingConfig =>
+      'Connect to a companion device before importing. Channels must be registered with firmware.';
+
+  @override
+  String get importTeamConfigExplanation =>
+      'Import a team config from a local file or by scanning a QR code from a nearby device sharing over Wi-Fi.';
+
+  @override
+  String omittedTooLargeToShare(String names) {
+    return 'Left out of the config because they are too large to share: $names. Transfer the file directly instead.';
+  }
+
+  @override
+  String get shareConfigWithoutInternet => 'Share Config Without Internet';
+
+  @override
+  String get shareConfigHotspotExplanation =>
+      'Create a mobile hotspot on your device so team members can connect and download the config directly.';
+
+  @override
+  String get mobileHotspot => 'Mobile Hotspot';
+
+  @override
+  String get iphoneOrIpad => 'iPhone / iPad';
+
+  @override
+  String get hotspotStepOpenSettings => 'Open Settings';
+
+  @override
+  String get hotspotStepTapPersonalHotspot => 'Tap Personal Hotspot';
+
+  @override
+  String get hotspotStepAllowOthersToJoin => 'Turn on \"Allow Others to Join\"';
+
+  @override
+  String get hotspotStepShareNameAndPassword =>
+      'Share the hotspot name and password with your team';
+
+  @override
+  String get hotspotStepTapNetworkInternet =>
+      'Tap Network & Internet (or Connections)';
+
+  @override
+  String get hotspotStepTapHotspotTethering => 'Tap Hotspot & Tethering';
+
+  @override
+  String get hotspotStepTurnOnWifiHotspot => 'Turn on Wi-Fi Hotspot';
+
+  @override
+  String get hotspotStepEnableFromSystemSettings =>
+      'Enable your mobile hotspot from system settings';
+
+  @override
+  String get connectToHotspotBeforeScanning =>
+      'Team members should connect to your hotspot Wi-Fi before scanning the QR code.';
+
+  @override
+  String get selectConfigToShare => 'Select Config to Share';
+
+  @override
+  String get chooseTeamcfgFile =>
+      'Choose a .teamcfg.zip file to share with your team.';
+
+  @override
+  String get couldNotReadSelectedFile => 'Could not read selected file.';
+
+  @override
+  String invalidConfigFile(String error) {
+    return 'Invalid config file: $error';
+  }
+
+  @override
+  String errorSelectingFile(String error) {
+    return 'Error selecting file: $error';
+  }
+
+  @override
+  String get configDetails => 'Config Details';
+
+  @override
+  String get radioSettingsLabel => 'Radio Settings';
+
+  @override
+  String channelsWithCount(int count) {
+    return 'Channels ($count)';
+  }
+
+  @override
+  String get mapTiles => 'Map Tiles';
+
+  @override
+  String get couldNotDetermineLocalIp =>
+      'Could not determine local IP address. Make sure your hotspot is enabled.';
+
+  @override
+  String failedToStartServer(String error) {
+    return 'Failed to start server: $error';
+  }
+
+  @override
+  String get sharingConfig => 'Sharing Config';
+
+  @override
+  String get teamMembersShould => 'Team members should:';
+
+  @override
+  String get shareStepConnectToHotspot => 'Connect to your hotspot Wi-Fi';
+
+  @override
+  String get shareStepOpenImportFromQr =>
+      'Open MeshCore TEAM → Import Team Config → From QR Code';
+
+  @override
+  String get shareStepScanQrToDownload => 'Scan this QR code to download';
+
+  @override
+  String get manualDownloadUrl => 'Manual download URL:';
+
+  @override
+  String get starting => 'Starting…';
+
+  @override
+  String get backgroundLocationExplanation =>
+      'MeshCore TEAM needs background location access to continue sharing your position with the mesh network when the app is minimized.\n\nThis allows location tracking and BLE communication to continue working in the background.';
+
+  @override
+  String get meshConnectionChannelName => 'Mesh Network Connection';
+
+  @override
+  String get meshConnectionChannelDescription =>
+      'Maintains mesh network connection in background';
+
+  @override
+  String get meshNetworkActive => 'Mesh network active';
+
+  @override
+  String get meshNetwork => 'Mesh network';
+
+  @override
+  String get meshNetworkReconnecting => 'Mesh network reconnecting';
+
+  @override
+  String get meshNetworkConnecting => 'Mesh network connecting';
+
+  @override
+  String get meshNetworkDisconnected => 'Mesh network disconnected';
+
+  @override
+  String get meshNetworkScanning => 'Mesh network scanning';
+
+  @override
+  String get meshNetworkError => 'Mesh network error';
+
+  @override
+  String get connectingToCompanionDevice => 'Connecting to companion device...';
+
+  @override
+  String reconnectingToDevice(String device) {
+    return 'Reconnecting to $device...';
+  }
+
+  @override
+  String get establishingConnection => 'Establishing connection...';
+
+  @override
+  String get deviceDisconnected => 'Device disconnected';
+
+  @override
+  String get searchingForDevices => 'Searching for devices...';
+
+  @override
+  String get connectionError => 'Connection error';
+
+  @override
+  String get maxChannelsReachedJoin =>
+      'Maximum number of channels reached. Delete an existing channel before joining a new one.';
+
+  @override
+  String get maxChannelsReachedCreate =>
+      'Maximum number of channels reached. Delete an existing channel before creating a new one.';
+
+  @override
+  String failedToRegisterChannel(String code) {
+    return 'Failed to register channel with firmware (error $code)';
+  }
+
+  @override
+  String failedToDeleteChannelFromCompanion(String code) {
+    return 'Failed to delete channel from companion (error $code)';
+  }
+
+  @override
+  String get kmzNoDocKml =>
+      'No doc.kml found in KMZ file. Is this a valid Garmin Custom Map?';
+
+  @override
+  String get kmzNoGroundOverlay =>
+      'No GroundOverlay elements found in doc.kml. This KMZ does not contain raster map overlays.';
+
+  @override
+  String get kmzNoUsableTiles =>
+      'Could not extract any usable image tiles from the KMZ.';
+
+  @override
+  String get mbtilesVectorNotSupported =>
+      'This is a vector MBTiles file. Only raster MBTiles (PNG, JPG, or WebP tiles) can be displayed.';
+
+  @override
+  String get nothingNew => 'Nothing new';
+
+  @override
+  String importedItems(String items) {
+    return 'Imported $items';
+  }
+
+  @override
+  String get packingTiles => 'Packing tiles';
+
+  @override
+  String get applyingRadioSettings => 'Applying radio settings';
+
+  @override
+  String get importingChannels => 'Importing channels';
+
+  @override
+  String get importingWaypoints => 'Importing waypoints';
+
+  @override
+  String get importingTiles => 'Importing tiles';
+
+  @override
+  String get importingOverlayMaps => 'Importing overlay maps';
+
+  @override
+  String get meshUser => 'Mesh User';
+
+  @override
+  String get inactive => 'Inactive';
+
+  @override
+  String countChannels(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'channels',
+      one: 'channel',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String countWaypoints(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'waypoints',
+      one: 'waypoint',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String countTiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'tiles',
+      one: 'tile',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String countOverlayMaps(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'overlay maps',
+      one: 'overlay map',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String get radioSettingsItem => 'radio settings';
+
+  @override
+  String importedWithSkipped(String imported, String skipped) {
+    return '$imported (skipped $skipped)';
+  }
 }

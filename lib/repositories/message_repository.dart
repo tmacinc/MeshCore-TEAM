@@ -33,6 +33,8 @@ import 'package:meshcore_team/models/topology_message.dart';
 import 'package:meshcore_team/models/network_topology.dart';
 import 'package:meshcore_team/services/neighbor_tracker.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:meshcore_team/l10n/app_localizations.dart';
+import 'package:meshcore_team/models/app_language.dart';
 
 /// Message Repository
 /// Handles message sync, sending, and database operations
@@ -717,7 +719,9 @@ class MessageRepository {
         messageContent = response.text.substring(separatorIndex + 2);
       } else {
         // Fallback if no colon separator found
-        senderName = 'Mesh User';
+        senderName = lookupAppLocalizations(AppLanguage.localeFor(
+                _settingsService.settings.localeCode))
+            .meshUser;
         messageContent = response.text;
       }
 

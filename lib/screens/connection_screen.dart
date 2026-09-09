@@ -359,8 +359,8 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                                 title: Text(innerL10n.areYouSure),
                                 content: Text(
                                   '${innerL10n.wipePermanentDeleteWarning} '
-                                  '${wipeChannels ? 'Channels will be cleared from the connected companion firmware. ' : ''}'
-                                  'This cannot be undone.',
+                                  '${wipeChannels ? '${innerL10n.channelsWillBeClearedFromFirmware} ' : ''}'
+                                  '${innerL10n.thisCannotBeUndone}',
                                 ),
                                 actions: [
                                   TextButton(
@@ -584,7 +584,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                bleManager.errorMessage ?? 'Bluetooth permission not granted.',
+                bleManager.errorMessage ?? l10n.bluetoothPermissionNotGranted,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.grey),
               ),
@@ -595,8 +595,8 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                 onPressed: () => openAppSettings(),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Enable "Nearby devices" permission, then return to the app.',
+              Text(
+                l10n.enableNearbyDevicesHint,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
@@ -626,16 +626,17 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
               const Icon(Icons.bluetooth_disabled,
                   size: 64, color: Colors.orange),
               const SizedBox(height: 16),
-              const Text(
-                'Bluetooth is Disabled',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                l10n.bluetoothIsDisabled,
+                style: const TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Turn on Bluetooth and tap Retry.',
+              Text(
+                l10n.turnOnBluetoothAndRetry,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
+                style: const TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
@@ -673,7 +674,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
             Text(l10n.noDevicesFound),
             const SizedBox(height: 8),
             Text(
-              'Tap the scan button to search for MeshCore companion radios',
+              l10n.tapScanToSearchForRadios,
               textAlign: TextAlign.center,
               style: TextStyle(color: emptyColor),
             ),
@@ -688,7 +689,8 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         final device = _discoveredDevices[index];
         return ListTile(
           leading: const Icon(Icons.bluetooth),
-          title: Text(device.name.isNotEmpty ? device.name : 'Mesh device'),
+          title:
+              Text(device.name.isNotEmpty ? device.name : l10n.meshDevice),
           subtitle: Text(device.address),
           trailing: const Icon(Icons.arrow_forward_ios),
           onTap: () => _connectToDevice(bleManager, device),
@@ -719,7 +721,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Text(
-                'Companion Settings',
+                l10n.companionSettings,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -734,7 +736,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                     title: l10n.deviceName,
                     subtitle: connectionVM.deviceName.isNotEmpty
                         ? connectionVM.deviceName
-                        : 'Not set',
+                        : l10n.notSet,
                     leading: Icons.edit,
                     onTap: () => _showDeviceNameDialog(connectionVM),
                   ),
@@ -1140,8 +1142,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                           SwitchListTile.adaptive(
                             contentPadding: EdgeInsets.zero,
                             title: Text(l10n.campMode),
-                            subtitle: const Text(
-                                'Locks radio to camp-compatible presets and enables firmware repeat mode'),
+                            subtitle: Text(l10n.campModeDescription),
                             value: campModeEnabled,
                             onChanged: isApplying
                                 ? null
@@ -1160,9 +1161,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                             SwitchListTile.adaptive(
                               contentPadding: EdgeInsets.zero,
                               title: Text(l10n.smartForwarding),
-                              subtitle: const Text(
-                                'Use app-managed smart forwarding while camp mode is active',
-                              ),
+                              subtitle: Text(l10n.smartForwardingDescription),
                               value: smartForwardingEnabled,
                               onChanged: isApplying
                                   ? null
@@ -1177,9 +1176,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                             SwitchListTile.adaptive(
                               contentPadding: EdgeInsets.zero,
                               title: Text(l10n.autonomousMode),
-                              subtitle: const Text(
-                                'Configures firmware autonomous tracking. Uses values from Location Tracking settings.',
-                              ),
+                              subtitle: Text(l10n.autonomousModeDescription),
                               value: autonomousEnabled,
                               onChanged: isApplying
                                   ? null
@@ -1201,17 +1198,18 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                             ),
                             if (autonomousEnabled &&
                                 !connectionVM.hasCompanionGpsFix)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 6),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.warning_amber_rounded,
+                                    const Icon(Icons.warning_amber_rounded,
                                         size: 16, color: Colors.orange),
-                                    SizedBox(width: 6),
+                                    const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
-                                        'No GPS fix yet. Telemetry will not be sent until the companion radio acquires a valid GPS position.',
-                                        style: TextStyle(color: Colors.orange),
+                                        l10n.noGpsFixWarning,
+                                        style: const TextStyle(
+                                            color: Colors.orange),
                                       ),
                                     ),
                                   ],
@@ -1334,8 +1332,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                           const SizedBox(height: 12),
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: Text(
-                                'TX Power: ${txPower} dBm (max $maxPower)'),
+                            child: Text(l10n.txPowerWithMax(txPower, maxPower)),
                           ),
                           Slider(
                             value: txPower.toDouble(),
@@ -1372,14 +1369,14 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                                 frequencyController.text.trim());
                             if (freq == null) {
                               setState(() =>
-                                  applyErrorMessage = 'Invalid frequency');
+                                  applyErrorMessage = l10n.invalidFrequency);
                               return;
                             }
 
                             final selected = findPresetByName(selectedPreset);
                             if (campModeEnabled && selected?.settings == null) {
                               setState(() =>
-                                  applyErrorMessage = 'Select a camp preset');
+                                  applyErrorMessage = l10n.selectACampPreset);
                               return;
                             }
 
@@ -1509,19 +1506,18 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                               if (supportsAutonomous &&
                                   autonomousErrorCode == 6) {
                                 errorMessage =
-                                    'Firmware rejected autonomous enable (ERR 6). This device does not have a GPS unit.';
+                                    l10n.autonomousRejectedNoGpsUnit;
                               } else if (supportsAutonomous &&
                                   autonomousErrorCode == -2) {
-                                errorMessage =
-                                    'Failed to verify autonomous settings after write. Check connection and retry.';
+                                errorMessage = l10n.autonomousVerifyFailed;
                               } else if (supportsAutonomous &&
                                   autonomousErrorCode == -3) {
                                 errorMessage =
-                                    'Autonomous settings did not stick after write. Please retry.';
+                                    l10n.autonomousSettingsDidNotStick;
                               } else {
                                 errorMessage = supportsAutonomous
-                                    ? 'Failed to apply settings. If enabling autonomous, ensure companion GPS is enabled and has a valid fix.'
-                                    : 'Failed to apply radio settings.';
+                                    ? l10n.failedToApplySettingsAutonomousHint
+                                    : l10n.failedToApplyRadioSettings;
                               }
 
                               setState(() {
@@ -1703,7 +1699,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
             Column(
               children: [
                 Tooltip(
-                  message: 'Send Advert',
+                  message: l10n.sendAdvert,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(8),
                     onTap: () async {
@@ -1842,18 +1838,18 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
 
     final success = await bleManager.connect(device);
 
-    if (success && mounted) {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final label = device.name.isNotEmpty ? device.name : device.address;
+
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Connected to ${device.name.isNotEmpty ? device.name : device.address}'),
-        ),
+        SnackBar(content: Text(l10n.connectedToDevice(label))),
       );
-    } else if (mounted) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              'Failed to connect to ${device.name.isNotEmpty ? device.name : device.address}'),
+          content: Text(l10n.failedToConnectToDevice(label)),
           backgroundColor: Colors.red,
         ),
       );

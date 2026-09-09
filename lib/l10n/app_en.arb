@@ -716,5 +716,443 @@
   "connectToDeviceToSeeChannels": "Connect to a device and sync to see channels",
   "@connectToDeviceToSeeChannels": {
     "description": "Empty state body on the channels list"
+  },
+  "bluetooth": "Bluetooth",
+  "notifications": "Notifications",
+  "background": "Background",
+  "permissionsIntro": "To connect to your mesh radio and share messages, MeshCore TEAM needs access to:",
+  "@permissionsIntro": {
+    "description": "Intro paragraph on the first-run permissions screen"
+  },
+  "permissionBluetoothReason": "Connect to your mesh radio",
+  "permissionLocationReason": "Required for maps: navigate and share your location with your team.",
+  "permissionNotificationsReason": "Alert you when messages arrive",
+  "permissionBackgroundReason": "Keep your mesh connection and tracking running in the background.",
+  "changePermissionsLaterHint": "You can change these later in system settings.",
+  "requestingPermissions": "Requesting permissions...",
+  "permissionsRequiredToFunction": "MeshCore TEAM requires Bluetooth and Location permissions to function. Please grant these permissions to continue.",
+  "batteryOptimizationExplanation": "To keep your mesh connection active in the background, we recommend disabling battery optimization for this app.\n\nThis will allow the app to maintain a stable Bluetooth connection to your radio even when the screen is off.",
+  "errorRequestingPermissions": "Error requesting permissions: {error}",
+  "@errorRequestingPermissions": {
+    "description": "Error shown when the permission request throws",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "requiredPermissionsDenied": "Required permissions denied:\n{permissions}",
+  "@requiredPermissionsDenied": {
+    "description": "Error listing the permissions the user denied",
+    "placeholders": {
+      "permissions": { "type": "String" }
+    }
+  },
+  "notificationChannelMessagesName": "Channel Messages",
+  "notificationChannelMessagesDescription": "Notifications for channel messages on the mesh network",
+  "notificationChannelDirectName": "Direct Messages",
+  "notificationChannelDirectDescription": "Notifications for direct messages on the mesh network",
+  "notificationChannelWaypointsName": "Waypoint Notifications",
+  "notificationChannelWaypointsDescription": "Notifications for received waypoints on the mesh network",
+  "directMessageNotificationTitle": "{sender} (Direct Message)",
+  "@directMessageNotificationTitle": {
+    "description": "Notification title for an incoming direct message",
+    "placeholders": {
+      "sender": { "type": "String" }
+    }
+  },
+  "newMessagesTitle": "New messages",
+  "newMessagesBody": "You have {count} {count, plural, =1{new message} other{new messages}}",
+  "@newMessagesBody": {
+    "description": "Body of the batched sync notification",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "newWaypointTitle": "New Waypoint: {name}",
+  "@newWaypointTitle": {
+    "description": "Notification title for a received waypoint",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "newWaypoint": "New Waypoint",
+  "waypointFromCreator": "{type} from {creator}",
+  "@waypointFromCreator": {
+    "description": "Notification body: waypoint type and who sent it",
+    "placeholders": {
+      "type": { "type": "String" },
+      "creator": { "type": "String" }
+    }
+  },
+  "channelsWillBeClearedFromFirmware": "Channels will be cleared from the connected companion firmware.",
+  "thisCannotBeUndone": "This cannot be undone.",
+  "bluetoothPermissionNotGranted": "Bluetooth permission not granted.",
+  "enableNearbyDevicesHint": "Enable \"Nearby devices\" permission, then return to the app.",
+  "bluetoothIsDisabled": "Bluetooth is Disabled",
+  "turnOnBluetoothAndRetry": "Turn on Bluetooth and tap Retry.",
+  "tapScanToSearchForRadios": "Tap the scan button to search for MeshCore companion radios",
+  "meshDevice": "Mesh device",
+  "companionSettings": "Companion Settings",
+  "notSet": "Not set",
+  "campModeDescription": "Locks radio to camp-compatible presets and enables firmware repeat mode",
+  "smartForwardingDescription": "Use app-managed smart forwarding while camp mode is active",
+  "autonomousModeDescription": "Configures firmware autonomous tracking. Uses values from Location Tracking settings.",
+  "noGpsFixWarning": "No GPS fix yet. Telemetry will not be sent until the companion radio acquires a valid GPS position.",
+  "txPowerWithMax": "TX Power: {power} dBm (max {maxPower})",
+  "@txPowerWithMax": {
+    "description": "Transmit power slider label",
+    "placeholders": {
+      "power": { "type": "int" },
+      "maxPower": { "type": "int" }
+    }
+  },
+  "invalidFrequency": "Invalid frequency",
+  "selectACampPreset": "Select a camp preset",
+  "autonomousRejectedNoGpsUnit": "Firmware rejected autonomous enable (ERR 6). This device does not have a GPS unit.",
+  "autonomousVerifyFailed": "Failed to verify autonomous settings after write. Check connection and retry.",
+  "autonomousSettingsDidNotStick": "Autonomous settings did not stick after write. Please retry.",
+  "failedToApplySettingsAutonomousHint": "Failed to apply settings. If enabling autonomous, ensure companion GPS is enabled and has a valid fix.",
+  "failedToApplyRadioSettings": "Failed to apply radio settings.",
+  "sendAdvert": "Send Advert",
+  "connectedToDevice": "Connected to {device}",
+  "@connectedToDevice": {
+    "description": "Snackbar after a successful BLE connection",
+    "placeholders": {
+      "device": { "type": "String" }
+    }
+  },
+  "failedToConnectToDevice": "Failed to connect to {device}",
+  "@failedToConnectToDevice": {
+    "description": "Snackbar after a failed BLE connection",
+    "placeholders": {
+      "device": { "type": "String" }
+    }
+  },
+  "copyContactInfo": "Copy contact info",
+  "contactInfoCopied": "Contact info copied",
+  "labelHash": "Hash",
+  "labelBattery": "Battery",
+  "labelType": "Type",
+  "nodeTypeRepeater": "Repeater",
+  "nodeTypeRoomServer": "Room Server",
+  "nodeTypeEndNode": "End Node",
+  "justNow": "Just now",
+  "minutesAgo": "{minutes}m ago",
+  "@minutesAgo": {
+    "description": "Relative time, under an hour",
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "hoursAgo": "{hours}h ago",
+  "@hoursAgo": {
+    "description": "Relative time, under a day",
+    "placeholders": {
+      "hours": { "type": "int" }
+    }
+  },
+  "daysAgo": "{days}d ago",
+  "@daysAgo": {
+    "description": "Relative time, a day or more",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "identityNameExplanation": "This name is how you will be identified on the mesh network.",
+  "nameCannotBeEmpty": "Name cannot be empty",
+  "failedToApplyName": "Failed to apply name. Please try again.",
+  "unknownContact": "Unknown Contact",
+  "repeaterDirectMessagesDisabled": "This contact is a repeater. Direct messages are disabled.",
+  "channelLinkPasswordWarning": "Anyone with this link can join this private channel. Treat it like a password.",
+  "sameNameSameChannelHint": "Anyone who types the same name joins the same channel",
+  "unnamedChannel": "Unnamed Channel",
+  "latWithValue": "Lat: {value}",
+  "@latWithValue": {
+    "description": "Latitude readout on the node detail sheet",
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "lonWithValue": "Lon: {value}",
+  "@lonWithValue": {
+    "description": "Longitude readout on the node detail sheet",
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+  "hidePath": "Hide Path",
+  "showPath": "Show Path",
+  "editRoute": "Edit Route",
+  "saveRoute": "Save Route",
+  "routeColor": "Route Color",
+  "editRoutePoints": "Edit Route Points",
+  "editRouteInfo": "Edit Route Info",
+  "waypointSharedToMesh": "Waypoint shared to mesh",
+  "failedToShareWaypoint": "Failed to share waypoint",
+  "deleteWaypointQuestion": "Delete waypoint?",
+  "deleteWaypointNamed": "This will delete \"{name}\".",
+  "@deleteWaypointNamed": {
+    "description": "Confirmation body naming the waypoint",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "deleteWaypointsQuestion": "Delete waypoints?",
+  "deleteWaypointsCount": "This will delete {count} {count, plural, =1{waypoint} other{waypoints}}.",
+  "@deleteWaypointsCount": {
+    "description": "Confirmation body for a bulk waypoint delete",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "deleteReceivedWaypointsQuestion": "Delete received waypoints?",
+  "deleteReceivedWaypointsBody": "This will delete all received waypoints from the device.",
+  "deleteLocalWaypointsQuestion": "Delete local waypoints?",
+  "deleteLocalWaypointsBody": "This will delete all local waypoints you created on the device.",
+  "sharedWaypointsCount": "Shared {count} {count, plural, =1{waypoint} other{waypoints}}",
+  "@sharedWaypointsCount": {
+    "description": "Snackbar after sharing waypoints, all succeeded",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "sharedWaypointsPartial": "Shared {okCount}, failed {failCount}",
+  "@sharedWaypointsPartial": {
+    "description": "Snackbar after sharing waypoints, some failed",
+    "placeholders": {
+      "okCount": { "type": "int" },
+      "failCount": { "type": "int" }
+    }
+  },
+  "routeModeTapToAddFirstPoint": "Route mode: tap map to add first point",
+  "routeModePointCount": "Route mode: {count} {count, plural, =1{point} other{points}} (tap a point to move it)",
+  "@routeModePointCount": {
+    "description": "Route drawing hint with the running point count",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "routeModeTapToMovePoint": "Tap map to move point {index} (tap point again to cancel)",
+  "@routeModeTapToMovePoint": {
+    "description": "Route drawing hint while moving one point",
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+  "tapWaypointsToSelect": "Tap waypoints to select",
+  "countSelected": "{count} selected",
+  "@countSelected": {
+    "description": "Multi-select header count",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "selectWaypoints": "Select Waypoints",
+  "importedWaypoint": "Imported Waypoint",
+  "saveGpxFile": "Save GPX file",
+  "garminKmz": "Garmin KMZ",
+  "garminKmzDescription": "Raster map tiles from a Garmin Custom Map archive",
+  "mbtilesDescription": "Offline tile pyramid from QGIS, GDAL, or Mobile Atlas Creator",
+  "pleaseSelectMbtilesFile": "Please select a .mbtiles file.",
+  "deleteMapQuestion": "Delete map?",
+  "deleteMapNamed": "This will remove \"{name}\" and its image files from the device.",
+  "@deleteMapNamed": {
+    "description": "Confirmation body for deleting an imported overlay map",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "noImportedMaps": "No imported maps",
+  "noImportedMapsHint": "Import a Garmin-style KMZ file or an MBTiles archive to display a custom offline map on top of the base map.",
+  "hideOnMap": "Hide on map",
+  "showOnMap": "Show on map",
+  "deleteOfflineMapQuestion": "Delete offline map?",
+  "deleteOfflineMapNamed": "This will remove downloaded tiles for \"{name}\".",
+  "@deleteOfflineMapNamed": {
+    "description": "Confirmation body for deleting a downloaded map area",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "clearAllOfflineMapsQuestion": "Clear all offline maps?",
+  "clearAllOfflineMapsBody": "This will remove all downloaded offline map areas and their tiles.",
+  "pleaseEnterAName": "Please enter a name",
+  "downloadCancelled": "Download cancelled",
+  "downloadFailed": "Download failed: {error}",
+  "@downloadFailed": {
+    "description": "Offline map download error",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "downloadProgress": "Progress: {completed}/{total} (failed: {failed})",
+  "@downloadProgress": {
+    "description": "Offline map download progress readout",
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" },
+      "failed": { "type": "int" }
+    }
+  },
+  "connectBeforeImportingConfig": "Connect to a companion device before importing. Channels must be registered with firmware.",
+  "importTeamConfigExplanation": "Import a team config from a local file or by scanning a QR code from a nearby device sharing over Wi-Fi.",
+  "omittedTooLargeToShare": "Left out of the config because they are too large to share: {names}. Transfer the file directly instead.",
+  "@omittedTooLargeToShare": {
+    "description": "Warning listing overlay maps excluded from a shared config",
+    "placeholders": {
+      "names": { "type": "String" }
+    }
+  },
+  "shareConfigWithoutInternet": "Share Config Without Internet",
+  "shareConfigHotspotExplanation": "Create a mobile hotspot on your device so team members can connect and download the config directly.",
+  "mobileHotspot": "Mobile Hotspot",
+  "iphoneOrIpad": "iPhone / iPad",
+  "hotspotStepOpenSettings": "Open Settings",
+  "hotspotStepTapPersonalHotspot": "Tap Personal Hotspot",
+  "hotspotStepAllowOthersToJoin": "Turn on \"Allow Others to Join\"",
+  "hotspotStepShareNameAndPassword": "Share the hotspot name and password with your team",
+  "hotspotStepTapNetworkInternet": "Tap Network & Internet (or Connections)",
+  "hotspotStepTapHotspotTethering": "Tap Hotspot & Tethering",
+  "hotspotStepTurnOnWifiHotspot": "Turn on Wi-Fi Hotspot",
+  "hotspotStepEnableFromSystemSettings": "Enable your mobile hotspot from system settings",
+  "connectToHotspotBeforeScanning": "Team members should connect to your hotspot Wi-Fi before scanning the QR code.",
+  "selectConfigToShare": "Select Config to Share",
+  "chooseTeamcfgFile": "Choose a .teamcfg.zip file to share with your team.",
+  "couldNotReadSelectedFile": "Could not read selected file.",
+  "invalidConfigFile": "Invalid config file: {error}",
+  "@invalidConfigFile": {
+    "description": "Error when a picked config file cannot be parsed",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "errorSelectingFile": "Error selecting file: {error}",
+  "@errorSelectingFile": {
+    "description": "Error when the file picker itself fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "configDetails": "Config Details",
+  "radioSettingsLabel": "Radio Settings",
+  "channelsWithCount": "Channels ({count})",
+  "@channelsWithCount": {
+    "description": "Config preview row label for channels",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mapTiles": "Map Tiles",
+  "couldNotDetermineLocalIp": "Could not determine local IP address. Make sure your hotspot is enabled.",
+  "failedToStartServer": "Failed to start server: {error}",
+  "@failedToStartServer": {
+    "description": "Error when the local sharing server will not start",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "sharingConfig": "Sharing Config",
+  "teamMembersShould": "Team members should:",
+  "shareStepConnectToHotspot": "Connect to your hotspot Wi-Fi",
+  "shareStepOpenImportFromQr": "Open MeshCore TEAM → Import Team Config → From QR Code",
+  "shareStepScanQrToDownload": "Scan this QR code to download",
+  "manualDownloadUrl": "Manual download URL:",
+  "starting": "Starting…",
+  "backgroundLocationExplanation": "MeshCore TEAM needs background location access to continue sharing your position with the mesh network when the app is minimized.\n\nThis allows location tracking and BLE communication to continue working in the background.",
+  "@backgroundLocationExplanation": {
+    "description": "Body of the background-location permission dialog"
+  },
+  "meshConnectionChannelName": "Mesh Network Connection",
+  "meshConnectionChannelDescription": "Maintains mesh network connection in background",
+  "meshNetworkActive": "Mesh network active",
+  "meshNetwork": "Mesh network",
+  "meshNetworkReconnecting": "Mesh network reconnecting",
+  "meshNetworkConnecting": "Mesh network connecting",
+  "meshNetworkDisconnected": "Mesh network disconnected",
+  "meshNetworkScanning": "Mesh network scanning",
+  "meshNetworkError": "Mesh network error",
+  "connectingToCompanionDevice": "Connecting to companion device...",
+  "reconnectingToDevice": "Reconnecting to {device}...",
+  "@reconnectingToDevice": {
+    "description": "Foreground notification body while reconnecting",
+    "placeholders": {
+      "device": { "type": "String" }
+    }
+  },
+  "establishingConnection": "Establishing connection...",
+  "deviceDisconnected": "Device disconnected",
+  "searchingForDevices": "Searching for devices...",
+  "connectionError": "Connection error",
+  "maxChannelsReachedJoin": "Maximum number of channels reached. Delete an existing channel before joining a new one.",
+  "maxChannelsReachedCreate": "Maximum number of channels reached. Delete an existing channel before creating a new one.",
+  "failedToRegisterChannel": "Failed to register channel with firmware (error {code})",
+  "@failedToRegisterChannel": {
+    "description": "Firmware rejected a channel registration",
+    "placeholders": {
+      "code": { "type": "String" }
+    }
+  },
+  "failedToDeleteChannelFromCompanion": "Failed to delete channel from companion (error {code})",
+  "@failedToDeleteChannelFromCompanion": {
+    "description": "Firmware rejected a channel delete",
+    "placeholders": {
+      "code": { "type": "String" }
+    }
+  },
+  "kmzNoDocKml": "No doc.kml found in KMZ file. Is this a valid Garmin Custom Map?",
+  "kmzNoGroundOverlay": "No GroundOverlay elements found in doc.kml. This KMZ does not contain raster map overlays.",
+  "kmzNoUsableTiles": "Could not extract any usable image tiles from the KMZ.",
+  "mbtilesVectorNotSupported": "This is a vector MBTiles file. Only raster MBTiles (PNG, JPG, or WebP tiles) can be displayed.",
+  "nothingNew": "Nothing new",
+  "importedItems": "Imported {items}",
+  "@importedItems": {
+    "description": "Summary of what a team config import brought in",
+    "placeholders": {
+      "items": { "type": "String" }
+    }
+  },
+  "packingTiles": "Packing tiles",
+  "applyingRadioSettings": "Applying radio settings",
+  "importingChannels": "Importing channels",
+  "importingWaypoints": "Importing waypoints",
+  "importingTiles": "Importing tiles",
+  "importingOverlayMaps": "Importing overlay maps",
+  "meshUser": "Mesh User",
+  "inactive": "Inactive",
+  "countChannels": "{count} {count, plural, =1{channel} other{channels}}",
+  "@countChannels": {
+    "description": "Channel count fragment in the import summary",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "countWaypoints": "{count} {count, plural, =1{waypoint} other{waypoints}}",
+  "@countWaypoints": {
+    "description": "Waypoint count fragment in the import summary",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "countTiles": "{count} {count, plural, =1{tile} other{tiles}}",
+  "@countTiles": {
+    "description": "Tile count fragment in the import summary",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "countOverlayMaps": "{count} {count, plural, =1{overlay map} other{overlay maps}}",
+  "@countOverlayMaps": {
+    "description": "Overlay map count fragment in the import summary",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "radioSettingsItem": "radio settings",
+  "importedWithSkipped": "{imported} (skipped {skipped})",
+  "@importedWithSkipped": {
+    "description": "Import summary that also lists skipped items",
+    "placeholders": {
+      "imported": { "type": "String" },
+      "skipped": { "type": "String" }
+    }
   }
 }

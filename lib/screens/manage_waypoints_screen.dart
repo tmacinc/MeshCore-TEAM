@@ -77,9 +77,10 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
   }
 
   Future<void> _deleteAllReceived() async {
+    final l10n = AppLocalizations.of(context)!;
     final ok = await _confirm(
-      'Delete received waypoints?',
-      'This will delete all received waypoints from the device.',
+      l10n.deleteReceivedWaypointsQuestion,
+      l10n.deleteReceivedWaypointsBody,
     );
     if (!ok) return;
 
@@ -105,9 +106,10 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
   }
 
   Future<void> _deleteAllLocal() async {
+    final l10n = AppLocalizations.of(context)!;
     final ok = await _confirm(
-      'Delete local waypoints?',
-      'This will delete all local waypoints you created on the device.',
+      l10n.deleteLocalWaypointsQuestion,
+      l10n.deleteLocalWaypointsBody,
     );
     if (!ok) return;
 
@@ -133,9 +135,10 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
   }
 
   Future<void> _deleteWaypoint(WaypointData waypoint) async {
+    final l10n = AppLocalizations.of(context)!;
     final ok = await _confirm(
-      'Delete waypoint?',
-      'This will delete "${waypoint.name}".',
+      l10n.deleteWaypointQuestion,
+      l10n.deleteWaypointNamed(waypoint.name),
     );
     if (!ok) return;
 
@@ -183,9 +186,10 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
   Future<void> _deleteSelectedWaypoints() async {
     if (_selectedWaypointIds.isEmpty) return;
 
+    final l10n = AppLocalizations.of(context)!;
     final ok = await _confirm(
-      'Delete waypoints?',
-      'This will delete ${_selectedWaypointIds.length} waypoint(s).',
+      l10n.deleteWaypointsQuestion,
+      l10n.deleteWaypointsCount(_selectedWaypointIds.length),
     );
     if (!ok) return;
 
@@ -241,12 +245,13 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
       final failCount = result.failCount;
 
       if (!mounted) return;
+      final shareL10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             failCount == 0
-                ? 'Shared $okCount waypoint(s)'
-                : 'Shared $okCount, failed $failCount',
+                ? shareL10n.sharedWaypointsCount(okCount)
+                : shareL10n.sharedWaypointsPartial(okCount, failCount),
           ),
         ),
       );
@@ -352,7 +357,8 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
         final lon = w.lon;
         if (lat == null || lon == null) continue;
 
-        final name = (w.name ?? 'Imported Waypoint').trim();
+        final name =
+            (w.name ?? AppLocalizations.of(context)!.importedWaypoint).trim();
         final description = (w.desc ?? w.cmt ?? '').trim();
         final type = _inferWaypointTypeFromGpx(
           type: w.type,
@@ -520,7 +526,7 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
 
       if (choice == 'save') {
         final outputPath = await FilePicker.platform.saveFile(
-          dialogTitle: 'Save GPX file',
+          dialogTitle: AppLocalizations.of(context)!.saveGpxFile,
           fileName: fileName,
           type: FileType.any,
           bytes: bytes,
@@ -613,12 +619,13 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
                     final repo = outerContext.read<MessageRepository>();
                     final ok = await repo.sendWaypointToMesh(waypoint);
                     if (!mounted) return;
+                    final shareL10n = AppLocalizations.of(outerContext)!;
                     ScaffoldMessenger.of(outerContext).showSnackBar(
                       SnackBar(
                         content: Text(
                           ok
-                              ? 'Waypoint shared to mesh'
-                              : 'Failed to share waypoint',
+                              ? shareL10n.waypointSharedToMesh
+                              : shareL10n.failedToShareWaypoint,
                         ),
                       ),
                     );
@@ -636,7 +643,9 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
                   ListTile(
                     leading: const Icon(Icons.edit),
                     title: Text(
-                      _isRoute(waypoint) ? 'Edit Route Info' : AppLocalizations.of(context)!.editWaypoint,
+                      _isRoute(waypoint)
+                          ? AppLocalizations.of(context)!.editRouteInfo
+                          : AppLocalizations.of(context)!.editWaypoint,
                     ),
                     onTap: () async {
                       Navigator.of(context).pop();
@@ -714,8 +723,8 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
         title: Text(
           _isMultiSelectMode
               ? (_selectedWaypointIds.isEmpty
-                  ? 'Select Waypoints'
-                  : '${_selectedWaypointIds.length} selected')
+                  ? l10n.selectWaypoints
+                  : l10n.countSelected(_selectedWaypointIds.length))
               : l10n.manageWaypointsAndRoutes,
         ),
         leading: _isMultiSelectMode

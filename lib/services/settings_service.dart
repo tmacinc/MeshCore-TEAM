@@ -127,6 +127,12 @@ class SettingsService extends ChangeNotifier {
 
   /// Load all settings from SharedPreferences
   void _loadSettings() {
+    // Mirrored onto AppLanguage so code with no BuildContext and no reference
+    // to this service (import services, background tasks) localizes into the
+    // same language as the UI.
+    AppLanguage.activeLocaleCode =
+        _sanitizeLocaleCode(_prefs.getString(_keyLocaleCode));
+
     final currentCompanionKey = _prefs.getString(_keyCurrentCompanionPublicKey);
     final telemetryChannelHash =
         _getTelemetryChannelHashForCompanion(currentCompanionKey);
@@ -501,6 +507,7 @@ class SettingsService extends ChangeNotifier {
     final sanitized = _sanitizeLocaleCode(code);
     await _prefs.setString(_keyLocaleCode, sanitized);
     _settings = _settings.copyWith(localeCode: sanitized);
+    AppLanguage.activeLocaleCode = sanitized;
     notifyListeners();
   }
 

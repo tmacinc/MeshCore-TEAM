@@ -12,6 +12,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:meshcore_team/l10n/app_localizations.dart';
+import 'package:meshcore_team/models/app_language.dart';
 
 class MapTileCacheProgress {
   final int completed;
@@ -399,5 +401,5 @@ class _TileBounds {
 
 class _DownloadCancelled implements Exception {
   @override
-  String toString() => 'Download cancelled';
+  String toString() => lookupAppLocalizations(AppLanguage.localeFor()).downloadCancelled;
 }

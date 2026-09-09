@@ -322,7 +322,8 @@ class ContactListTile extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final contactRepository = context.read<ContactRepository>();
     final hasLocation = contact.latitude != null && contact.longitude != null;
-    final lastSeenText = _formatLastSeen(contact.lastSeen);
+    final lastSeenText =
+        _formatLastSeen(AppLocalizations.of(context)!, contact.lastSeen);
     final isNighttime = context.watch<SettingsService>().settings.appTheme ==
         AppThemeMode.nighttime;
 
@@ -493,23 +494,28 @@ class ContactListTile extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('Copy contact info'),
+              title: Text(l10n.copyContactInfo),
               onTap: () {
                 Navigator.of(ctx).pop();
                 final hash = contact.hash.toRadixString(16);
+                final type = contact.isRepeater
+                    ? l10n.nodeTypeRepeater
+                    : contact.isRoomServer
+                        ? l10n.nodeTypeRoomServer
+                        : l10n.nodeTypeEndNode;
                 final lines = <String>[
-                  'Name: $name',
-                  'Hash: $hash',
+                  '${l10n.name}: $name',
+                  '${l10n.labelHash}: $hash',
                   if (contact.latitude != null && contact.longitude != null)
-                    'Location: ${contact.latitude!.toStringAsFixed(6)}, ${contact.longitude!.toStringAsFixed(6)}',
+                    '${l10n.location}: ${contact.latitude!.toStringAsFixed(6)}, ${contact.longitude!.toStringAsFixed(6)}',
                   if (contact.companionBatteryMilliVolts != null)
-                    'Battery: ${(contact.companionBatteryMilliVolts! / 1000).toStringAsFixed(2)}V',
-                  'Type: ${contact.isRepeater ? 'Repeater' : contact.isRoomServer ? 'Room Server' : 'End Node'}',
+                    '${l10n.labelBattery}: ${(contact.companionBatteryMilliVolts! / 1000).toStringAsFixed(2)}V',
+                  '${l10n.labelType}: $type',
                 ];
                 Clipboard.setData(ClipboardData(text: lines.join('\n')));
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Contact info copied')),
+                    SnackBar(content: Text(l10n.contactInfoCopied)),
                   );
                 }
               },
@@ -536,19 +542,19 @@ class ContactListTile extends StatelessWidget {
     );
   }
 
-  String _formatLastSeen(int timestamp) {
+  String _formatLastSeen(AppLocalizations l10n, int timestamp) {
     final now = DateTime.now();
     final lastSeen = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final difference = lastSeen.isAfter(now) ? Duration.zero : now.difference(lastSeen);
 
     if (difference.inMinutes < 1) {
-      return 'Just now';
+      return l10n.justNow;
     } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
+      return l10n.minutesAgo(difference.inMinutes);
     } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
+      return l10n.hoursAgo(difference.inHours);
     } else {
-      return '${difference.inDays}d ago';
+      return l10n.daysAgo(difference.inDays);
     }
   }
 

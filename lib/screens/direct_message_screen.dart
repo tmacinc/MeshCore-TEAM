@@ -133,7 +133,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
           StatusBarActions(),
         ],
         bottom: AppBarSubtitle(
-          title: widget.contact.name ?? 'Unknown Contact',
+          title: widget.contact.name ?? l10n.unknownContact,
           subtitle: l10n.directMessage,
         ),
       ),
@@ -145,7 +145,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               color: theme.colorScheme.surfaceVariant,
               child: Text(
-                'This contact is a repeater. Direct messages are disabled.',
+                l10n.repeaterDirectMessagesDisabled,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
@@ -391,7 +391,9 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        formatMessageTime(timestamp),
+                        formatMessageTime(timestamp,
+                            locale: Localizations.localeOf(context)
+                                .toLanguageTag()),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: (isFromMe
                                   ? theme.colorScheme.onPrimaryContainer

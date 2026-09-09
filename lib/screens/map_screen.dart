@@ -498,9 +498,11 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                   const SizedBox(height: 6),
                   Text(l10n.lastHeard(lastHeard)),
                   const SizedBox(height: 10),
-                  Text('Lat: ${lat?.toStringAsFixed(6) ?? 'Unknown'}'),
+                  Text(l10n.latWithValue(
+                      lat?.toStringAsFixed(6) ?? l10n.unknown)),
                   const SizedBox(height: 6),
-                  Text('Lon: ${lon?.toStringAsFixed(6) ?? 'Unknown'}'),
+                  Text(l10n.lonWithValue(
+                      lon?.toStringAsFixed(6) ?? l10n.unknown)),
                   const SizedBox(height: 10),
                   Text(l10n.battery),
                   const SizedBox(height: 6),
@@ -542,8 +544,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
               },
               child: Text(
                 _contactPathsVisible.contains(state.publicKeyHex)
-                    ? 'Hide Path'
-                    : 'Show Path',
+                    ? l10n.hidePath
+                    : l10n.showPath,
               ),
             ),
             if (state.lastLatitude != null && state.lastLongitude != null)
@@ -854,7 +856,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
             final canSave = nameCtrl.text.trim().isNotEmpty;
             return AlertDialog(
               scrollable: true,
-              title: Text(isEdit ? 'Edit Route' : 'Save Route'),
+              title: Text(isEdit ? l10n.editRoute : l10n.saveRoute),
               content: SizedBox(
                 width: 420,
                 child: Column(
@@ -878,7 +880,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Route Color',
+                        l10n.routeColor,
                         style: Theme.of(dialogContext).textTheme.bodySmall,
                       ),
                     ),
@@ -948,7 +950,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                           Navigator.of(dialogContext).pop(res);
                         }
                       : null,
-                  child: Text(isEdit ? 'Save' : 'Create'),
+                  child: Text(isEdit ? l10n.save : l10n.create),
                 ),
               ],
             );
@@ -1191,8 +1193,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                               SnackBar(
                                 content: Text(
                                   ok
-                                      ? 'Waypoint shared to mesh'
-                                      : 'Failed to share waypoint',
+                                      ? l10n.waypointSharedToMesh
+                                      : l10n.failedToShareWaypoint,
                                 ),
                               ),
                             );
@@ -1214,7 +1216,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                             leading: const Icon(Icons.edit),
                             title: Text(
                               type == waypoint_model.WaypointType.route
-                                  ? 'Edit Route Points'
+                                  ? l10n.editRoutePoints
                                   : l10n.edit,
                             ),
                             onTap: () async {
@@ -1248,8 +1250,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                           onTap: () async {
                             Navigator.of(context).pop();
                             final ok = await _confirm(
-                              'Delete waypoint?',
-                              'This will delete "${waypoint.name}".',
+                              l10n.deleteWaypointQuestion,
+                              l10n.deleteWaypointNamed(waypoint.name),
                             );
                             if (!ok) return;
                             await db.waypointsDao.deleteWaypoint(waypoint.id);
@@ -1292,9 +1294,10 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   Future<void> _deleteSelectedWaypoints() async {
     if (_selectedWaypointIds.isEmpty) return;
 
+    final l10n = AppLocalizations.of(context)!;
     final ok = await _confirm(
-      'Delete waypoints?',
-      'This will delete ${_selectedWaypointIds.length} waypoint(s).',
+      l10n.deleteWaypointsQuestion,
+      l10n.deleteWaypointsCount(_selectedWaypointIds.length),
     );
     if (!ok) return;
 
@@ -1329,12 +1332,13 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     final failCount = result.failCount;
 
     if (!mounted) return;
+    final shareL10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           failCount == 0
-              ? 'Shared $okCount waypoint(s)'
-              : 'Shared $okCount, failed $failCount',
+              ? shareL10n.sharedWaypointsCount(okCount)
+              : shareL10n.sharedWaypointsPartial(okCount, failCount),
         ),
       ),
     );
@@ -2671,10 +2675,12 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                   padding: const EdgeInsets.all(10),
                   child: Text(
                     _draggingPointIndex != null
-                        ? 'Tap map to move point ${_draggingPointIndex! + 1} (tap point again to cancel)'
+                        ? l10n.routeModeTapToMovePoint(
+                            _draggingPointIndex! + 1)
                         : _routeDraftPoints.isEmpty
-                            ? 'Route mode: tap map to add first point'
-                            : 'Route mode: ${_routeDraftPoints.length} points (tap a point to move it)',
+                            ? l10n.routeModeTapToAddFirstPoint
+                            : l10n.routeModePointCount(
+                                _routeDraftPoints.length),
                   ),
                 ),
               ),
@@ -2707,8 +2713,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                       ),
                       child: Text(
                         _selectedWaypointIds.isEmpty
-                            ? 'Tap waypoints to select'
-                            : '${_selectedWaypointIds.length} selected',
+                            ? l10n.tapWaypointsToSelect
+                            : l10n.countSelected(_selectedWaypointIds.length),
                       ),
                     ),
                   ),

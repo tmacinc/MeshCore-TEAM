@@ -19,6 +19,8 @@ import 'package:meshcore_team/models/unread_models.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/utils/sync_trace.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:meshcore_team/l10n/app_localizations.dart';
+import 'package:meshcore_team/models/app_language.dart';
 
 /// Channel fetch result
 class _ChannelFetchResult {
@@ -75,6 +77,13 @@ class ChannelRepository {
   final BleConnectionManager _bleManager;
   final ChannelsDao _channelsDao;
   final SettingsService _settingsService;
+
+  /// Strings for the user's language.
+  ///
+  /// These messages are thrown as [StateError] and shown verbatim in a
+  /// snackbar, so they have to be localized here rather than at the call site.
+  AppLocalizations get _l10n => lookupAppLocalizations(
+      AppLanguage.localeFor(_settingsService.settings.localeCode));
 
   // Default to 8 channels total, indices 1-7 private (0 is public)
   int _maxPrivateChannels = 7;
@@ -178,11 +187,10 @@ class ChannelRepository {
       );
       if (!result.isSuccess) {
         if (result.errorCode == 3) {
-          throw StateError(
-              'Maximum number of channels reached. Delete an existing channel before joining a new one.');
+          throw StateError(_l10n.maxChannelsReachedJoin);
         }
-        throw StateError(
-            'Failed to register channel with firmware (error ${result.errorCode ?? 'unknown'})');
+        throw StateError(_l10n.failedToRegisterChannel(
+            result.errorCode?.toString() ?? _l10n.unknown));
       }
       await Future.delayed(const Duration(milliseconds: 300));
     } else {
@@ -248,11 +256,10 @@ class ChannelRepository {
       );
       if (!result.isSuccess) {
         if (result.errorCode == 3) {
-          throw StateError(
-              'Maximum number of channels reached. Delete an existing channel before creating a new one.');
+          throw StateError(_l10n.maxChannelsReachedCreate);
         }
-        throw StateError(
-            'Failed to register channel with firmware (error ${result.errorCode ?? 'unknown'})');
+        throw StateError(_l10n.failedToRegisterChannel(
+            result.errorCode?.toString() ?? _l10n.unknown));
       }
       await Future.delayed(const Duration(milliseconds: 300));
     } else {
@@ -385,8 +392,8 @@ class ChannelRepository {
       psk: Uint8List(16),
     );
     if (!clearResult.isSuccess) {
-      throw StateError(
-          'Failed to delete channel from companion (error ${clearResult.errorCode ?? 'unknown'})');
+      throw StateError(_l10n.failedToDeleteChannelFromCompanion(
+          clearResult.errorCode?.toString() ?? _l10n.unknown));
     }
     await Future.delayed(const Duration(milliseconds: 300));
 

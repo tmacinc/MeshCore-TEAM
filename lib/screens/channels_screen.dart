@@ -356,8 +356,8 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                     decoration: InputDecoration(
                       labelText: AppLocalizations.of(dialogContext)!.channelName,
                       hintText: AppLocalizations.of(dialogContext)!.publicChannelName,
-                      helperText:
-                          'Anyone who types the same name joins the same channel',
+                      helperText: AppLocalizations.of(dialogContext)!
+                          .sameNameSameChannelHint,
                     ),
                     onSubmitted: (_) => join(),
                   ),
@@ -729,7 +729,7 @@ class ChannelListTile extends StatelessWidget {
             ],
           ),
           title: Text(
-            channel.name.isNotEmpty ? channel.name : 'Unnamed Channel',
+            channel.name.isNotEmpty ? channel.name : l10n.unnamedChannel,
             style: TextStyle(
               fontWeight:
                   showBadge ? FontWeight.bold : FontWeight.normal,

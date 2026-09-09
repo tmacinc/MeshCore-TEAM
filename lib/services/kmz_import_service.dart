@@ -12,6 +12,8 @@ import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:xml/xml.dart';
+import 'package:meshcore_team/l10n/app_localizations.dart';
+import 'package:meshcore_team/models/app_language.dart';
 
 /// A single georeferenced image tile extracted from a KMZ GroundOverlay.
 class KmzTile {
@@ -87,8 +89,8 @@ class KmzImportService {
     // Locate doc.kml (may be at root or inside a subdirectory)
     final kmlEntry = archive.files.firstWhere(
       (f) => f.isFile && p.basename(f.name).toLowerCase() == 'doc.kml',
-      orElse: () => throw const FormatException(
-          'No doc.kml found in KMZ file. Is this a valid Garmin Custom Map?'),
+      orElse: () => throw FormatException(
+          lookupAppLocalizations(AppLanguage.localeFor()).kmzNoDocKml),
     );
 
     final kmlContent = String.fromCharCodes(kmlEntry.content as List<int>);
@@ -96,8 +98,8 @@ class KmzImportService {
 
     final overlays = document.findAllElements('GroundOverlay').toList();
     if (overlays.isEmpty) {
-      throw const FormatException(
-          'No GroundOverlay elements found in doc.kml. This KMZ does not contain raster map overlays.');
+      throw FormatException(
+          lookupAppLocalizations(AppLanguage.localeFor()).kmzNoGroundOverlay);
     }
 
     // Derive a map name: first GroundOverlay name, then KMZ filename
@@ -195,8 +197,8 @@ class KmzImportService {
     if (tiles.isEmpty) {
       // Clean up empty directory
       await Directory(dirPath).delete(recursive: true);
-      throw const FormatException(
-          'Could not extract any usable image tiles from the KMZ.');
+      throw FormatException(
+          lookupAppLocalizations(AppLanguage.localeFor()).kmzNoUsableTiles);
     }
 
     return KmzImportResult(

@@ -16,6 +16,8 @@ import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:meshcore_team/database/database.dart';
+import 'package:meshcore_team/l10n/app_localizations.dart';
+import 'package:meshcore_team/models/app_language.dart';
 import 'package:meshcore_team/models/map_tile_providers.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/services/map_tile_cache_service.dart';
@@ -319,6 +321,40 @@ class TeamConfigImportResult {
     this.overlayMapsSkipped = 0,
   });
 
+  /// Human-readable summary in the user's language.
+  ///
+  /// [toString] stays English for logs and crash reports; this is what the
+  /// snackbar after an import shows.
+  String describe(AppLocalizations l10n) {
+    final parts = <String>[];
+    if (channelsImported > 0) parts.add(l10n.countChannels(channelsImported));
+    if (waypointsImported > 0) {
+      parts.add(l10n.countWaypoints(waypointsImported));
+    }
+    if (tilesImported > 0) parts.add(l10n.countTiles(tilesImported));
+    if (overlayMapsImported > 0) {
+      parts.add(l10n.countOverlayMaps(overlayMapsImported));
+    }
+    if (radioSettingsApplied) parts.add(l10n.radioSettingsItem);
+    final imported = parts.isEmpty
+        ? l10n.nothingNew
+        : l10n.importedItems(parts.join(', '));
+
+    final skipped = <String>[];
+    if (channelsSkipped > 0) skipped.add(l10n.countChannels(channelsSkipped));
+    if (waypointsSkipped > 0) {
+      skipped.add(l10n.countWaypoints(waypointsSkipped));
+    }
+    if (tilesSkipped > 0) skipped.add(l10n.countTiles(tilesSkipped));
+    if (overlayMapsSkipped > 0) {
+      skipped.add(l10n.countOverlayMaps(overlayMapsSkipped));
+    }
+
+    return skipped.isEmpty
+        ? imported
+        : l10n.importedWithSkipped(imported, skipped.join(', '));
+  }
+
   @override
   String toString() {
     final parts = <String>[];
@@ -339,6 +375,14 @@ class TeamConfigImportResult {
         : '$imported (skipped ${skipped.join(', ')})';
   }
 }
+
+/// Strings for the user's language, for progress labels built outside the
+/// widget tree.
+///
+/// This service holds no [SettingsService], so it reads the language from
+/// [AppLanguage.activeLocaleCode], which settings keeps up to date.
+AppLocalizations get _phaseL10n =>
+    lookupAppLocalizations(AppLanguage.localeFor());
 
 class TeamConfigService {
   static const int _formatVersion = 1;
@@ -454,7 +498,7 @@ class TeamConfigService {
         tilesProcessed++;
         if (tilesProcessed % 50 == 0 || tilesProcessed == totalTilesToPack) {
           onProgress?.call(TeamConfigProgress(
-            phase: 'Packing tiles',
+            phase: _phaseL10n.packingTiles,
             current: tilesProcessed,
             total: totalTilesToPack,
           ));
@@ -762,14 +806,14 @@ class TeamConfigService {
 
     // --- Apply radio settings first (before channels, since firmware restarts) ---
     if (radioSettings != null && applyRadioSettings != null) {
-      onProgress?.call(const TeamConfigProgress(
-        phase: 'Applying radio settings',
+      onProgress?.call(TeamConfigProgress(
+        phase: _phaseL10n.applyingRadioSettings,
         current: 0,
         total: 1,
       ));
       radioSettingsApplied = await applyRadioSettings(radioSettings);
-      onProgress?.call(const TeamConfigProgress(
-        phase: 'Applying radio settings',
+      onProgress?.call(TeamConfigProgress(
+        phase: _phaseL10n.applyingRadioSettings,
         current: 1,
         total: 1,
       ));
@@ -777,7 +821,7 @@ class TeamConfigService {
 
     // --- Import channels via existing importChannel() ---
     onProgress?.call(TeamConfigProgress(
-      phase: 'Importing channels',
+      phase: _phaseL10n.importingChannels,
       current: 0,
       total: channelEntries.length,
     ));
@@ -804,7 +848,7 @@ class TeamConfigService {
       }
 
       onProgress?.call(TeamConfigProgress(
-        phase: 'Importing channels',
+        phase: _phaseL10n.importingChannels,
         current: i + 1,
         total: channelEntries.length,
       ));
@@ -812,7 +856,7 @@ class TeamConfigService {
 
     // --- Import waypoints ---
     onProgress?.call(TeamConfigProgress(
-      phase: 'Importing waypoints',
+      phase: _phaseL10n.importingWaypoints,
       current: 0,
       total: waypointEntries.length,
     ));
@@ -871,7 +915,7 @@ class TeamConfigService {
       }
 
       onProgress?.call(TeamConfigProgress(
-        phase: 'Importing waypoints',
+        phase: _phaseL10n.importingWaypoints,
         current: i + 1,
         total: waypointEntries.length,
       ));
@@ -883,7 +927,7 @@ class TeamConfigService {
     final totalTiles = tileFiles.length;
 
     onProgress?.call(TeamConfigProgress(
-      phase: 'Importing tiles',
+      phase: _phaseL10n.importingTiles,
       current: 0,
       total: totalTiles,
     ));
@@ -919,7 +963,7 @@ class TeamConfigService {
 
       if (i % 50 == 0 || i == totalTiles - 1) {
         onProgress?.call(TeamConfigProgress(
-          phase: 'Importing tiles',
+          phase: _phaseL10n.importingTiles,
           current: i + 1,
           total: totalTiles,
         ));
@@ -981,7 +1025,7 @@ class TeamConfigService {
       final existingOverlays = await db.importedOverlayMapsDao.getAllMaps();
 
       onProgress?.call(TeamConfigProgress(
-        phase: 'Importing overlay maps',
+        phase: _phaseL10n.importingOverlayMaps,
         current: 0,
         total: overlayMapEntries.length,
       ));
@@ -1037,7 +1081,7 @@ class TeamConfigService {
         }
 
         onProgress?.call(TeamConfigProgress(
-          phase: 'Importing overlay maps',
+          phase: _phaseL10n.importingOverlayMaps,
           current: i + 1,
           total: overlayMapEntries.length,
         ));

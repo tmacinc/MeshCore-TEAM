@@ -458,12 +458,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(AppLocalizations.of(context)!.backgroundLocation),
-        content: const Text(
-          'MeshCore TEAM needs background location access to continue '
-          'sharing your position with the mesh network when the app is '
-          'minimized.\n\n'
-          'This allows location tracking and BLE communication to '
-          'continue working in the background.',
+        content: Text(
+          AppLocalizations.of(context)!.backgroundLocationExplanation,
         ),
         actions: [
           TextButton(

@@ -75,9 +75,10 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
   }
 
   Future<void> _deleteArea(OfflineMapAreaData area) async {
+    final l10n = AppLocalizations.of(context)!;
     final ok = await _confirm(
-      'Delete offline map?',
-      'This will remove downloaded tiles for "${area.name}".',
+      l10n.deleteOfflineMapQuestion,
+      l10n.deleteOfflineMapNamed(area.name),
     );
     if (!ok) return;
 
@@ -114,9 +115,10 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
   Future<void> _clearAll(List<OfflineMapAreaData> areas) async {
     if (areas.isEmpty) return;
 
+    final l10n = AppLocalizations.of(context)!;
     final ok = await _confirm(
-      'Clear all offline maps?',
-      'This will remove all downloaded offline map areas and their tiles.',
+      l10n.clearAllOfflineMapsQuestion,
+      l10n.clearAllOfflineMapsBody,
     );
     if (!ok) return;
 

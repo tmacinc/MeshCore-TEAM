@@ -1285,4 +1285,771 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get connectToDeviceToSeeChannels =>
       'Verbind met een apparaat en synchroniseer om kanalen te zien';
+
+  @override
+  String get bluetooth => 'Bluetooth';
+
+  @override
+  String get notifications => 'Meldingen';
+
+  @override
+  String get background => 'Achtergrond';
+
+  @override
+  String get permissionsIntro =>
+      'Om verbinding te maken met je mesh-radio en berichten te delen, heeft MeshCore TEAM toegang nodig tot:';
+
+  @override
+  String get permissionBluetoothReason => 'Verbinding maken met je mesh-radio';
+
+  @override
+  String get permissionLocationReason =>
+      'Vereist voor kaarten: navigeren en je locatie met je team delen.';
+
+  @override
+  String get permissionNotificationsReason =>
+      'Je waarschuwen wanneer er berichten binnenkomen';
+
+  @override
+  String get permissionBackgroundReason =>
+      'Je mesh-verbinding en tracking op de achtergrond actief houden.';
+
+  @override
+  String get changePermissionsLaterHint =>
+      'Je kunt dit later wijzigen in de systeeminstellingen.';
+
+  @override
+  String get requestingPermissions => 'Machtigingen aanvragen...';
+
+  @override
+  String get permissionsRequiredToFunction =>
+      'MeshCore TEAM heeft Bluetooth- en locatiemachtigingen nodig om te werken. Verleen deze machtigingen om door te gaan.';
+
+  @override
+  String get batteryOptimizationExplanation =>
+      'Om je mesh-verbinding op de achtergrond actief te houden, raden we aan de batterijoptimalisatie voor deze app uit te schakelen.\n\nZo kan de app een stabiele Bluetooth-verbinding met je radio behouden, zelfs als het scherm uit staat.';
+
+  @override
+  String errorRequestingPermissions(String error) {
+    return 'Fout bij aanvragen van machtigingen: $error';
+  }
+
+  @override
+  String requiredPermissionsDenied(String permissions) {
+    return 'Vereiste machtigingen geweigerd:\n$permissions';
+  }
+
+  @override
+  String get notificationChannelMessagesName => 'Kanaalberichten';
+
+  @override
+  String get notificationChannelMessagesDescription =>
+      'Meldingen voor kanaalberichten op het mesh-netwerk';
+
+  @override
+  String get notificationChannelDirectName => 'Directe berichten';
+
+  @override
+  String get notificationChannelDirectDescription =>
+      'Meldingen voor directe berichten op het mesh-netwerk';
+
+  @override
+  String get notificationChannelWaypointsName => 'Waypoint-meldingen';
+
+  @override
+  String get notificationChannelWaypointsDescription =>
+      'Meldingen voor ontvangen waypoints op het mesh-netwerk';
+
+  @override
+  String directMessageNotificationTitle(String sender) {
+    return '$sender (Direct bericht)';
+  }
+
+  @override
+  String get newMessagesTitle => 'Nieuwe berichten';
+
+  @override
+  String newMessagesBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'nieuwe berichten',
+      one: 'nieuw bericht',
+    );
+    return 'Je hebt $count $_temp0';
+  }
+
+  @override
+  String newWaypointTitle(String name) {
+    return 'Nieuw waypoint: $name';
+  }
+
+  @override
+  String get newWaypoint => 'Nieuw waypoint';
+
+  @override
+  String waypointFromCreator(String type, String creator) {
+    return '$type van $creator';
+  }
+
+  @override
+  String get channelsWillBeClearedFromFirmware =>
+      'Kanalen worden gewist uit de firmware van de verbonden companion.';
+
+  @override
+  String get thisCannotBeUndone => 'Dit kan niet ongedaan worden gemaakt.';
+
+  @override
+  String get bluetoothPermissionNotGranted =>
+      'Bluetooth-machtiging niet verleend.';
+
+  @override
+  String get enableNearbyDevicesHint =>
+      'Schakel de machtiging \"Apparaten in de buurt\" in en keer terug naar de app.';
+
+  @override
+  String get bluetoothIsDisabled => 'Bluetooth is uitgeschakeld';
+
+  @override
+  String get turnOnBluetoothAndRetry =>
+      'Schakel Bluetooth in en tik op Opnieuw.';
+
+  @override
+  String get tapScanToSearchForRadios =>
+      'Tik op de scanknop om te zoeken naar MeshCore companion-radio’s';
+
+  @override
+  String get meshDevice => 'Mesh-apparaat';
+
+  @override
+  String get companionSettings => 'Companion-instellingen';
+
+  @override
+  String get notSet => 'Niet ingesteld';
+
+  @override
+  String get campModeDescription =>
+      'Beperkt de radio tot camp-compatibele presets en schakelt de firmware-repeatmodus in';
+
+  @override
+  String get smartForwardingDescription =>
+      'Gebruik door de app beheerde slimme forwarding zolang campmodus actief is';
+
+  @override
+  String get autonomousModeDescription =>
+      'Configureert autonome tracking in de firmware. Gebruikt de waarden uit de locatietracking-instellingen.';
+
+  @override
+  String get noGpsFixWarning =>
+      'Nog geen GPS-fix. Er wordt geen telemetrie verzonden totdat de radio een geldige GPS-positie heeft.';
+
+  @override
+  String txPowerWithMax(int power, int maxPower) {
+    return 'TX-vermogen: $power dBm (max $maxPower)';
+  }
+
+  @override
+  String get invalidFrequency => 'Ongeldige frequentie';
+
+  @override
+  String get selectACampPreset => 'Selecteer een camp-preset';
+
+  @override
+  String get autonomousRejectedNoGpsUnit =>
+      'Firmware weigerde autonome modus (ERR 6). Dit apparaat heeft geen gps-module.';
+
+  @override
+  String get autonomousVerifyFailed =>
+      'Kon autonome instellingen na het schrijven niet verifiëren. Controleer de verbinding en probeer opnieuw.';
+
+  @override
+  String get autonomousSettingsDidNotStick =>
+      'Autonome instellingen bleven na het schrijven niet behouden. Probeer het opnieuw.';
+
+  @override
+  String get failedToApplySettingsAutonomousHint =>
+      'Kon instellingen niet toepassen. Zorg bij autonome modus dat de companion-gps aan staat en een geldige fix heeft.';
+
+  @override
+  String get failedToApplyRadioSettings =>
+      'Kon radio-instellingen niet toepassen.';
+
+  @override
+  String get sendAdvert => 'Advert verzenden';
+
+  @override
+  String connectedToDevice(String device) {
+    return 'Verbonden met $device';
+  }
+
+  @override
+  String failedToConnectToDevice(String device) {
+    return 'Kon geen verbinding maken met $device';
+  }
+
+  @override
+  String get copyContactInfo => 'Contactgegevens kopiëren';
+
+  @override
+  String get contactInfoCopied => 'Contactgegevens gekopieerd';
+
+  @override
+  String get labelHash => 'Hash';
+
+  @override
+  String get labelBattery => 'Batterij';
+
+  @override
+  String get labelType => 'Type';
+
+  @override
+  String get nodeTypeRepeater => 'Repeater';
+
+  @override
+  String get nodeTypeRoomServer => 'Roomserver';
+
+  @override
+  String get nodeTypeEndNode => 'Eindknooppunt';
+
+  @override
+  String get justNow => 'Zojuist';
+
+  @override
+  String minutesAgo(int minutes) {
+    return '$minutes min geleden';
+  }
+
+  @override
+  String hoursAgo(int hours) {
+    return '$hours u geleden';
+  }
+
+  @override
+  String daysAgo(int days) {
+    return '$days d geleden';
+  }
+
+  @override
+  String get identityNameExplanation =>
+      'Met deze naam word je op het mesh-netwerk geïdentificeerd.';
+
+  @override
+  String get nameCannotBeEmpty => 'Naam mag niet leeg zijn';
+
+  @override
+  String get failedToApplyName =>
+      'Kon naam niet toepassen. Probeer het opnieuw.';
+
+  @override
+  String get unknownContact => 'Onbekend contact';
+
+  @override
+  String get repeaterDirectMessagesDisabled =>
+      'Dit contact is een repeater. Directe berichten zijn uitgeschakeld.';
+
+  @override
+  String get channelLinkPasswordWarning =>
+      'Iedereen met deze link kan dit privékanaal binnenkomen. Behandel het als een wachtwoord.';
+
+  @override
+  String get sameNameSameChannelHint =>
+      'Iedereen die dezelfde naam typt, komt in hetzelfde kanaal';
+
+  @override
+  String get unnamedChannel => 'Naamloos kanaal';
+
+  @override
+  String latWithValue(String value) {
+    return 'Lat: $value';
+  }
+
+  @override
+  String lonWithValue(String value) {
+    return 'Lon: $value';
+  }
+
+  @override
+  String get hidePath => 'Pad verbergen';
+
+  @override
+  String get showPath => 'Pad tonen';
+
+  @override
+  String get editRoute => 'Route bewerken';
+
+  @override
+  String get saveRoute => 'Route opslaan';
+
+  @override
+  String get routeColor => 'Routekleur';
+
+  @override
+  String get editRoutePoints => 'Routepunten bewerken';
+
+  @override
+  String get editRouteInfo => 'Route-info bewerken';
+
+  @override
+  String get waypointSharedToMesh => 'Waypoint gedeeld op het mesh';
+
+  @override
+  String get failedToShareWaypoint => 'Kon waypoint niet delen';
+
+  @override
+  String get deleteWaypointQuestion => 'Waypoint verwijderen?';
+
+  @override
+  String deleteWaypointNamed(String name) {
+    return 'Hiermee wordt \"$name\" verwijderd.';
+  }
+
+  @override
+  String get deleteWaypointsQuestion => 'Waypoints verwijderen?';
+
+  @override
+  String deleteWaypointsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'worden',
+      one: 'wordt',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'waypoints',
+      one: 'waypoint',
+    );
+    return 'Hiermee $_temp0 $count $_temp1 verwijderd.';
+  }
+
+  @override
+  String get deleteReceivedWaypointsQuestion =>
+      'Ontvangen waypoints verwijderen?';
+
+  @override
+  String get deleteReceivedWaypointsBody =>
+      'Hiermee worden alle ontvangen waypoints van het apparaat verwijderd.';
+
+  @override
+  String get deleteLocalWaypointsQuestion => 'Lokale waypoints verwijderen?';
+
+  @override
+  String get deleteLocalWaypointsBody =>
+      'Hiermee worden alle lokale waypoints verwijderd die je op het apparaat hebt gemaakt.';
+
+  @override
+  String sharedWaypointsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'waypoints',
+      one: 'waypoint',
+    );
+    return '$count $_temp0 gedeeld';
+  }
+
+  @override
+  String sharedWaypointsPartial(int okCount, int failCount) {
+    return '$okCount gedeeld, $failCount mislukt';
+  }
+
+  @override
+  String get routeModeTapToAddFirstPoint =>
+      'Routemodus: tik op de kaart om het eerste punt toe te voegen';
+
+  @override
+  String routeModePointCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'punten',
+      one: 'punt',
+    );
+    return 'Routemodus: $count $_temp0 (tik op een punt om het te verplaatsen)';
+  }
+
+  @override
+  String routeModeTapToMovePoint(int index) {
+    return 'Tik op de kaart om punt $index te verplaatsen (tik nogmaals op het punt om te annuleren)';
+  }
+
+  @override
+  String get tapWaypointsToSelect => 'Tik op waypoints om te selecteren';
+
+  @override
+  String countSelected(int count) {
+    return '$count geselecteerd';
+  }
+
+  @override
+  String get selectWaypoints => 'Waypoints selecteren';
+
+  @override
+  String get importedWaypoint => 'Geïmporteerd waypoint';
+
+  @override
+  String get saveGpxFile => 'GPX-bestand opslaan';
+
+  @override
+  String get garminKmz => 'Garmin KMZ';
+
+  @override
+  String get garminKmzDescription =>
+      'Rasterkaarttegels uit een Garmin Custom Map-archief';
+
+  @override
+  String get mbtilesDescription =>
+      'Offline tegelpiramide uit QGIS, GDAL of Mobile Atlas Creator';
+
+  @override
+  String get pleaseSelectMbtilesFile => 'Selecteer een .mbtiles-bestand.';
+
+  @override
+  String get deleteMapQuestion => 'Kaart verwijderen?';
+
+  @override
+  String deleteMapNamed(String name) {
+    return 'Hiermee worden \"$name\" en de bijbehorende afbeeldingsbestanden van het apparaat verwijderd.';
+  }
+
+  @override
+  String get noImportedMaps => 'Geen geïmporteerde kaarten';
+
+  @override
+  String get noImportedMapsHint =>
+      'Importeer een Garmin-achtig KMZ-bestand of een MBTiles-archief om een eigen offlinekaart over de basiskaart te tonen.';
+
+  @override
+  String get hideOnMap => 'Verbergen op kaart';
+
+  @override
+  String get showOnMap => 'Tonen op kaart';
+
+  @override
+  String get deleteOfflineMapQuestion => 'Offlinekaart verwijderen?';
+
+  @override
+  String deleteOfflineMapNamed(String name) {
+    return 'Hiermee worden de gedownloade tegels voor \"$name\" verwijderd.';
+  }
+
+  @override
+  String get clearAllOfflineMapsQuestion => 'Alle offlinekaarten wissen?';
+
+  @override
+  String get clearAllOfflineMapsBody =>
+      'Hiermee worden alle gedownloade offlinekaartgebieden en hun tegels verwijderd.';
+
+  @override
+  String get pleaseEnterAName => 'Voer een naam in';
+
+  @override
+  String get downloadCancelled => 'Download geannuleerd';
+
+  @override
+  String downloadFailed(String error) {
+    return 'Download mislukt: $error';
+  }
+
+  @override
+  String downloadProgress(int completed, int total, int failed) {
+    return 'Voortgang: $completed/$total (mislukt: $failed)';
+  }
+
+  @override
+  String get connectBeforeImportingConfig =>
+      'Maak verbinding met een companion-apparaat voordat je importeert. Kanalen moeten in de firmware worden geregistreerd.';
+
+  @override
+  String get importTeamConfigExplanation =>
+      'Importeer een teamconfiguratie uit een lokaal bestand of door de QR-code te scannen van een apparaat in de buurt dat via wifi deelt.';
+
+  @override
+  String omittedTooLargeToShare(String names) {
+    return 'Weggelaten uit de configuratie omdat ze te groot zijn om te delen: $names. Draag het bestand rechtstreeks over.';
+  }
+
+  @override
+  String get shareConfigWithoutInternet => 'Configuratie delen zonder internet';
+
+  @override
+  String get shareConfigHotspotExplanation =>
+      'Maak een mobiele hotspot op je apparaat zodat teamleden verbinding kunnen maken en de configuratie rechtstreeks kunnen downloaden.';
+
+  @override
+  String get mobileHotspot => 'Mobiele hotspot';
+
+  @override
+  String get iphoneOrIpad => 'iPhone / iPad';
+
+  @override
+  String get hotspotStepOpenSettings => 'Open Instellingen';
+
+  @override
+  String get hotspotStepTapPersonalHotspot => 'Tik op Persoonlijke hotspot';
+
+  @override
+  String get hotspotStepAllowOthersToJoin =>
+      'Schakel \"Anderen toegang geven\" in';
+
+  @override
+  String get hotspotStepShareNameAndPassword =>
+      'Deel de hotspotnaam en het wachtwoord met je team';
+
+  @override
+  String get hotspotStepTapNetworkInternet =>
+      'Tik op Netwerk en internet (of Verbindingen)';
+
+  @override
+  String get hotspotStepTapHotspotTethering => 'Tik op Hotspot en tethering';
+
+  @override
+  String get hotspotStepTurnOnWifiHotspot => 'Schakel wifi-hotspot in';
+
+  @override
+  String get hotspotStepEnableFromSystemSettings =>
+      'Schakel je mobiele hotspot in via de systeeminstellingen';
+
+  @override
+  String get connectToHotspotBeforeScanning =>
+      'Teamleden moeten verbinding maken met je hotspot-wifi voordat ze de QR-code scannen.';
+
+  @override
+  String get selectConfigToShare => 'Selecteer de te delen configuratie';
+
+  @override
+  String get chooseTeamcfgFile =>
+      'Kies een .teamcfg.zip-bestand om met je team te delen.';
+
+  @override
+  String get couldNotReadSelectedFile =>
+      'Kon het geselecteerde bestand niet lezen.';
+
+  @override
+  String invalidConfigFile(String error) {
+    return 'Ongeldig configuratiebestand: $error';
+  }
+
+  @override
+  String errorSelectingFile(String error) {
+    return 'Fout bij selecteren van bestand: $error';
+  }
+
+  @override
+  String get configDetails => 'Configuratiedetails';
+
+  @override
+  String get radioSettingsLabel => 'Radio-instellingen';
+
+  @override
+  String channelsWithCount(int count) {
+    return 'Kanalen ($count)';
+  }
+
+  @override
+  String get mapTiles => 'Kaarttegels';
+
+  @override
+  String get couldNotDetermineLocalIp =>
+      'Kon het lokale IP-adres niet bepalen. Zorg dat je hotspot is ingeschakeld.';
+
+  @override
+  String failedToStartServer(String error) {
+    return 'Kon server niet starten: $error';
+  }
+
+  @override
+  String get sharingConfig => 'Configuratie delen';
+
+  @override
+  String get teamMembersShould => 'Teamleden moeten:';
+
+  @override
+  String get shareStepConnectToHotspot =>
+      'Verbinding maken met je hotspot-wifi';
+
+  @override
+  String get shareStepOpenImportFromQr =>
+      'Open MeshCore TEAM → Teamconfiguratie importeren → Via QR-code';
+
+  @override
+  String get shareStepScanQrToDownload => 'Scan deze QR-code om te downloaden';
+
+  @override
+  String get manualDownloadUrl => 'Handmatige download-URL:';
+
+  @override
+  String get starting => 'Starten…';
+
+  @override
+  String get backgroundLocationExplanation =>
+      'MeshCore TEAM heeft locatietoegang op de achtergrond nodig om je positie met het mesh-netwerk te blijven delen wanneer de app geminimaliseerd is.\n\nZo blijven locatietracking en BLE-communicatie op de achtergrond werken.';
+
+  @override
+  String get meshConnectionChannelName => 'Mesh-netwerkverbinding';
+
+  @override
+  String get meshConnectionChannelDescription =>
+      'Houdt de mesh-netwerkverbinding op de achtergrond in stand';
+
+  @override
+  String get meshNetworkActive => 'Mesh-netwerk actief';
+
+  @override
+  String get meshNetwork => 'Mesh-netwerk';
+
+  @override
+  String get meshNetworkReconnecting => 'Mesh-netwerk maakt opnieuw verbinding';
+
+  @override
+  String get meshNetworkConnecting => 'Mesh-netwerk maakt verbinding';
+
+  @override
+  String get meshNetworkDisconnected => 'Mesh-netwerk verbroken';
+
+  @override
+  String get meshNetworkScanning => 'Mesh-netwerk scant';
+
+  @override
+  String get meshNetworkError => 'Mesh-netwerkfout';
+
+  @override
+  String get connectingToCompanionDevice =>
+      'Verbinding maken met companion-apparaat...';
+
+  @override
+  String reconnectingToDevice(String device) {
+    return 'Opnieuw verbinden met $device...';
+  }
+
+  @override
+  String get establishingConnection => 'Verbinding tot stand brengen...';
+
+  @override
+  String get deviceDisconnected => 'Apparaat losgekoppeld';
+
+  @override
+  String get searchingForDevices => 'Zoeken naar apparaten...';
+
+  @override
+  String get connectionError => 'Verbindingsfout';
+
+  @override
+  String get maxChannelsReachedJoin =>
+      'Maximum aantal kanalen bereikt. Verwijder een bestaand kanaal voordat je een nieuw kanaal binnengaat.';
+
+  @override
+  String get maxChannelsReachedCreate =>
+      'Maximum aantal kanalen bereikt. Verwijder een bestaand kanaal voordat je een nieuw kanaal aanmaakt.';
+
+  @override
+  String failedToRegisterChannel(String code) {
+    return 'Kon kanaal niet registreren in firmware (fout $code)';
+  }
+
+  @override
+  String failedToDeleteChannelFromCompanion(String code) {
+    return 'Kon kanaal niet van companion verwijderen (fout $code)';
+  }
+
+  @override
+  String get kmzNoDocKml =>
+      'Geen doc.kml gevonden in het KMZ-bestand. Is dit een geldige Garmin Custom Map?';
+
+  @override
+  String get kmzNoGroundOverlay =>
+      'Geen GroundOverlay-elementen gevonden in doc.kml. Deze KMZ bevat geen rasterkaartoverlays.';
+
+  @override
+  String get kmzNoUsableTiles =>
+      'Kon geen bruikbare afbeeldingstegels uit de KMZ halen.';
+
+  @override
+  String get mbtilesVectorNotSupported =>
+      'Dit is een vector-MBTiles-bestand. Alleen raster-MBTiles (PNG-, JPG- of WebP-tegels) kunnen worden weergegeven.';
+
+  @override
+  String get nothingNew => 'Niets nieuws';
+
+  @override
+  String importedItems(String items) {
+    return 'Geïmporteerd: $items';
+  }
+
+  @override
+  String get packingTiles => 'Tegels inpakken';
+
+  @override
+  String get applyingRadioSettings => 'Radio-instellingen toepassen';
+
+  @override
+  String get importingChannels => 'Kanalen importeren';
+
+  @override
+  String get importingWaypoints => 'Waypoints importeren';
+
+  @override
+  String get importingTiles => 'Tegels importeren';
+
+  @override
+  String get importingOverlayMaps => 'Overlaykaarten importeren';
+
+  @override
+  String get meshUser => 'Mesh-gebruiker';
+
+  @override
+  String get inactive => 'Inactief';
+
+  @override
+  String countChannels(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'kanalen',
+      one: 'kanaal',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String countWaypoints(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'waypoints',
+      one: 'waypoint',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String countTiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'tegels',
+      one: 'tegel',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String countOverlayMaps(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'overlaykaarten',
+      one: 'overlaykaart',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String get radioSettingsItem => 'radio-instellingen';
+
+  @override
+  String importedWithSkipped(String imported, String skipped) {
+    return '$imported (overgeslagen: $skipped)';
+  }
 }

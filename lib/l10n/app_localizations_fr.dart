@@ -1292,4 +1292,770 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get connectToDeviceToSeeChannels =>
       'Connectez-vous à un appareil et synchronisez pour voir les canaux';
+
+  @override
+  String get bluetooth => 'Bluetooth';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get background => 'Arrière-plan';
+
+  @override
+  String get permissionsIntro =>
+      'Pour se connecter à votre radio mesh et partager des messages, MeshCore TEAM a besoin d’accéder à :';
+
+  @override
+  String get permissionBluetoothReason => 'Se connecter à votre radio mesh';
+
+  @override
+  String get permissionLocationReason =>
+      'Nécessaire pour les cartes : naviguer et partager votre position avec votre équipe.';
+
+  @override
+  String get permissionNotificationsReason =>
+      'Vous alerter à l’arrivée de messages';
+
+  @override
+  String get permissionBackgroundReason =>
+      'Maintenir votre connexion mesh et le suivi actifs en arrière-plan.';
+
+  @override
+  String get changePermissionsLaterHint =>
+      'Vous pourrez les modifier plus tard dans les réglages du système.';
+
+  @override
+  String get requestingPermissions => 'Demande des autorisations...';
+
+  @override
+  String get permissionsRequiredToFunction =>
+      'MeshCore TEAM nécessite les autorisations Bluetooth et Localisation pour fonctionner. Veuillez les accorder pour continuer.';
+
+  @override
+  String get batteryOptimizationExplanation =>
+      'Pour maintenir votre connexion mesh active en arrière-plan, nous recommandons de désactiver l’optimisation de la batterie pour cette application.\n\nCela lui permettra de conserver une connexion Bluetooth stable avec votre radio, même écran éteint.';
+
+  @override
+  String errorRequestingPermissions(String error) {
+    return 'Erreur lors de la demande d’autorisations : $error';
+  }
+
+  @override
+  String requiredPermissionsDenied(String permissions) {
+    return 'Autorisations requises refusées :\n$permissions';
+  }
+
+  @override
+  String get notificationChannelMessagesName => 'Messages de canal';
+
+  @override
+  String get notificationChannelMessagesDescription =>
+      'Notifications des messages de canal sur le réseau mesh';
+
+  @override
+  String get notificationChannelDirectName => 'Messages directs';
+
+  @override
+  String get notificationChannelDirectDescription =>
+      'Notifications des messages directs sur le réseau mesh';
+
+  @override
+  String get notificationChannelWaypointsName =>
+      'Notifications de points de passage';
+
+  @override
+  String get notificationChannelWaypointsDescription =>
+      'Notifications des points de passage reçus sur le réseau mesh';
+
+  @override
+  String directMessageNotificationTitle(String sender) {
+    return '$sender (Message direct)';
+  }
+
+  @override
+  String get newMessagesTitle => 'Nouveaux messages';
+
+  @override
+  String newMessagesBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'nouveaux messages',
+      one: 'nouveau message',
+    );
+    return 'Vous avez $count $_temp0';
+  }
+
+  @override
+  String newWaypointTitle(String name) {
+    return 'Nouveau point de passage : $name';
+  }
+
+  @override
+  String get newWaypoint => 'Nouveau point de passage';
+
+  @override
+  String waypointFromCreator(String type, String creator) {
+    return '$type de $creator';
+  }
+
+  @override
+  String get channelsWillBeClearedFromFirmware =>
+      'Les canaux seront effacés du firmware du compagnon connecté.';
+
+  @override
+  String get thisCannotBeUndone => 'Cette action est irréversible.';
+
+  @override
+  String get bluetoothPermissionNotGranted =>
+      'Autorisation Bluetooth non accordée.';
+
+  @override
+  String get enableNearbyDevicesHint =>
+      'Activez l’autorisation « Appareils à proximité », puis revenez à l’application.';
+
+  @override
+  String get bluetoothIsDisabled => 'Le Bluetooth est désactivé';
+
+  @override
+  String get turnOnBluetoothAndRetry =>
+      'Activez le Bluetooth puis appuyez sur Réessayer.';
+
+  @override
+  String get tapScanToSearchForRadios =>
+      'Appuyez sur le bouton de recherche pour trouver des radios compagnon MeshCore';
+
+  @override
+  String get meshDevice => 'Appareil mesh';
+
+  @override
+  String get companionSettings => 'Réglages du compagnon';
+
+  @override
+  String get notSet => 'Non défini';
+
+  @override
+  String get campModeDescription =>
+      'Limite la radio aux préréglages compatibles camp et active le mode répéteur du firmware';
+
+  @override
+  String get smartForwardingDescription =>
+      'Utiliser le relais intelligent géré par l’application tant que le mode camp est actif';
+
+  @override
+  String get autonomousModeDescription =>
+      'Configure le suivi autonome du firmware. Utilise les valeurs des réglages de suivi de position.';
+
+  @override
+  String get noGpsFixWarning =>
+      'Pas encore de position GPS. Aucune télémétrie ne sera envoyée tant que la radio n’aura pas acquis une position GPS valide.';
+
+  @override
+  String txPowerWithMax(int power, int maxPower) {
+    return 'Puissance TX : $power dBm (max $maxPower)';
+  }
+
+  @override
+  String get invalidFrequency => 'Fréquence non valide';
+
+  @override
+  String get selectACampPreset => 'Sélectionnez un préréglage camp';
+
+  @override
+  String get autonomousRejectedNoGpsUnit =>
+      'Le firmware a refusé l’activation autonome (ERR 6). Cet appareil n’a pas de module GPS.';
+
+  @override
+  String get autonomousVerifyFailed =>
+      'Impossible de vérifier les réglages autonomes après l’écriture. Vérifiez la connexion et réessayez.';
+
+  @override
+  String get autonomousSettingsDidNotStick =>
+      'Les réglages autonomes n’ont pas été conservés après l’écriture. Veuillez réessayer.';
+
+  @override
+  String get failedToApplySettingsAutonomousHint =>
+      'Impossible d’appliquer les réglages. Pour le mode autonome, vérifiez que le GPS du compagnon est activé avec une position valide.';
+
+  @override
+  String get failedToApplyRadioSettings =>
+      'Impossible d’appliquer les réglages radio.';
+
+  @override
+  String get sendAdvert => 'Envoyer une annonce';
+
+  @override
+  String connectedToDevice(String device) {
+    return 'Connecté à $device';
+  }
+
+  @override
+  String failedToConnectToDevice(String device) {
+    return 'Échec de la connexion à $device';
+  }
+
+  @override
+  String get copyContactInfo => 'Copier les infos du contact';
+
+  @override
+  String get contactInfoCopied => 'Infos du contact copiées';
+
+  @override
+  String get labelHash => 'Hash';
+
+  @override
+  String get labelBattery => 'Batterie';
+
+  @override
+  String get labelType => 'Type';
+
+  @override
+  String get nodeTypeRepeater => 'Répéteur';
+
+  @override
+  String get nodeTypeRoomServer => 'Serveur de salon';
+
+  @override
+  String get nodeTypeEndNode => 'Nœud terminal';
+
+  @override
+  String get justNow => 'À l’instant';
+
+  @override
+  String minutesAgo(int minutes) {
+    return 'il y a $minutes min';
+  }
+
+  @override
+  String hoursAgo(int hours) {
+    return 'il y a $hours h';
+  }
+
+  @override
+  String daysAgo(int days) {
+    return 'il y a $days j';
+  }
+
+  @override
+  String get identityNameExplanation =>
+      'Ce nom vous identifiera sur le réseau mesh.';
+
+  @override
+  String get nameCannotBeEmpty => 'Le nom ne peut pas être vide';
+
+  @override
+  String get failedToApplyName =>
+      'Impossible d’appliquer le nom. Veuillez réessayer.';
+
+  @override
+  String get unknownContact => 'Contact inconnu';
+
+  @override
+  String get repeaterDirectMessagesDisabled =>
+      'Ce contact est un répéteur. Les messages directs sont désactivés.';
+
+  @override
+  String get channelLinkPasswordWarning =>
+      'Toute personne disposant de ce lien peut rejoindre ce canal privé. Traitez-le comme un mot de passe.';
+
+  @override
+  String get sameNameSameChannelHint =>
+      'Toute personne qui saisit le même nom rejoint le même canal';
+
+  @override
+  String get unnamedChannel => 'Canal sans nom';
+
+  @override
+  String latWithValue(String value) {
+    return 'Lat : $value';
+  }
+
+  @override
+  String lonWithValue(String value) {
+    return 'Lon : $value';
+  }
+
+  @override
+  String get hidePath => 'Masquer le tracé';
+
+  @override
+  String get showPath => 'Afficher le tracé';
+
+  @override
+  String get editRoute => 'Modifier l’itinéraire';
+
+  @override
+  String get saveRoute => 'Enregistrer l’itinéraire';
+
+  @override
+  String get routeColor => 'Couleur de l’itinéraire';
+
+  @override
+  String get editRoutePoints => 'Modifier les points de l’itinéraire';
+
+  @override
+  String get editRouteInfo => 'Modifier les infos de l’itinéraire';
+
+  @override
+  String get waypointSharedToMesh => 'Point de passage partagé sur le mesh';
+
+  @override
+  String get failedToShareWaypoint => 'Échec du partage du point de passage';
+
+  @override
+  String get deleteWaypointQuestion => 'Supprimer le point de passage ?';
+
+  @override
+  String deleteWaypointNamed(String name) {
+    return 'Cela supprimera « $name ».';
+  }
+
+  @override
+  String get deleteWaypointsQuestion => 'Supprimer les points de passage ?';
+
+  @override
+  String deleteWaypointsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'points de passage',
+      one: 'point de passage',
+    );
+    return 'Cela supprimera $count $_temp0.';
+  }
+
+  @override
+  String get deleteReceivedWaypointsQuestion =>
+      'Supprimer les points de passage reçus ?';
+
+  @override
+  String get deleteReceivedWaypointsBody =>
+      'Cela supprimera de l’appareil tous les points de passage reçus.';
+
+  @override
+  String get deleteLocalWaypointsQuestion =>
+      'Supprimer les points de passage locaux ?';
+
+  @override
+  String get deleteLocalWaypointsBody =>
+      'Cela supprimera tous les points de passage locaux créés sur l’appareil.';
+
+  @override
+  String sharedWaypointsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'points de passage partagés',
+      one: 'point de passage partagé',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String sharedWaypointsPartial(int okCount, int failCount) {
+    return '$okCount partagés, $failCount en échec';
+  }
+
+  @override
+  String get routeModeTapToAddFirstPoint =>
+      'Mode itinéraire : touchez la carte pour ajouter le premier point';
+
+  @override
+  String routeModePointCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'points',
+      one: 'point',
+    );
+    return 'Mode itinéraire : $count $_temp0 (touchez un point pour le déplacer)';
+  }
+
+  @override
+  String routeModeTapToMovePoint(int index) {
+    return 'Touchez la carte pour déplacer le point $index (retouchez le point pour annuler)';
+  }
+
+  @override
+  String get tapWaypointsToSelect =>
+      'Touchez les points de passage pour les sélectionner';
+
+  @override
+  String countSelected(int count) {
+    return '$count sélectionnés';
+  }
+
+  @override
+  String get selectWaypoints => 'Sélectionner des points de passage';
+
+  @override
+  String get importedWaypoint => 'Point de passage importé';
+
+  @override
+  String get saveGpxFile => 'Enregistrer le fichier GPX';
+
+  @override
+  String get garminKmz => 'KMZ Garmin';
+
+  @override
+  String get garminKmzDescription =>
+      'Tuiles raster issues d’une archive Garmin Custom Map';
+
+  @override
+  String get mbtilesDescription =>
+      'Pyramide de tuiles hors ligne depuis QGIS, GDAL ou Mobile Atlas Creator';
+
+  @override
+  String get pleaseSelectMbtilesFile =>
+      'Veuillez sélectionner un fichier .mbtiles.';
+
+  @override
+  String get deleteMapQuestion => 'Supprimer la carte ?';
+
+  @override
+  String deleteMapNamed(String name) {
+    return 'Cela supprimera « $name » et ses fichiers image de l’appareil.';
+  }
+
+  @override
+  String get noImportedMaps => 'Aucune carte importée';
+
+  @override
+  String get noImportedMapsHint =>
+      'Importez un fichier KMZ de type Garmin ou une archive MBTiles pour afficher une carte hors ligne par-dessus la carte de base.';
+
+  @override
+  String get hideOnMap => 'Masquer sur la carte';
+
+  @override
+  String get showOnMap => 'Afficher sur la carte';
+
+  @override
+  String get deleteOfflineMapQuestion => 'Supprimer la carte hors ligne ?';
+
+  @override
+  String deleteOfflineMapNamed(String name) {
+    return 'Cela supprimera les tuiles téléchargées pour « $name ».';
+  }
+
+  @override
+  String get clearAllOfflineMapsQuestion =>
+      'Effacer toutes les cartes hors ligne ?';
+
+  @override
+  String get clearAllOfflineMapsBody =>
+      'Cela supprimera toutes les zones de carte hors ligne téléchargées et leurs tuiles.';
+
+  @override
+  String get pleaseEnterAName => 'Veuillez saisir un nom';
+
+  @override
+  String get downloadCancelled => 'Téléchargement annulé';
+
+  @override
+  String downloadFailed(String error) {
+    return 'Échec du téléchargement : $error';
+  }
+
+  @override
+  String downloadProgress(int completed, int total, int failed) {
+    return 'Progression : $completed/$total (échecs : $failed)';
+  }
+
+  @override
+  String get connectBeforeImportingConfig =>
+      'Connectez-vous à un appareil compagnon avant d’importer. Les canaux doivent être enregistrés dans le firmware.';
+
+  @override
+  String get importTeamConfigExplanation =>
+      'Importez une configuration d’équipe depuis un fichier local ou en scannant le QR code d’un appareil proche qui partage en Wi-Fi.';
+
+  @override
+  String omittedTooLargeToShare(String names) {
+    return 'Exclus de la configuration car trop volumineux : $names. Transférez plutôt le fichier directement.';
+  }
+
+  @override
+  String get shareConfigWithoutInternet =>
+      'Partager la configuration sans Internet';
+
+  @override
+  String get shareConfigHotspotExplanation =>
+      'Créez un point d’accès mobile sur votre appareil pour que les membres de l’équipe s’y connectent et téléchargent la configuration directement.';
+
+  @override
+  String get mobileHotspot => 'Point d’accès mobile';
+
+  @override
+  String get iphoneOrIpad => 'iPhone / iPad';
+
+  @override
+  String get hotspotStepOpenSettings => 'Ouvrez Réglages';
+
+  @override
+  String get hotspotStepTapPersonalHotspot => 'Touchez Partage de connexion';
+
+  @override
+  String get hotspotStepAllowOthersToJoin =>
+      'Activez « Autoriser d’autres utilisateurs »';
+
+  @override
+  String get hotspotStepShareNameAndPassword =>
+      'Partagez le nom et le mot de passe du point d’accès avec votre équipe';
+
+  @override
+  String get hotspotStepTapNetworkInternet =>
+      'Touchez Réseau et Internet (ou Connexions)';
+
+  @override
+  String get hotspotStepTapHotspotTethering =>
+      'Touchez Point d’accès et partage de connexion';
+
+  @override
+  String get hotspotStepTurnOnWifiHotspot => 'Activez le point d’accès Wi-Fi';
+
+  @override
+  String get hotspotStepEnableFromSystemSettings =>
+      'Activez votre point d’accès mobile depuis les réglages système';
+
+  @override
+  String get connectToHotspotBeforeScanning =>
+      'Les membres de l’équipe doivent se connecter à votre Wi-Fi avant de scanner le QR code.';
+
+  @override
+  String get selectConfigToShare => 'Sélectionnez la configuration à partager';
+
+  @override
+  String get chooseTeamcfgFile =>
+      'Choisissez un fichier .teamcfg.zip à partager avec votre équipe.';
+
+  @override
+  String get couldNotReadSelectedFile =>
+      'Impossible de lire le fichier sélectionné.';
+
+  @override
+  String invalidConfigFile(String error) {
+    return 'Fichier de configuration non valide : $error';
+  }
+
+  @override
+  String errorSelectingFile(String error) {
+    return 'Erreur lors de la sélection du fichier : $error';
+  }
+
+  @override
+  String get configDetails => 'Détails de la configuration';
+
+  @override
+  String get radioSettingsLabel => 'Réglages radio';
+
+  @override
+  String channelsWithCount(int count) {
+    return 'Canaux ($count)';
+  }
+
+  @override
+  String get mapTiles => 'Tuiles de carte';
+
+  @override
+  String get couldNotDetermineLocalIp =>
+      'Impossible de déterminer l’adresse IP locale. Vérifiez que votre point d’accès est activé.';
+
+  @override
+  String failedToStartServer(String error) {
+    return 'Impossible de démarrer le serveur : $error';
+  }
+
+  @override
+  String get sharingConfig => 'Partage de la configuration';
+
+  @override
+  String get teamMembersShould => 'Les membres de l’équipe doivent :';
+
+  @override
+  String get shareStepConnectToHotspot => 'Se connecter à votre Wi-Fi';
+
+  @override
+  String get shareStepOpenImportFromQr =>
+      'Ouvrir MeshCore TEAM → Importer la configuration d’équipe → Par QR code';
+
+  @override
+  String get shareStepScanQrToDownload => 'Scanner ce QR code pour télécharger';
+
+  @override
+  String get manualDownloadUrl => 'URL de téléchargement manuel :';
+
+  @override
+  String get starting => 'Démarrage…';
+
+  @override
+  String get backgroundLocationExplanation =>
+      'MeshCore TEAM a besoin d’accéder à la position en arrière-plan pour continuer à partager votre position avec le réseau mesh lorsque l’application est réduite.\n\nCela permet au suivi de position et à la communication BLE de continuer à fonctionner en arrière-plan.';
+
+  @override
+  String get meshConnectionChannelName => 'Connexion au réseau mesh';
+
+  @override
+  String get meshConnectionChannelDescription =>
+      'Maintient la connexion au réseau mesh en arrière-plan';
+
+  @override
+  String get meshNetworkActive => 'Réseau mesh actif';
+
+  @override
+  String get meshNetwork => 'Réseau mesh';
+
+  @override
+  String get meshNetworkReconnecting => 'Reconnexion au réseau mesh';
+
+  @override
+  String get meshNetworkConnecting => 'Connexion au réseau mesh';
+
+  @override
+  String get meshNetworkDisconnected => 'Réseau mesh déconnecté';
+
+  @override
+  String get meshNetworkScanning => 'Recherche sur le réseau mesh';
+
+  @override
+  String get meshNetworkError => 'Erreur du réseau mesh';
+
+  @override
+  String get connectingToCompanionDevice => 'Connexion à l’appareil compagnon…';
+
+  @override
+  String reconnectingToDevice(String device) {
+    return 'Reconnexion à $device…';
+  }
+
+  @override
+  String get establishingConnection => 'Établissement de la connexion…';
+
+  @override
+  String get deviceDisconnected => 'Appareil déconnecté';
+
+  @override
+  String get searchingForDevices => 'Recherche d’appareils…';
+
+  @override
+  String get connectionError => 'Erreur de connexion';
+
+  @override
+  String get maxChannelsReachedJoin =>
+      'Nombre maximal de canaux atteint. Supprimez un canal existant avant d’en rejoindre un nouveau.';
+
+  @override
+  String get maxChannelsReachedCreate =>
+      'Nombre maximal de canaux atteint. Supprimez un canal existant avant d’en créer un nouveau.';
+
+  @override
+  String failedToRegisterChannel(String code) {
+    return 'Échec de l’enregistrement du canal dans le firmware (erreur $code)';
+  }
+
+  @override
+  String failedToDeleteChannelFromCompanion(String code) {
+    return 'Échec de la suppression du canal sur le compagnon (erreur $code)';
+  }
+
+  @override
+  String get kmzNoDocKml =>
+      'Aucun doc.kml trouvé dans le fichier KMZ. S’agit-il d’une Garmin Custom Map valide ?';
+
+  @override
+  String get kmzNoGroundOverlay =>
+      'Aucun élément GroundOverlay trouvé dans doc.kml. Ce KMZ ne contient pas de superpositions raster.';
+
+  @override
+  String get kmzNoUsableTiles =>
+      'Impossible d’extraire des tuiles d’image exploitables du KMZ.';
+
+  @override
+  String get mbtilesVectorNotSupported =>
+      'Ceci est un fichier MBTiles vectoriel. Seuls les MBTiles raster (tuiles PNG, JPG ou WebP) peuvent être affichés.';
+
+  @override
+  String get nothingNew => 'Rien de nouveau';
+
+  @override
+  String importedItems(String items) {
+    return 'Importé : $items';
+  }
+
+  @override
+  String get packingTiles => 'Empaquetage des tuiles';
+
+  @override
+  String get applyingRadioSettings => 'Application des réglages radio';
+
+  @override
+  String get importingChannels => 'Importation des canaux';
+
+  @override
+  String get importingWaypoints => 'Importation des points de passage';
+
+  @override
+  String get importingTiles => 'Importation des tuiles';
+
+  @override
+  String get importingOverlayMaps => 'Importation des cartes de superposition';
+
+  @override
+  String get meshUser => 'Utilisateur mesh';
+
+  @override
+  String get inactive => 'Inactif';
+
+  @override
+  String countChannels(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'canaux',
+      one: 'canal',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String countWaypoints(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'points de passage',
+      one: 'point de passage',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String countTiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'tuiles',
+      one: 'tuile',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String countOverlayMaps(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'cartes de superposition',
+      one: 'carte de superposition',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String get radioSettingsItem => 'réglages radio';
+
+  @override
+  String importedWithSkipped(String imported, String skipped) {
+    return '$imported (ignoré : $skipped)';
+  }
 }

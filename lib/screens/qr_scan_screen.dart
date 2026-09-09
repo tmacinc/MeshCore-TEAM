@@ -4,12 +4,18 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../l10n/app_localizations.dart';
+
 class QrScanScreen extends StatefulWidget {
-  final String title;
+  /// Screen title, or null to use the localized default.
+  ///
+  /// Nullable rather than defaulted because a `const` default cannot read
+  /// localizations — the fallback has to happen where there is a context.
+  final String? title;
 
   const QrScanScreen({
     super.key,
-    this.title = 'Scan QR Code',
+    this.title,
   });
 
   @override
@@ -23,7 +29,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text(
+            widget.title ?? AppLocalizations.of(context)!.scanQrCode),
       ),
       body: MobileScanner(
         onDetect: (capture) {
