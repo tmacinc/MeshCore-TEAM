@@ -575,11 +575,12 @@
   "addedChannelToRadio": "{name} aggiunto alla radio",
   "teamOnly": "Solo team",
   "failedToAddChannel": "Impossibile aggiungere il canale alla radio",
-  "teamName": "Nome del team",
-  "teamNamePrompt": "Scegli il nome del team",
+  "teamName": "Il tuo nome",
+  "teamNamePrompt": "Scegli il tuo nome",
   "teamNameSaveExplanation": "Il tuo team vedrà questo nome. Solo chi è nel canale del team può vederlo.",
-  "teamNameSkipExplanation": "Il tuo team vedrà il nome della radio, visibile a tutti sulla mesh.",
+  "teamNameSkipExplanation": "Se salti questo passaggio, il tuo team vedrà il nome della radio, visibile a tutti sulla mesh.",
   "teamNameChangeLater": "Puoi impostare o cambiare il nome del team più tardi nelle Impostazioni.",
   "teamNameUsingRadioName": "Uso il nome della radio ({name})",
-  "radioNameExplanation": "Questo nome è visibile a tutti sulla mesh, anche fuori dal tuo team. Valuta un nome anonimo."
+  "radioNameExplanation": "Questo nome è visibile a tutti sulla mesh, anche fuori dal tuo team. Valuta un nome anonimo.",
+  "teamNameSettingsTitle": "Nome (nascosto fuori dal tuo team)"
 }

@@ -575,11 +575,12 @@
   "addedChannelToRadio": "{name} adicionado ao teu rádio",
   "teamOnly": "Apenas equipa",
   "failedToAddChannel": "Não foi possível adicionar o canal ao teu rádio",
-  "teamName": "Nome de equipa",
-  "teamNamePrompt": "Define o teu nome de equipa",
+  "teamName": "O teu nome",
+  "teamNamePrompt": "Define o teu nome",
   "teamNameSaveExplanation": "A tua equipa vê este nome. Só quem está no teu canal de equipa o consegue ver.",
-  "teamNameSkipExplanation": "A tua equipa vê o nome do teu rádio, que todos na malha conseguem ver.",
+  "teamNameSkipExplanation": "Se ignorares isto, a tua equipa vê o nome do teu rádio, que todos na malha conseguem ver.",
   "teamNameChangeLater": "Podes definir ou alterar o teu nome de equipa mais tarde nas Definições.",
   "teamNameUsingRadioName": "A usar o nome do rádio ({name})",
-  "radioNameExplanation": "Este nome é visível para todos na malha, incluindo fora da tua equipa. Considera um nome anónimo."
+  "radioNameExplanation": "Este nome é visível para todos na malha, incluindo fora da tua equipa. Considera um nome anónimo.",
+  "teamNameSettingsTitle": "Nome (oculto fora da tua equipa)"
 }

@@ -2120,10 +2120,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile aggiungere il canale alla radio';
 
   @override
-  String get teamName => 'Nome del team';
+  String get teamName => 'Il tuo nome';
 
   @override
-  String get teamNamePrompt => 'Scegli il nome del team';
+  String get teamNamePrompt => 'Scegli il tuo nome';
 
   @override
   String get teamNameSaveExplanation =>
@@ -2131,7 +2131,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get teamNameSkipExplanation =>
-      'Il tuo team vedrà il nome della radio, visibile a tutti sulla mesh.';
+      'Se salti questo passaggio, il tuo team vedrà il nome della radio, visibile a tutti sulla mesh.';
 
   @override
   String get teamNameChangeLater =>
@@ -2145,4 +2145,7 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get radioNameExplanation =>
       'Questo nome è visibile a tutti sulla mesh, anche fuori dal tuo team. Valuta un nome anonimo.';
+
+  @override
+  String get teamNameSettingsTitle => 'Nome (nascosto fuori dal tuo team)';
 }

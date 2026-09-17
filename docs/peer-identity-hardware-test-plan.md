@@ -202,7 +202,7 @@ Team channel history is kept for 30 days, map trails for 24 hours. Fastest check
 ## 8. Phase 4 — the team name
 
 ### 8.1 First launch
-Fresh install. Expected: the prompt appears once, after permissions and **before** a radio is needed. The field is **empty**, with the radio name (if known) as grey placeholder text. It explains what Save and Skip each mean, and where to change it later.
+Fresh install. Expected: the prompt is titled *Set your name* — not "team name", which would read as a name for the group. It appears once, after permissions and **before** a radio is needed. The field is **empty**, with the radio name (if known) as grey placeholder text. It explains what Save means, what happens *if you skip this*, and where to change it later. In Settings the row reads **Name (hidden outside your team)**.
 
 ### 8.2 Skip keeps today's behaviour
 Skip it. Expected: it never reappears, and you appear to your team under your radio name, exactly as before this branch.

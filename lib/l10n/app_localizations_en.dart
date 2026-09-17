@@ -2099,10 +2099,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedToAddChannel => 'Could not add the channel to your radio';
 
   @override
-  String get teamName => 'Team name';
+  String get teamName => 'Your name';
 
   @override
-  String get teamNamePrompt => 'Set your team name';
+  String get teamNamePrompt => 'Set your name';
 
   @override
   String get teamNameSaveExplanation =>
@@ -2110,7 +2110,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get teamNameSkipExplanation =>
-      'Your team will see your radio name, which everyone on the mesh can see.';
+      'If you skip this, your team will see your radio name, which everyone on the mesh can see.';
 
   @override
   String get teamNameChangeLater =>
@@ -2124,4 +2124,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get radioNameExplanation =>
       'This name is visible to everyone on the mesh, including people outside your team. Consider an anonymous name.';
+
+  @override
+  String get teamNameSettingsTitle => 'Name (hidden outside your team)';
 }

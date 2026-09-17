@@ -3561,13 +3561,13 @@ abstract class AppLocalizations {
   /// No description provided for @teamName.
   ///
   /// In en, this message translates to:
-  /// **'Team name'**
+  /// **'Your name'**
   String get teamName;
 
   /// No description provided for @teamNamePrompt.
   ///
   /// In en, this message translates to:
-  /// **'Set your team name'**
+  /// **'Set your name'**
   String get teamNamePrompt;
 
   /// No description provided for @teamNameSaveExplanation.
@@ -3579,7 +3579,7 @@ abstract class AppLocalizations {
   /// No description provided for @teamNameSkipExplanation.
   ///
   /// In en, this message translates to:
-  /// **'Your team will see your radio name, which everyone on the mesh can see.'**
+  /// **'If you skip this, your team will see your radio name, which everyone on the mesh can see.'**
   String get teamNameSkipExplanation;
 
   /// No description provided for @teamNameChangeLater.
@@ -3599,6 +3599,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This name is visible to everyone on the mesh, including people outside your team. Consider an anonymous name.'**
   String get radioNameExplanation;
+
+  /// No description provided for @teamNameSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (hidden outside your team)'**
+  String get teamNameSettingsTitle;
 }
 
 class _AppLocalizationsDelegate

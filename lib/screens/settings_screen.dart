@@ -300,7 +300,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: ListTile(
         leading: const Icon(Icons.badge_outlined),
-        title: Text(l10n.teamName),
+        title: Text(l10n.teamNameSettingsTitle),
         subtitle: Text(
           alias != null && alias.isNotEmpty
               ? alias

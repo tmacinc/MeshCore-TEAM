@@ -2127,10 +2127,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible d\'ajouter le canal à votre radio';
 
   @override
-  String get teamName => 'Nom d\'équipe';
+  String get teamName => 'Votre nom';
 
   @override
-  String get teamNamePrompt => 'Choisissez votre nom d\'équipe';
+  String get teamNamePrompt => 'Choisissez votre nom';
 
   @override
   String get teamNameSaveExplanation =>
@@ -2138,7 +2138,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get teamNameSkipExplanation =>
-      'Votre équipe verra le nom de votre radio, visible par tout le réseau.';
+      'Si vous ignorez cette étape, votre équipe verra le nom de votre radio, visible par tout le réseau.';
 
   @override
   String get teamNameChangeLater =>
@@ -2152,4 +2152,7 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get radioNameExplanation =>
       'Ce nom est visible par tout le réseau, y compris hors de votre équipe. Envisagez un nom anonyme.';
+
+  @override
+  String get teamNameSettingsTitle => 'Nom (masqué hors de votre équipe)';
 }

@@ -1027,11 +1027,12 @@
   "addedChannelToRadio": "{name} zum Funkgerät hinzugefügt",
   "teamOnly": "Nur Team",
   "failedToAddChannel": "Kanal konnte nicht zum Funkgerät hinzugefügt werden",
-  "teamName": "Teamname",
-  "teamNamePrompt": "Teamnamen festlegen",
+  "teamName": "Dein Name",
+  "teamNamePrompt": "Lege deinen Namen fest",
   "teamNameSaveExplanation": "Dein Team sieht diesen Namen. Nur Personen in deinem Teamkanal können ihn sehen.",
-  "teamNameSkipExplanation": "Dein Team sieht deinen Funkgerätnamen, den jeder im Mesh sehen kann.",
+  "teamNameSkipExplanation": "Wenn du das überspringst, sieht dein Team deinen Funkgerätnamen, den jeder im Mesh sehen kann.",
   "teamNameChangeLater": "Du kannst deinen Teamnamen später in den Einstellungen festlegen oder ändern.",
   "teamNameUsingRadioName": "Funkgerätname wird verwendet ({name})",
-  "radioNameExplanation": "Dieser Name ist für alle im Mesh sichtbar, auch außerhalb deines Teams. Erwäge einen anonymen Namen."
+  "radioNameExplanation": "Dieser Name ist für alle im Mesh sichtbar, auch außerhalb deines Teams. Erwäge einen anonymen Namen.",
+  "teamNameSettingsTitle": "Name (außerhalb deines Teams verborgen)"
 }
