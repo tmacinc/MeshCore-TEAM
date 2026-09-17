@@ -2158,4 +2158,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get teamNameSettingsTitle => 'Nombre (oculto fuera de tu equipo)';
+
+  @override
+  String get general => 'General';
+
+  @override
+  String get hideNonTeam => 'Mostrar solo canales y contactos del equipo';
 }

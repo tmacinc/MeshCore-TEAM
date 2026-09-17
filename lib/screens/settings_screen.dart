@@ -27,6 +27,7 @@ const MethodChannel _appLifecycleChannel =
 /// storage keys: renaming one silently resets that section to expanded. They
 /// are deliberately independent of the localized section titles.
 class SettingsSection {
+  static const String general = 'general';
   static const String appearance = 'appearance';
   static const String location = 'location';
   static const String data = 'data';
@@ -54,7 +55,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: ListView(
         children: [
-          _buildTeamNameCard(context, l10n, settings),
+          _buildSection(
+            context: context,
+            settings: settings,
+            id: SettingsSection.general,
+            title: l10n.general,
+            children: _generalChildren(context, l10n, settings),
+          ),
           const Divider(height: 1),
           _buildSection(
             context: context,
@@ -288,16 +295,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   static const _purgeDayOptions = [7, 14, 30, 60, 90, 180, 365, 0];
 
-  /// The team name, kept next to nothing else: it is the one name the user
-  /// picks for themselves, and it is separate from the radio name shown on
-  /// the Connection screen.
+  List<Widget> _generalChildren(
+    BuildContext context,
+    AppLocalizations l10n,
+    SettingsService settings,
+  ) {
+    return [
+      _buildTeamNameCard(context, l10n, settings),
+      Card(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: SwitchListTile(
+          secondary: const Icon(Icons.group_outlined),
+          title: Text(l10n.hideNonTeam),
+          value: settings.settings.teamOnlyFilter,
+          onChanged: settings.setTeamOnlyFilter,
+        ),
+      ),
+    ];
+  }
+
+  /// The user's own name, shown to their team. Separate from the radio name
+  /// on the Connection screen, which the whole mesh can see.
   Widget _buildTeamNameCard(BuildContext context, AppLocalizations l10n,
       SettingsService settingsService) {
     final alias = settingsService.settings.teamAlias;
     final radioName = context.watch<ConnectionViewModel>().deviceName.trim();
 
     return Card(
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: ListTile(
         leading: const Icon(Icons.badge_outlined),
         title: Text(l10n.teamNameSettingsTitle),

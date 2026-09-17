@@ -582,5 +582,7 @@
   "teamNameChangeLater": "Podes definir ou alterar o teu nome de equipa mais tarde nas Definições.",
   "teamNameUsingRadioName": "A usar o nome do rádio ({name})",
   "radioNameExplanation": "Este nome é visível para todos na malha, incluindo fora da tua equipa. Considera um nome anónimo.",
-  "teamNameSettingsTitle": "Nome (oculto fora da tua equipa)"
+  "teamNameSettingsTitle": "Nome (oculto fora da tua equipa)",
+  "general": "Geral",
+  "hideNonTeam": "Mostrar apenas canais e contactos da equipa"
 }

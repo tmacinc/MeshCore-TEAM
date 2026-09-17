@@ -3,12 +3,12 @@
 ## Your name on the team
 - You can now set **your name**: an in-app name only members of your team channel can see, so your radio name can stay anonymous on the mesh. You're asked for one when the app first starts; skipping it keeps today's behaviour of showing your radio name.
 - Team members appear under the name they chose on the map, in contacts, in chat and in notifications, with their radio name kept underneath. Replies and @mentions still use radio names, so your chosen name never reaches a public channel.
-- Change it any time in **Settings → Your name**.
+- Change it any time in **Settings → General**.
 
 ## Team channels
 - A **team channel** belongs to your phone rather than one radio: it survives changing radio, along with its chat history, and is offered back to the new radio when you use it.
 - A team channel the radio doesn't hold is greyed out and marked *Not on this radio*; you can still read it, and adding it back is one tap.
-- New **Team only** filter on the Channels and Contacts tabs.
+- New **Settings → General** section holding your name and a *Hide all but team channels and contacts* toggle.
 - Team channel history is kept for 30 days; map trails for 24 hours, while each member's last known position is kept indefinitely.
 
 ## Contacts and discovery

@@ -1420,5 +1420,7 @@
     }
   },
   "radioNameExplanation": "This name is visible to everyone on the mesh, including people outside your team. Consider an anonymous name.",
-  "teamNameSettingsTitle": "Name (hidden outside your team)"
+  "teamNameSettingsTitle": "Name (hidden outside your team)",
+  "general": "General",
+  "hideNonTeam": "Hide all but team channels and contacts"
 }

@@ -582,5 +582,7 @@
   "teamNameChangeLater": "Puoi impostare o cambiare il nome del team più tardi nelle Impostazioni.",
   "teamNameUsingRadioName": "Uso il nome della radio ({name})",
   "radioNameExplanation": "Questo nome è visibile a tutti sulla mesh, anche fuori dal tuo team. Valuta un nome anonimo.",
-  "teamNameSettingsTitle": "Nome (nascosto fuori dal tuo team)"
+  "teamNameSettingsTitle": "Nome (nascosto fuori dal tuo team)",
+  "general": "Generale",
+  "hideNonTeam": "Mostra solo canali e contatti del team"
 }

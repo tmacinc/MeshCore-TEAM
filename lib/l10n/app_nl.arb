@@ -582,5 +582,7 @@
   "teamNameChangeLater": "Je kunt je teamnaam later instellen of wijzigen in Instellingen.",
   "teamNameUsingRadioName": "Radionaam wordt gebruikt ({name})",
   "radioNameExplanation": "Deze naam is zichtbaar voor iedereen op het mesh, ook buiten je team. Overweeg een anonieme naam.",
-  "teamNameSettingsTitle": "Naam (verborgen buiten je team)"
+  "teamNameSettingsTitle": "Naam (verborgen buiten je team)",
+  "general": "Algemeen",
+  "hideNonTeam": "Alleen teamkanalen en -contacten tonen"
 }

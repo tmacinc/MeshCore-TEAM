@@ -234,7 +234,7 @@ On subsequent connects to the same companion, the app runs an **incremental sync
 You have two names, and they are visible to different people.
 
 - **Radio name** — the name your radio advertises. **Everyone on the mesh can see it**, including people outside your team. You are asked for it the first time you connect a radio, and can change it from the Connection screen. Many people pick something anonymous here.
-- **Your name** — an in-app name that **only members of your team channel can see**. It travels in a small capability message on the tracking channel, not with every position update. You are asked for it once when the app first starts, and can change it any time in **Settings → Your name**.
+- **Your name** — an in-app name that **only members of your team channel can see**. It travels in a small capability message on the tracking channel, not with every position update. You are asked for it once when the app first starts, and can change it any time in **Settings → General**.
 
 If you leave it blank, or skip the prompt, your team simply sees your radio name — the app behaves as it always did.
 
@@ -437,9 +437,9 @@ A **team channel** is a private channel that belongs to your phone rather than t
 - **Deleting it** removes it and its history from the phone. Connected, it is cleared from the radio too. Not connected, it goes locally, and if the radio still has that slot the channel comes back on the next sync as an ordinary channel with no history.
 - **History limit** — team channel messages are kept for 30 days. Other channels are unchanged.
 
-#### Team only
+#### Hiding everything but your team
 
-The **Team only** button on the Channels and Contacts tabs hides everything that isn't part of your team: one toggle, shared by both lists.
+**Settings → General → Hide all but team channels and contacts** limits the Channels and Contacts tabs to your team.
 
 #### Moving to a different radio
 

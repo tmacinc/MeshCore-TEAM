@@ -146,12 +146,6 @@ class _ContactsScreenState extends State<ContactsScreen> {
             centerTitle: false,
             title: isNighttime ? const NightClock() : null,
             actions: [
-              IconButton(
-                icon: Icon(teamOnly ? Icons.group : Icons.group_outlined),
-                tooltip: l10n.teamOnly,
-                isSelected: teamOnly,
-                onPressed: () => settings.setTeamOnlyFilter(!teamOnly),
-              ),
               _buildFilterButton(l10n),
               SortMenuButton<_SortOrder>(
                 value: _sort,

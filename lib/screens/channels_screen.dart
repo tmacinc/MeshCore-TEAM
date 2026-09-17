@@ -117,12 +117,6 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             onChanged: (value) => setState(() => _sort = value),
           ),
           IconButton(
-            icon: Icon(teamOnly ? Icons.group : Icons.group_outlined),
-            tooltip: l10n.teamOnly,
-            isSelected: teamOnly,
-            onPressed: () => settings.setTeamOnlyFilter(!teamOnly),
-          ),
-          IconButton(
             icon: const Icon(Icons.add),
             tooltip: l10n.addChannelLower,
             onPressed: () => _showAddMenu(context, channelRepository),

@@ -3605,6 +3605,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Name (hidden outside your team)'**
   String get teamNameSettingsTitle;
+
+  /// No description provided for @general.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get general;
+
+  /// No description provided for @hideNonTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide all but team channels and contacts'**
+  String get hideNonTeam;
 }
 
 class _AppLocalizationsDelegate

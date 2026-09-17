@@ -191,8 +191,8 @@ Disconnect the radio, delete a team channel. Expected: it goes from the phone wi
 ### 7.7 Deleting while connected
 Delete a team channel with the radio connected. Expected: it goes from both, and does not come back after a sync.
 
-### 7.8 Team only
-Toggle **Team only** on the Channels tab and the Contacts tab. Expected: one shared toggle; the lists show only team channels and team members; toggling back restores everything.
+### 7.8 Hide all but the team
+In **Settings → General**, turn on *Hide all but team channels and contacts*. Expected: the Channels and Contacts tabs show only team channels and team members; turning it off restores everything. The tabs themselves have no filter button — this is the only control.
 
 ### 7.9 Retention
 Team channel history is kept for 30 days, map trails for 24 hours. Fastest check: move the phone clock forward 31 days, restart the app, look for `[Retention] 🧹`. Expected: old team messages and old trail points go; **last known positions and peers stay**.

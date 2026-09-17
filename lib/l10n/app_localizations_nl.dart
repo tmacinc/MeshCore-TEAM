@@ -2148,4 +2148,10 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get teamNameSettingsTitle => 'Naam (verborgen buiten je team)';
+
+  @override
+  String get general => 'Algemeen';
+
+  @override
+  String get hideNonTeam => 'Alleen teamkanalen en -contacten tonen';
 }

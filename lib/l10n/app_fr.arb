@@ -582,5 +582,7 @@
   "teamNameChangeLater": "Vous pourrez définir ou modifier votre nom d'équipe plus tard dans les Réglages.",
   "teamNameUsingRadioName": "Nom de la radio utilisé ({name})",
   "radioNameExplanation": "Ce nom est visible par tout le réseau, y compris hors de votre équipe. Envisagez un nom anonyme.",
-  "teamNameSettingsTitle": "Nom (masqué hors de votre équipe)"
+  "teamNameSettingsTitle": "Nom (masqué hors de votre équipe)",
+  "general": "Général",
+  "hideNonTeam": "N'afficher que les canaux et contacts de l'équipe"
 }
