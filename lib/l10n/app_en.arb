@@ -1387,5 +1387,23 @@
     }
   },
   "roomServer": "Room server",
-  "sensor": "Sensor"
+  "sensor": "Sensor",
+  "teamChannel": "Team channel",
+  "markAsTeamChannel": "Mark as team channel",
+  "unmarkTeamChannel": "Not a team channel",
+  "teamChannelExplanation": "Kept on this phone with its history, even if you change radio.",
+  "notOnRadio": "Not on this radio",
+  "addChannelToRadio": "Add to radio?",
+  "addChannelToRadioExplanation": "This channel has to be on your radio to send messages or use it for tracking.",
+  "addChannelToRadioNoSlots": "Your radio has no free channel slots. Delete a channel on the radio first.",
+  "addedChannelToRadio": "Added {name} to your radio",
+  "@addedChannelToRadio": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "teamOnly": "Team only",
+  "failedToAddChannel": "Could not add the channel to your radio"
 }

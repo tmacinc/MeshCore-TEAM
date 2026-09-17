@@ -20,6 +20,7 @@ import '../repositories/channel_repository.dart';
 import '../repositories/message_repository.dart';
 import '../services/message_notification_service.dart';
 import '../widgets/app_bar_subtitle.dart';
+import '../widgets/add_channel_to_radio.dart';
 import '../widgets/chat_message_text.dart';
 import '../widgets/status_bar_actions.dart';
 import '../models/app_settings.dart';
@@ -329,6 +330,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                           maxLength: 130,
                           textInputAction: TextInputAction.send,
                           onSubmitted: (_) => _sendMessage(),
+                          onTap: _ensureChannelOnRadio,
                           onChanged: (text) {
                             // Mark as read when user starts typing
                             if (text.isNotEmpty &&
@@ -750,10 +752,24 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
     });
   }
 
+  /// A team channel can exist on the phone without the radio holding it
+  /// (after a radio switch, or when its slots were full). The radio does the
+  /// encryption, so offer to add it rather than sending into nothing.
+  Future<bool> _ensureChannelOnRadio() async {
+    final channel = await _messageRepository.channelsDao
+            .getChannelByHash(widget.channel.hash) ??
+        widget.channel;
+    if (!channelNeedsRadio(channel)) return true;
+    if (!mounted) return false;
+    return promptAddChannelToRadio(context, channel);
+  }
+
   Future<void> _sendMessage() async {
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
     if (content.length > 130) return;
+
+    if (!await _ensureChannelOnRadio()) return;
 
     // Clear input immediately
     _messageController.clear();

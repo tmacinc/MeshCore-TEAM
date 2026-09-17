@@ -77,7 +77,7 @@ class AppDatabase extends _$AppDatabase {
   // Jumps 9 -> 12: the Team Link branch (D0sockets) already uses 10 and 11,
   // so dev skips them to keep the two branches mergeable. See
   // docs/alias-peer-identity-plan.md §3.5.
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -185,7 +185,7 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(peers);
             await m.createTable(peerLocations);
             await m.createTable(peerPositionHistory);
-            await m.addColumn(messages, messages.senderPeerId);
+            await _addColumnIfMissing(m, messages, messages.senderPeerId);
             final copied = await _copyLegacyDisplayStates();
             await customStatement(
                 'DROP TABLE IF EXISTS contact_position_histories');
@@ -200,8 +200,40 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(heardAdverts);
             print('[Migration] v12->v13: heard_adverts');
           }
+
+          // Migration to schema version 14: team channels are owned by the
+          // phone, so they survive a radio switch and can be absent from the
+          // radio's slots.
+          if (from <= 13 && to >= 14) {
+            await _addColumnIfMissing(m, channels, channels.isTeam);
+            await _addColumnIfMissing(m, channels, channels.firmwareConfirmed);
+
+            // The tracking channel is marked as a team channel by
+            // ChannelRepository.markTrackingChannelAsTeam() at startup, which
+            // is where the setting lives.
+            print('[Migration] v13->v14: channels isTeam, firmwareConfirmed');
+          }
         },
       );
+
+  /// Adds a column unless the table already has it. A duplicate-column error
+  /// aborts the whole migration, and the same column can legitimately already
+  /// be there: the schema counter means different things on `dev` and the
+  /// Team Link branch, so a database can arrive with part of a later version
+  /// already applied.
+  Future<void> _addColumnIfMissing(
+    Migrator m,
+    TableInfo table,
+    GeneratedColumn column,
+  ) async {
+    final existing = (await customSelect(
+      'PRAGMA table_info(${table.actualTableName})',
+    ).get())
+        .map((row) => row.read<String>('name'))
+        .toSet();
+    if (existing.contains(column.name)) return;
+    await m.addColumn(table, column);
+  }
 
   /// Copies each legacy contact_display_states row into a peer plus its last
   /// known location. Returns the number of rows copied.

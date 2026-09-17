@@ -563,5 +563,16 @@
   "contactAdded": "{name} toegevoegd",
   "contactAddFailed": "Kon {name} niet toevoegen",
   "roomServer": "Kamerserver",
-  "sensor": "Sensor"
+  "sensor": "Sensor",
+  "teamChannel": "Teamkanaal",
+  "markAsTeamChannel": "Markeren als teamkanaal",
+  "unmarkTeamChannel": "Geen teamkanaal",
+  "teamChannelExplanation": "Blijft met geschiedenis op deze telefoon staan, ook als je van radio wisselt.",
+  "notOnRadio": "Niet op deze radio",
+  "addChannelToRadio": "Aan radio toevoegen?",
+  "addChannelToRadioExplanation": "Dit kanaal moet op je radio staan om berichten te sturen of het voor tracking te gebruiken.",
+  "addChannelToRadioNoSlots": "Je radio heeft geen vrije kanaalplekken. Verwijder eerst een kanaal van de radio.",
+  "addedChannelToRadio": "{name} toegevoegd aan je radio",
+  "teamOnly": "Alleen team",
+  "failedToAddChannel": "Kon het kanaal niet aan je radio toevoegen"
 }

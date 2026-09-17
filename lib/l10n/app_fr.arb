@@ -563,5 +563,16 @@
   "contactAdded": "{name} ajouté",
   "contactAddFailed": "Impossible d'ajouter {name}",
   "roomServer": "Serveur de salon",
-  "sensor": "Capteur"
+  "sensor": "Capteur",
+  "teamChannel": "Canal d'équipe",
+  "markAsTeamChannel": "Marquer comme canal d'équipe",
+  "unmarkTeamChannel": "Pas un canal d'équipe",
+  "teamChannelExplanation": "Conservé sur ce téléphone avec son historique, même si vous changez de radio.",
+  "notOnRadio": "Absent de cette radio",
+  "addChannelToRadio": "Ajouter à la radio ?",
+  "addChannelToRadioExplanation": "Ce canal doit être sur votre radio pour envoyer des messages ou le utiliser pour le suivi.",
+  "addChannelToRadioNoSlots": "Votre radio n'a plus d'emplacement de canal libre. Supprimez d'abord un canal de la radio.",
+  "addedChannelToRadio": "{name} ajouté à votre radio",
+  "teamOnly": "Équipe uniquement",
+  "failedToAddChannel": "Impossible d'ajouter le canal à votre radio"
 }

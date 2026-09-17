@@ -563,5 +563,16 @@
   "contactAdded": "{name} adicionado",
   "contactAddFailed": "Não foi possível adicionar {name}",
   "roomServer": "Servidor de sala",
-  "sensor": "Sensor"
+  "sensor": "Sensor",
+  "teamChannel": "Canal da equipa",
+  "markAsTeamChannel": "Marcar como canal da equipa",
+  "unmarkTeamChannel": "Não é canal da equipa",
+  "teamChannelExplanation": "Fica neste telemóvel com o histórico, mesmo que mudes de rádio.",
+  "notOnRadio": "Não está neste rádio",
+  "addChannelToRadio": "Adicionar ao rádio?",
+  "addChannelToRadioExplanation": "Este canal tem de estar no teu rádio para enviares mensagens ou o usares para localização.",
+  "addChannelToRadioNoSlots": "O teu rádio não tem espaços de canal livres. Apaga primeiro um canal do rádio.",
+  "addedChannelToRadio": "{name} adicionado ao teu rádio",
+  "teamOnly": "Apenas equipa",
+  "failedToAddChannel": "Não foi possível adicionar o canal ao teu rádio"
 }

@@ -3491,6 +3491,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sensor'**
   String get sensor;
+
+  /// No description provided for @teamChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Team channel'**
+  String get teamChannel;
+
+  /// No description provided for @markAsTeamChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as team channel'**
+  String get markAsTeamChannel;
+
+  /// No description provided for @unmarkTeamChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a team channel'**
+  String get unmarkTeamChannel;
+
+  /// No description provided for @teamChannelExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept on this phone with its history, even if you change radio.'**
+  String get teamChannelExplanation;
+
+  /// No description provided for @notOnRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'Not on this radio'**
+  String get notOnRadio;
+
+  /// No description provided for @addChannelToRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to radio?'**
+  String get addChannelToRadio;
+
+  /// No description provided for @addChannelToRadioExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'This channel has to be on your radio to send messages or use it for tracking.'**
+  String get addChannelToRadioExplanation;
+
+  /// No description provided for @addChannelToRadioNoSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'Your radio has no free channel slots. Delete a channel on the radio first.'**
+  String get addChannelToRadioNoSlots;
+
+  /// No description provided for @addedChannelToRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {name} to your radio'**
+  String addedChannelToRadio(String name);
+
+  /// No description provided for @teamOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Team only'**
+  String get teamOnly;
+
+  /// No description provided for @failedToAddChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not add the channel to your radio'**
+  String get failedToAddChannel;
 }
 
 class _AppLocalizationsDelegate

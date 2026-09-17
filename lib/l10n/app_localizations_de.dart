@@ -2060,4 +2060,43 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get sensor => 'Sensor';
+
+  @override
+  String get teamChannel => 'Team-Kanal';
+
+  @override
+  String get markAsTeamChannel => 'Als Team-Kanal markieren';
+
+  @override
+  String get unmarkTeamChannel => 'Kein Team-Kanal';
+
+  @override
+  String get teamChannelExplanation =>
+      'Bleibt mit Verlauf auf diesem Telefon, auch wenn du das Funkgerät wechselst.';
+
+  @override
+  String get notOnRadio => 'Nicht auf diesem Funkgerät';
+
+  @override
+  String get addChannelToRadio => 'Zum Funkgerät hinzufügen?';
+
+  @override
+  String get addChannelToRadioExplanation =>
+      'Dieser Kanal muss auf deinem Funkgerät sein, um Nachrichten zu senden oder ihn für das Tracking zu nutzen.';
+
+  @override
+  String get addChannelToRadioNoSlots =>
+      'Dein Funkgerät hat keine freien Kanalplätze. Lösche zuerst einen Kanal auf dem Funkgerät.';
+
+  @override
+  String addedChannelToRadio(String name) {
+    return '$name zum Funkgerät hinzugefügt';
+  }
+
+  @override
+  String get teamOnly => 'Nur Team';
+
+  @override
+  String get failedToAddChannel =>
+      'Kanal konnte nicht zum Funkgerät hinzugefügt werden';
 }

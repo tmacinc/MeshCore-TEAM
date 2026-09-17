@@ -16,6 +16,7 @@ class SettingsService extends ChangeNotifier {
   static const String _keyTelemetryChannelName = 'telemetry_channel_name';
   static const String _keyTeamAlias = 'team_alias';
   static const String _keyTeamAliasPrompted = 'team_alias_prompted';
+  static const String _keyTeamOnlyFilter = 'team_only_filter';
   static const String _keyTelemetryIntervalSeconds =
       'telemetry_interval_seconds';
   static const String _keyTelemetryMinDistanceMeters =
@@ -155,6 +156,7 @@ class SettingsService extends ChangeNotifier {
       telemetryChannelName: telemetryChannelName,
       teamAlias: _prefs.getString(_keyTeamAlias),
       teamAliasPrompted: _prefs.getBool(_keyTeamAliasPrompted) ?? false,
+      teamOnlyFilter: _prefs.getBool(_keyTeamOnlyFilter) ?? false,
       telemetryIntervalSeconds:
           _prefs.getInt(_keyTelemetryIntervalSeconds) ?? 60,
       telemetryMinDistanceMeters:
@@ -258,6 +260,13 @@ class SettingsService extends ChangeNotifier {
       await _prefs.setString(_keyTeamAlias, trimmed);
       _settings = _settings.copyWith(teamAlias: trimmed);
     }
+    notifyListeners();
+  }
+
+  /// One toggle shared by the channel and contact lists.
+  Future<void> setTeamOnlyFilter(bool enabled) async {
+    await _prefs.setBool(_keyTeamOnlyFilter, enabled);
+    _settings = _settings.copyWith(teamOnlyFilter: enabled);
     notifyListeners();
   }
 

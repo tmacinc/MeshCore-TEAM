@@ -236,6 +236,10 @@ Future<void> _runAppStartup() async {
     await peerDirectory.start();
     RetentionService(database).start();
 
+    // The tracking channel is a team channel by definition; make sure the
+    // flag is set for databases that predate it.
+    unawaited(channelRepository.markTrackingChannelAsTeam());
+
     final networkTopology = NetworkTopology();
     final neighborTracker = NeighborTracker();
 

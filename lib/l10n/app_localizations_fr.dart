@@ -2086,4 +2086,43 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get sensor => 'Capteur';
+
+  @override
+  String get teamChannel => 'Canal d\'équipe';
+
+  @override
+  String get markAsTeamChannel => 'Marquer comme canal d\'équipe';
+
+  @override
+  String get unmarkTeamChannel => 'Pas un canal d\'équipe';
+
+  @override
+  String get teamChannelExplanation =>
+      'Conservé sur ce téléphone avec son historique, même si vous changez de radio.';
+
+  @override
+  String get notOnRadio => 'Absent de cette radio';
+
+  @override
+  String get addChannelToRadio => 'Ajouter à la radio ?';
+
+  @override
+  String get addChannelToRadioExplanation =>
+      'Ce canal doit être sur votre radio pour envoyer des messages ou le utiliser pour le suivi.';
+
+  @override
+  String get addChannelToRadioNoSlots =>
+      'Votre radio n\'a plus d\'emplacement de canal libre. Supprimez d\'abord un canal de la radio.';
+
+  @override
+  String addedChannelToRadio(String name) {
+    return '$name ajouté à votre radio';
+  }
+
+  @override
+  String get teamOnly => 'Équipe uniquement';
+
+  @override
+  String get failedToAddChannel =>
+      'Impossible d\'ajouter le canal à votre radio';
 }

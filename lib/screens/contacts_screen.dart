@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import 'package:meshcore_team/models/unread_models.dart';
 import 'package:meshcore_team/repositories/contact_repository.dart';
 import 'package:meshcore_team/models/app_settings.dart';
+import 'package:meshcore_team/services/peer_directory.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
 import 'package:meshcore_team/widgets/status_bar_actions.dart';
@@ -121,20 +122,36 @@ class _ContactsScreenState extends State<ContactsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final contactRepository = context.watch<ContactRepository>();
-    final isNighttime = context.watch<SettingsService>().settings.appTheme ==
-        AppThemeMode.nighttime;
+    final settings = context.watch<SettingsService>();
+    final peers = context.watch<PeerDirectory>();
+    final isNighttime =
+        settings.settings.appTheme == AppThemeMode.nighttime;
+    final teamOnly = settings.settings.teamOnlyFilter;
 
     return StreamBuilder<List<ContactWithUnread>>(
       stream: contactRepository.watchContactsWithUnread(),
       builder: (context, snapshot) {
         final all = snapshot.data ?? [];
-        final contacts = _applyFilterAndSort(all);
+        final visible = teamOnly
+            ? all
+                .where((c) =>
+                    peers.byRadioKey(c.contact.publicKey)?.isTeamMember ??
+                    false)
+                .toList()
+            : all;
+        final contacts = _applyFilterAndSort(visible);
 
         return Scaffold(
           appBar: AppBar(
             centerTitle: false,
             title: isNighttime ? const NightClock() : null,
             actions: [
+              IconButton(
+                icon: Icon(teamOnly ? Icons.group : Icons.group_outlined),
+                tooltip: l10n.teamOnly,
+                isSelected: teamOnly,
+                onPressed: () => settings.setTeamOnlyFilter(!teamOnly),
+              ),
               _buildFilterButton(l10n),
               SortMenuButton<_SortOrder>(
                 value: _sort,

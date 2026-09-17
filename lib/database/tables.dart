@@ -64,6 +64,17 @@ class Channels extends Table {
   TextColumn get companionDeviceKey =>
       text().nullable()(); // Which companion this channel belongs to
 
+  /// Owned by the phone rather than the radio: kept across radio switches,
+  /// pushed to a radio that doesn't have it, and its history is kept.
+  /// Only ever true for a private channel with a secret key.
+  BoolColumn get isTeam => boolean().withDefault(const Constant(false))();
+
+  /// False when the channel is not in the current radio's slots — either
+  /// never pushed, or the radio no longer has it. Named to match the Team
+  /// Link branch so the two converge on merge.
+  BoolColumn get firmwareConfirmed =>
+      boolean().withDefault(const Constant(true))();
+
   @override
   Set<Column> get primaryKey => {hash};
 }

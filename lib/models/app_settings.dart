@@ -36,6 +36,9 @@ class AppSettings {
   /// everyone on the mesh can see anyway.
   final String? teamAlias;
 
+  /// Show only team channels and team members in the lists.
+  final bool teamOnlyFilter;
+
   /// The team-name prompt has been shown once (whether skipped or saved).
   final bool teamAliasPrompted;
 
@@ -89,6 +92,7 @@ class AppSettings {
     this.telemetryChannelHash,
     this.telemetryChannelName,
     this.teamAlias,
+    this.teamOnlyFilter = false,
     this.teamAliasPrompted = false,
     this.telemetryIntervalSeconds = 60,
     this.telemetryMinDistanceMeters = 100,
@@ -128,6 +132,7 @@ class AppSettings {
     String? telemetryChannelName,
     String? teamAlias,
     bool clearTeamAlias = false,
+    bool? teamOnlyFilter,
     bool? teamAliasPrompted,
     int? telemetryIntervalSeconds,
     int? telemetryMinDistanceMeters,
@@ -166,6 +171,7 @@ class AppSettings {
       telemetryChannelHash: telemetryChannelHash ?? this.telemetryChannelHash,
       telemetryChannelName: telemetryChannelName ?? this.telemetryChannelName,
       teamAlias: clearTeamAlias ? null : (teamAlias ?? this.teamAlias),
+      teamOnlyFilter: teamOnlyFilter ?? this.teamOnlyFilter,
       teamAliasPrompted: teamAliasPrompted ?? this.teamAliasPrompted,
       telemetryIntervalSeconds:
           telemetryIntervalSeconds ?? this.telemetryIntervalSeconds,

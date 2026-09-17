@@ -15,6 +15,8 @@ import 'package:meshcore_team/ble/ble_responses.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/database/daos/channels_dao.dart';
 import 'package:meshcore_team/models/channel.dart' as channel_model;
+import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
+import 'package:meshcore_team/models/team_map_visibility.dart';
 import 'package:meshcore_team/models/sync_status.dart';
 import 'package:meshcore_team/models/unread_models.dart';
 import 'package:meshcore_team/services/settings_service.dart';
@@ -67,6 +69,9 @@ class _OkOrError {
 /// Channel Repository
 /// Manages channel sync and database operations
 /// Matches Android ChannelRepository.kt implementation
+/// Why a channel could not be put on the radio.
+enum AddChannelToRadioError { notConnected, noSlots, failed }
+
 class ChannelRepository {
   static const String _syncTraceTag = '[SYNCTRACE][CHANNEL]';
   static const int _channelFetchRetryAttempts = 3;
@@ -352,44 +357,50 @@ class ChannelRepository {
 
   /// Delete a private channel.
   ///
-  /// TEAM behavior: firmware is source of truth, so we clear the firmware slot
-  /// first via CMD_SET_CHANNEL with empty name + zero PSK, then delete locally.
+  /// Deletes a private channel.
+  ///
+  /// Connected, the firmware slot is cleared first: the radio is the source
+  /// of truth for its own slots. A team channel can also be deleted with no
+  /// radio connected, because it belongs to the phone — it goes with its
+  /// history, and if the radio still holds the slot it returns on the next
+  /// sync as an ordinary channel with no history, which is what "deleted on
+  /// the phone" should look like.
   Future<void> deletePrivateChannel(ChannelData channel) async {
     if (channel.isPublic || channel.channelIndex == 0) {
       throw StateError('Public channel cannot be deleted');
     }
 
     final companionKey = _settingsService.settings.currentCompanionPublicKey;
-    if (companionKey == null || companionKey.isEmpty) {
-      throw StateError('No companion selected');
-    }
 
     // Safety: prevent deleting a channel row that belongs to a different companion.
-    if (channel.companionDeviceKey != null &&
+    if (companionKey != null &&
+        channel.companionDeviceKey != null &&
         channel.companionDeviceKey!.isNotEmpty &&
         channel.companionDeviceKey != companionKey) {
       throw StateError('Channel belongs to a different companion');
     }
 
-    // Ensure we actually remove it from the companion device.
+    final onRadio = channel.firmwareConfirmed && channel.channelIndex > 0;
     if (!_bleManager.isConnected) {
-      throw StateError('Connect to the companion device to delete channels');
-    }
+      if (!channel.isTeam) {
+        throw StateError('Connect to the companion device to delete channels');
+      }
+    } else if (onRadio) {
+      debugPrint(
+          '[Channel] 🗑️ Deleting private channel "${channel.name}" at index ${channel.channelIndex} (hash=${channel.hash})');
 
-    debugPrint(
-        '[Channel] 🗑️ Deleting private channel "${channel.name}" at index ${channel.channelIndex} (hash=${channel.hash})');
-
-    // Clear from firmware first.
-    final clearResult = await _registerChannelWithFirmware(
-      channelIndex: channel.channelIndex,
-      name: '',
-      psk: Uint8List(16),
-    );
-    if (!clearResult.isSuccess) {
-      throw StateError(_l10n.failedToDeleteChannelFromCompanion(
-          clearResult.errorCode?.toString() ?? _l10n.unknown));
+      // Clear from firmware first.
+      final clearResult = await _registerChannelWithFirmware(
+        channelIndex: channel.channelIndex,
+        name: '',
+        psk: Uint8List(16),
+      );
+      if (!clearResult.isSuccess) {
+        throw StateError(_l10n.failedToDeleteChannelFromCompanion(
+            clearResult.errorCode?.toString() ?? _l10n.unknown));
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
     }
-    await Future.delayed(const Duration(milliseconds: 300));
 
     // If this channel is selected for telemetry, clear the setting.
     final telemetryHashHex = channel.hash.toRadixString(16).toLowerCase();
@@ -398,13 +409,47 @@ class ChannelRepository {
       await _settingsService.setTelemetryChannelHash(null);
     }
 
-    // Delete messages first, then channel.
-    await _channelsDao.attachedDatabase.messagesDao
-        .deleteMessagesByChannelForCompanion(channel.hash, companionKey);
-    await _channelsDao.deleteChannelForCompanion(channel.hash, companionKey);
+    // Delete messages first, then the channel. A team channel's history is
+    // not tied to one radio, so all of it goes.
+    final messagesDao = _channelsDao.attachedDatabase.messagesDao;
+    if (channel.isTeam || companionKey == null || companionKey.isEmpty) {
+      await messagesDao.deleteMessagesByChannel(channel.hash);
+      await _channelsDao.deleteChannel(channel.hash);
+    } else {
+      await messagesDao.deleteMessagesByChannelForCompanion(
+          channel.hash, companionKey);
+      await _channelsDao.deleteChannelForCompanion(channel.hash, companionKey);
+    }
 
     debugPrint(
         '[Channel] ✅ Deleted private channel "${channel.name}" (index ${channel.channelIndex})');
+  }
+
+  /// Marks a channel as owned by the phone: kept across radio switches,
+  /// offered to a radio that doesn't have it, and its history is kept.
+  /// Refused for public and hashtag channels, whose key isn't a secret.
+  Future<bool> setTeamChannel(ChannelData channel, bool isTeam) async {
+    if (isTeam && !channel.canBeTrackingChannel) {
+      debugPrint(
+          '[Channel] ⏭️ "${channel.name}" cannot be a team channel (public or hashtag)');
+      return false;
+    }
+    await _channelsDao.setTeamFlag(channel.hash, isTeam);
+    debugPrint(
+        '[Channel] ${isTeam ? '👥' : '🚪'} "${channel.name}" team=$isTeam');
+    return true;
+  }
+
+  /// The tracking channel is a team channel by definition. Called at startup
+  /// and whenever the tracking channel changes.
+  Future<void> markTrackingChannelAsTeam() async {
+    final hash = parseTrackingChannelHash(
+        _settingsService.settings.telemetryChannelHash);
+    if (hash == null) return;
+
+    final channel = await _channelsDao.getChannelByHash(hash);
+    if (channel == null || channel.isTeam) return;
+    await setTeamChannel(channel, true);
   }
 
   int? _nextAvailablePrivateIndex(Set<int> usedIndices) {
@@ -487,6 +532,52 @@ class ChannelRepository {
   String _encodeNameForMeshcoreUrl(String name) {
     // Match Java URLEncoder behavior used by TEAM (space => '+')
     return Uri.encodeQueryComponent(name).replaceAll('%20', '+');
+  }
+
+  /// Puts a channel the phone owns into a slot on the connected radio.
+  ///
+  /// A team channel can exist with no radio holding it — after a radio
+  /// switch, or when the radio's slots were full — but the radio does the
+  /// encryption, so it has to be there to send or receive on that channel.
+  ///
+  /// Returns null on success, or a reason: [AddChannelToRadioError.noSlots]
+  /// when the radio is full, [AddChannelToRadioError.notConnected], or
+  /// [AddChannelToRadioError.failed].
+  Future<AddChannelToRadioError?> addChannelToRadio(
+      ChannelData channel) async {
+    if (!_bleManager.isConnected) return AddChannelToRadioError.notConnected;
+
+    final companionKey = _settingsService.settings.currentCompanionPublicKey;
+    final existing = companionKey == null || companionKey.isEmpty
+        ? await _channelsDao.getAllChannelsOnce()
+        : await _channelsDao.getChannelsByCompanion(companionKey);
+
+    final usedIndices = existing
+        .where((c) => c.channelIndex > 0 && c.hash != channel.hash)
+        .map((c) => c.channelIndex)
+        .toSet();
+    final index = _nextAvailablePrivateIndex(usedIndices);
+    if (index == null) return AddChannelToRadioError.noSlots;
+
+    final result = await _registerChannelWithFirmware(
+      channelIndex: index,
+      name: channel.name,
+      psk: channel.sharedKey,
+    );
+    if (!result.isSuccess) {
+      debugPrint(
+          '[Channel] ❌ Could not add "${channel.name}" to the radio (code=${result.errorCode})');
+      return AddChannelToRadioError.failed;
+    }
+
+    await _channelsDao.updateChannel(ChannelsCompanion(
+      hash: drift.Value(channel.hash),
+      channelIndex: drift.Value(index),
+      firmwareConfirmed: const drift.Value(true),
+      companionDeviceKey: drift.Value(companionKey),
+    ));
+    debugPrint('[Channel] ✅ Added "${channel.name}" to the radio at $index');
+    return null;
   }
 
   Future<_OkOrError> _registerChannelWithFirmware({

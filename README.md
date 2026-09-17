@@ -411,13 +411,27 @@ The app manages your radio's contact list instead of letting the radio store eve
 - **Everyone else is listed, not lost** — other devices appear under **Heard nearby** at the top of the Contacts tab, with **Add** and **Dismiss**. Dismissing hides that device until it is heard again. The list is capped, and entries disappear after 7 days.
 - **This stays set on the radio.** The app doesn't put it back, because managed contacts are how it works. If you stop using TEAM, turn auto-add back on from any MeshCore app under the radio's contact settings.
 
+#### Team channels
+
+A **team channel** is a private channel that belongs to your phone rather than to one radio. The tracking channel becomes one automatically, and you can mark any private channel as a team channel from its long-press menu. Public and hashtag channels can't be team channels, because anyone can work out their key.
+
+- **It survives a radio switch**, along with its chat history.
+- **It survives being missing from the radio.** If the radio doesn't have it, the channel is shown greyed out and marked *Not on this radio*: you can read its history, but the radio does the encryption, so it can't send or receive on it.
+- **Adding it back** — tapping the message box, choosing it for tracking, or using *Add to radio* in its menu asks whether to put it on the radio. If every channel slot is taken, delete a channel from the radio first.
+- **Deleting it** removes it and its history from the phone. Connected, it is cleared from the radio too. Not connected, it goes locally, and if the radio still has that slot the channel comes back on the next sync as an ordinary channel with no history.
+- **History limit** — team channel messages are kept for 30 days. Other channels are unchanged.
+
+#### Team only
+
+The **Team only** button on the Channels and Contacts tabs hides everything that isn't part of your team: one toggle, shared by both lists.
+
 #### Moving to a different radio
 
 Your team is remembered by the app, not by the radio, so pairing a new radio doesn't cost you the group:
 
 - Team members' contacts are copied onto the new radio automatically, as long as it has room (the app leaves part of the table free for other contacts).
 - The app then sends one advert, because the team has never seen this radio's key and their contact for you still points at the old one.
-- Team channels, team chat history and everyone's last known position stay on the phone.
+- Team channels, team chat history and everyone's last known position stay on the phone. The channels are offered to the new radio the first time you use them.
 
 ### 10) App settings (appearance, theme, and device options)
 

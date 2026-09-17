@@ -1245,6 +1245,34 @@ class $ChannelsTable extends Channels
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _isTeamMeta = const VerificationMeta('isTeam');
+  @override
+  late final GeneratedColumn<bool> isTeam = GeneratedColumn<bool>(
+    'is_team',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_team" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _firmwareConfirmedMeta = const VerificationMeta(
+    'firmwareConfirmed',
+  );
+  @override
+  late final GeneratedColumn<bool> firmwareConfirmed = GeneratedColumn<bool>(
+    'firmware_confirmed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("firmware_confirmed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     hash,
@@ -1257,6 +1285,8 @@ class $ChannelsTable extends Channels
     notificationMode,
     isFavorite,
     companionDeviceKey,
+    isTeam,
+    firmwareConfirmed,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1352,6 +1382,21 @@ class $ChannelsTable extends Channels
         ),
       );
     }
+    if (data.containsKey('is_team')) {
+      context.handle(
+        _isTeamMeta,
+        isTeam.isAcceptableOrUnknown(data['is_team']!, _isTeamMeta),
+      );
+    }
+    if (data.containsKey('firmware_confirmed')) {
+      context.handle(
+        _firmwareConfirmedMeta,
+        firmwareConfirmed.isAcceptableOrUnknown(
+          data['firmware_confirmed']!,
+          _firmwareConfirmedMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -1410,6 +1455,16 @@ class $ChannelsTable extends Channels
         DriftSqlType.string,
         data['${effectivePrefix}companion_device_key'],
       ),
+      isTeam:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.bool,
+            data['${effectivePrefix}is_team'],
+          )!,
+      firmwareConfirmed:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.bool,
+            data['${effectivePrefix}firmware_confirmed'],
+          )!,
     );
   }
 
@@ -1430,6 +1485,16 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
   final String notificationMode;
   final bool isFavorite;
   final String? companionDeviceKey;
+
+  /// Owned by the phone rather than the radio: kept across radio switches,
+  /// pushed to a radio that doesn't have it, and its history is kept.
+  /// Only ever true for a private channel with a secret key.
+  final bool isTeam;
+
+  /// False when the channel is not in the current radio's slots — either
+  /// never pushed, or the radio no longer has it. Named to match the Team
+  /// Link branch so the two converge on merge.
+  final bool firmwareConfirmed;
   const ChannelData({
     required this.hash,
     required this.name,
@@ -1441,6 +1506,8 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
     required this.notificationMode,
     required this.isFavorite,
     this.companionDeviceKey,
+    required this.isTeam,
+    required this.firmwareConfirmed,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1457,6 +1524,8 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
     if (!nullToAbsent || companionDeviceKey != null) {
       map['companion_device_key'] = Variable<String>(companionDeviceKey);
     }
+    map['is_team'] = Variable<bool>(isTeam);
+    map['firmware_confirmed'] = Variable<bool>(firmwareConfirmed);
     return map;
   }
 
@@ -1475,6 +1544,8 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
           companionDeviceKey == null && nullToAbsent
               ? const Value.absent()
               : Value(companionDeviceKey),
+      isTeam: Value(isTeam),
+      firmwareConfirmed: Value(firmwareConfirmed),
     );
   }
 
@@ -1496,6 +1567,8 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
       companionDeviceKey: serializer.fromJson<String?>(
         json['companionDeviceKey'],
       ),
+      isTeam: serializer.fromJson<bool>(json['isTeam']),
+      firmwareConfirmed: serializer.fromJson<bool>(json['firmwareConfirmed']),
     );
   }
   @override
@@ -1512,6 +1585,8 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
       'notificationMode': serializer.toJson<String>(notificationMode),
       'isFavorite': serializer.toJson<bool>(isFavorite),
       'companionDeviceKey': serializer.toJson<String?>(companionDeviceKey),
+      'isTeam': serializer.toJson<bool>(isTeam),
+      'firmwareConfirmed': serializer.toJson<bool>(firmwareConfirmed),
     };
   }
 
@@ -1526,6 +1601,8 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
     String? notificationMode,
     bool? isFavorite,
     Value<String?> companionDeviceKey = const Value.absent(),
+    bool? isTeam,
+    bool? firmwareConfirmed,
   }) => ChannelData(
     hash: hash ?? this.hash,
     name: name ?? this.name,
@@ -1540,6 +1617,8 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
         companionDeviceKey.present
             ? companionDeviceKey.value
             : this.companionDeviceKey,
+    isTeam: isTeam ?? this.isTeam,
+    firmwareConfirmed: firmwareConfirmed ?? this.firmwareConfirmed,
   );
   ChannelData copyWithCompanion(ChannelsCompanion data) {
     return ChannelData(
@@ -1566,6 +1645,11 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
           data.companionDeviceKey.present
               ? data.companionDeviceKey.value
               : this.companionDeviceKey,
+      isTeam: data.isTeam.present ? data.isTeam.value : this.isTeam,
+      firmwareConfirmed:
+          data.firmwareConfirmed.present
+              ? data.firmwareConfirmed.value
+              : this.firmwareConfirmed,
     );
   }
 
@@ -1581,7 +1665,9 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
           ..write('createdAt: $createdAt, ')
           ..write('notificationMode: $notificationMode, ')
           ..write('isFavorite: $isFavorite, ')
-          ..write('companionDeviceKey: $companionDeviceKey')
+          ..write('companionDeviceKey: $companionDeviceKey, ')
+          ..write('isTeam: $isTeam, ')
+          ..write('firmwareConfirmed: $firmwareConfirmed')
           ..write(')'))
         .toString();
   }
@@ -1598,6 +1684,8 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
     notificationMode,
     isFavorite,
     companionDeviceKey,
+    isTeam,
+    firmwareConfirmed,
   );
   @override
   bool operator ==(Object other) =>
@@ -1612,7 +1700,9 @@ class ChannelData extends DataClass implements Insertable<ChannelData> {
           other.createdAt == this.createdAt &&
           other.notificationMode == this.notificationMode &&
           other.isFavorite == this.isFavorite &&
-          other.companionDeviceKey == this.companionDeviceKey);
+          other.companionDeviceKey == this.companionDeviceKey &&
+          other.isTeam == this.isTeam &&
+          other.firmwareConfirmed == this.firmwareConfirmed);
 }
 
 class ChannelsCompanion extends UpdateCompanion<ChannelData> {
@@ -1626,6 +1716,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelData> {
   final Value<String> notificationMode;
   final Value<bool> isFavorite;
   final Value<String?> companionDeviceKey;
+  final Value<bool> isTeam;
+  final Value<bool> firmwareConfirmed;
   const ChannelsCompanion({
     this.hash = const Value.absent(),
     this.name = const Value.absent(),
@@ -1637,6 +1729,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelData> {
     this.notificationMode = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.companionDeviceKey = const Value.absent(),
+    this.isTeam = const Value.absent(),
+    this.firmwareConfirmed = const Value.absent(),
   });
   ChannelsCompanion.insert({
     this.hash = const Value.absent(),
@@ -1649,6 +1743,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelData> {
     this.notificationMode = const Value.absent(),
     this.isFavorite = const Value.absent(),
     this.companionDeviceKey = const Value.absent(),
+    this.isTeam = const Value.absent(),
+    this.firmwareConfirmed = const Value.absent(),
   }) : name = Value(name),
        sharedKey = Value(sharedKey),
        isPublic = Value(isPublic),
@@ -1665,6 +1761,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelData> {
     Expression<String>? notificationMode,
     Expression<bool>? isFavorite,
     Expression<String>? companionDeviceKey,
+    Expression<bool>? isTeam,
+    Expression<bool>? firmwareConfirmed,
   }) {
     return RawValuesInsertable({
       if (hash != null) 'hash': hash,
@@ -1678,6 +1776,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelData> {
       if (isFavorite != null) 'is_favorite': isFavorite,
       if (companionDeviceKey != null)
         'companion_device_key': companionDeviceKey,
+      if (isTeam != null) 'is_team': isTeam,
+      if (firmwareConfirmed != null) 'firmware_confirmed': firmwareConfirmed,
     });
   }
 
@@ -1692,6 +1792,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelData> {
     Value<String>? notificationMode,
     Value<bool>? isFavorite,
     Value<String?>? companionDeviceKey,
+    Value<bool>? isTeam,
+    Value<bool>? firmwareConfirmed,
   }) {
     return ChannelsCompanion(
       hash: hash ?? this.hash,
@@ -1704,6 +1806,8 @@ class ChannelsCompanion extends UpdateCompanion<ChannelData> {
       notificationMode: notificationMode ?? this.notificationMode,
       isFavorite: isFavorite ?? this.isFavorite,
       companionDeviceKey: companionDeviceKey ?? this.companionDeviceKey,
+      isTeam: isTeam ?? this.isTeam,
+      firmwareConfirmed: firmwareConfirmed ?? this.firmwareConfirmed,
     );
   }
 
@@ -1740,6 +1844,12 @@ class ChannelsCompanion extends UpdateCompanion<ChannelData> {
     if (companionDeviceKey.present) {
       map['companion_device_key'] = Variable<String>(companionDeviceKey.value);
     }
+    if (isTeam.present) {
+      map['is_team'] = Variable<bool>(isTeam.value);
+    }
+    if (firmwareConfirmed.present) {
+      map['firmware_confirmed'] = Variable<bool>(firmwareConfirmed.value);
+    }
     return map;
   }
 
@@ -1755,7 +1865,9 @@ class ChannelsCompanion extends UpdateCompanion<ChannelData> {
           ..write('createdAt: $createdAt, ')
           ..write('notificationMode: $notificationMode, ')
           ..write('isFavorite: $isFavorite, ')
-          ..write('companionDeviceKey: $companionDeviceKey')
+          ..write('companionDeviceKey: $companionDeviceKey, ')
+          ..write('isTeam: $isTeam, ')
+          ..write('firmwareConfirmed: $firmwareConfirmed')
           ..write(')'))
         .toString();
   }
@@ -9048,6 +9160,8 @@ typedef $$ChannelsTableCreateCompanionBuilder =
       Value<String> notificationMode,
       Value<bool> isFavorite,
       Value<String?> companionDeviceKey,
+      Value<bool> isTeam,
+      Value<bool> firmwareConfirmed,
     });
 typedef $$ChannelsTableUpdateCompanionBuilder =
     ChannelsCompanion Function({
@@ -9061,6 +9175,8 @@ typedef $$ChannelsTableUpdateCompanionBuilder =
       Value<String> notificationMode,
       Value<bool> isFavorite,
       Value<String?> companionDeviceKey,
+      Value<bool> isTeam,
+      Value<bool> firmwareConfirmed,
     });
 
 class $$ChannelsTableFilterComposer
@@ -9119,6 +9235,16 @@ class $$ChannelsTableFilterComposer
 
   ColumnFilters<String> get companionDeviceKey => $composableBuilder(
     column: $table.companionDeviceKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isTeam => $composableBuilder(
+    column: $table.isTeam,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get firmwareConfirmed => $composableBuilder(
+    column: $table.firmwareConfirmed,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -9181,6 +9307,16 @@ class $$ChannelsTableOrderingComposer
     column: $table.companionDeviceKey,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isTeam => $composableBuilder(
+    column: $table.isTeam,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get firmwareConfirmed => $composableBuilder(
+    column: $table.firmwareConfirmed,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ChannelsTableAnnotationComposer
@@ -9231,6 +9367,14 @@ class $$ChannelsTableAnnotationComposer
     column: $table.companionDeviceKey,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isTeam =>
+      $composableBuilder(column: $table.isTeam, builder: (column) => column);
+
+  GeneratedColumn<bool> get firmwareConfirmed => $composableBuilder(
+    column: $table.firmwareConfirmed,
+    builder: (column) => column,
+  );
 }
 
 class $$ChannelsTableTableManager
@@ -9274,6 +9418,8 @@ class $$ChannelsTableTableManager
                 Value<String> notificationMode = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<String?> companionDeviceKey = const Value.absent(),
+                Value<bool> isTeam = const Value.absent(),
+                Value<bool> firmwareConfirmed = const Value.absent(),
               }) => ChannelsCompanion(
                 hash: hash,
                 name: name,
@@ -9285,6 +9431,8 @@ class $$ChannelsTableTableManager
                 notificationMode: notificationMode,
                 isFavorite: isFavorite,
                 companionDeviceKey: companionDeviceKey,
+                isTeam: isTeam,
+                firmwareConfirmed: firmwareConfirmed,
               ),
           createCompanionCallback:
               ({
@@ -9298,6 +9446,8 @@ class $$ChannelsTableTableManager
                 Value<String> notificationMode = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
                 Value<String?> companionDeviceKey = const Value.absent(),
+                Value<bool> isTeam = const Value.absent(),
+                Value<bool> firmwareConfirmed = const Value.absent(),
               }) => ChannelsCompanion.insert(
                 hash: hash,
                 name: name,
@@ -9309,6 +9459,8 @@ class $$ChannelsTableTableManager
                 notificationMode: notificationMode,
                 isFavorite: isFavorite,
                 companionDeviceKey: companionDeviceKey,
+                isTeam: isTeam,
+                firmwareConfirmed: firmwareConfirmed,
               ),
           withReferenceMapper:
               (p0) =>

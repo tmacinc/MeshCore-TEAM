@@ -12,7 +12,9 @@ import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/screens/qr_scan_screen.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/services/settings_service.dart';
+import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/theme/night_theme.dart';
+import 'package:meshcore_team/widgets/add_channel_to_radio.dart';
 import 'package:meshcore_team/widgets/status_bar_actions.dart';
 import 'package:meshcore_team/widgets/night_clock.dart';
 import 'package:meshcore_team/widgets/sort_menu_button.dart';
@@ -99,8 +101,10 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final channelRepository = context.watch<ChannelRepository>();
-    final isNighttime = context.watch<SettingsService>().settings.appTheme ==
-        AppThemeMode.nighttime;
+    final settings = context.watch<SettingsService>();
+    final isNighttime =
+        settings.settings.appTheme == AppThemeMode.nighttime;
+    final teamOnly = settings.settings.teamOnlyFilter;
 
     return Scaffold(
       appBar: AppBar(
@@ -111,6 +115,12 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             value: _sort,
             options: _sortOptions(l10n),
             onChanged: (value) => setState(() => _sort = value),
+          ),
+          IconButton(
+            icon: Icon(teamOnly ? Icons.group : Icons.group_outlined),
+            tooltip: l10n.teamOnly,
+            isSelected: teamOnly,
+            onPressed: () => settings.setTeamOnlyFilter(!teamOnly),
           ),
           IconButton(
             icon: const Icon(Icons.add),
@@ -146,7 +156,10 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             );
           }
 
-          final channelsWithUnread = _applySort(snapshot.data ?? []);
+          final all = snapshot.data ?? <ChannelWithUnread>[];
+          final channelsWithUnread = _applySort(
+            teamOnly ? all.where((c) => c.channel.isTeam).toList() : all,
+          );
 
           if (channelsWithUnread.isEmpty) {
             final emptyColor = Theme.of(context).colorScheme.outline;
@@ -574,6 +587,31 @@ class ChannelListTile extends StatelessWidget {
                   repo.setNotificationMode(channel.hash, 'muted');
                 },
               ),
+              if (!isPublic && channel.canBeTrackingChannel) ...[
+                const Divider(),
+                ListTile(
+                  leading: Icon(
+                    channel.isTeam ? Icons.group : Icons.group_outlined,
+                  ),
+                  title: Text(channel.isTeam
+                      ? l10n.unmarkTeamChannel
+                      : l10n.markAsTeamChannel),
+                  subtitle: Text(l10n.teamChannelExplanation),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    repo.setTeamChannel(channel, !channel.isTeam);
+                  },
+                ),
+                if (channelNeedsRadio(channel))
+                  ListTile(
+                    leading: const Icon(Icons.radio),
+                    title: Text(l10n.addChannelToRadio),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      promptAddChannelToRadio(context, channel);
+                    },
+                  ),
+              ],
               if (!isPublic) ...[
                 const Divider(),
                 ListTile(
@@ -690,11 +728,14 @@ class ChannelListTile extends StatelessWidget {
           leading: Stack(
             children: [
               CircleAvatar(
-                backgroundColor: isNighttime
-                    ? (isPublic
-                        ? NightColors.connectStale
-                        : NightColors.surfaceHigh)
-                    : (isPublic ? Colors.green : Colors.blue),
+                // A channel the radio doesn't hold can be read but not used.
+                backgroundColor: channelNeedsRadio(channel)
+                    ? (isNighttime ? NightColors.surfaceHigh : Colors.grey)
+                    : isNighttime
+                        ? (isPublic
+                            ? NightColors.connectStale
+                            : NightColors.surfaceHigh)
+                        : (isPublic ? Colors.green : Colors.blue),
                 child: Icon(
                   isPublic ? Icons.public : Icons.lock,
                   color: isNighttime ? NightColors.onSurface : Colors.white,
@@ -739,8 +780,33 @@ class ChannelListTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l10n.channelHash(channel.hash.toRadixString(16))),
-              Text(l10n.channelIndex(channel.channelIndex.toString())),
+              if (!channelNeedsRadio(channel))
+                Text(l10n.channelIndex(channel.channelIndex.toString())),
               Text(isPublic ? l10n.channelTypePublic : l10n.channelTypePrivate),
+              if (channel.isTeam)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.group,
+                        size: 14,
+                        color: isNighttime ? NightColors.primary : Colors.blue),
+                    const SizedBox(width: 2),
+                    Text(l10n.teamChannel),
+                  ],
+                ),
+              if (channelNeedsRadio(channel))
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.radio_button_unchecked,
+                        size: 14,
+                        color: isNighttime
+                            ? NightColors.connectStale
+                            : Colors.orange),
+                    const SizedBox(width: 2),
+                    Text(l10n.notOnRadio),
+                  ],
+                ),
               if (isMuted) Text(l10n.notificationsMuted),
               if (isSilent) Text(l10n.notificationsSilent),
               if (isTelemetryChannel)

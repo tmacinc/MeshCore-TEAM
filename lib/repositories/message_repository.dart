@@ -153,20 +153,35 @@ class MessageRepository {
   // TODO: Remove this after migrating all screens to use repository methods
   MessagesDao get messagesDao => _messagesDao;
 
+  ChannelsDao get channelsDao => _channelsDao;
+
   /// Watch messages for a channel, automatically filtered by current companion
   /// Auto-switches when currentCompanionPublicKey changes
   /// Matches Android MessageRepository.getMessagesByChannel()
   Stream<List<MessageData>> watchMessagesByChannel(int channelHash) {
-    return _settingsService.currentCompanionPublicKeyStream
-        .switchMap((companionKey) {
-      if (companionKey != null && companionKey.isNotEmpty) {
-        return _messagesDao.watchMessagesByChannelForCompanion(
-            channelHash, companionKey);
-      } else {
-        // No companion selected - return empty list
-        return Stream.value([]);
-      }
-    });
+    return _settingsService.currentCompanionPublicKeyStream.switchMap(
+        (companionKey) => _watchChannelMessages(channelHash, companionKey));
+  }
+
+  /// A team channel's history belongs to the phone, so it is shown whichever
+  /// radio received it — the channel hash comes from its key, so it means the
+  /// same thing on every radio. Other channels stay scoped to their radio.
+  Stream<List<MessageData>> _watchChannelMessages(
+    int channelHash,
+    String? companionKey,
+  ) async* {
+    final channel = await _channelsDao.getChannelByHash(channelHash);
+    if (channel?.isTeam ?? false) {
+      yield* _messagesDao.watchMessagesByChannelAnyCompanion(channelHash);
+      return;
+    }
+
+    if (companionKey == null || companionKey.isEmpty) {
+      yield const [];
+      return;
+    }
+    yield* _messagesDao.watchMessagesByChannelForCompanion(
+        channelHash, companionKey);
   }
 
   /// Watch private messages for a contact, automatically filtered by current companion

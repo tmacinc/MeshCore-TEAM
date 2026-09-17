@@ -79,6 +79,13 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Update channel name
+  Future<List<ChannelData>> getAllChannelsOnce() => select(channels).get();
+
+  Future<void> updateChannel(ChannelsCompanion changes) async {
+    await (update(channels)..where((t) => t.hash.equals(changes.hash.value)))
+        .write(changes);
+  }
+
   Future<void> updateChannelName(int hash, String name) {
     return (update(channels)..where((t) => t.hash.equals(hash)))
         .write(ChannelsCompanion(
@@ -122,32 +129,94 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Delete all channels for a companion device
-  Future<int> deleteChannelsByCompanion(String companionKey) {
-    return (delete(channels)
-          ..where((t) => t.companionDeviceKey.equals(companionKey)))
-        .go();
+  /// Deletes a radio's channels when switching away from it. Team channels
+  /// belong to the phone, so they are kept: they are untied from the old
+  /// radio and marked as not on it, ready to be offered to the new one.
+  Future<int> deleteChannelsByCompanion(String companionKey) async {
+    return db.transaction(() async {
+      var sentinelIndex = -1;
+      final teamChannels = await (select(channels)
+            ..where((t) =>
+                t.companionDeviceKey.equals(companionKey) &
+                t.isTeam.equals(true)))
+          .get();
+
+      for (final channel in teamChannels) {
+        await (update(channels)..where((t) => t.hash.equals(channel.hash)))
+            .write(ChannelsCompanion(
+          companionDeviceKey: const Value(null),
+          firmwareConfirmed: const Value(false),
+          channelIndex: Value(sentinelIndex--),
+        ));
+      }
+
+      return (delete(channels)
+            ..where((t) =>
+                t.companionDeviceKey.equals(companionKey) &
+                t.isTeam.equals(false)))
+          .go();
+    });
   }
 
   /// Delete all channels then insert replacements in a single transaction.
   /// Preserves user-set fields (notificationMode, isFavorite) across syncs.
+  Future<void> setTeamFlag(int hash, bool isTeam) {
+    return (update(channels)..where((t) => t.hash.equals(hash)))
+        .write(ChannelsCompanion(isTeam: Value(isTeam)));
+  }
+
+  Future<List<ChannelData>> getTeamChannels() {
+    return (select(channels)..where((t) => t.isTeam.equals(true))).get();
+  }
+
+  /// Replaces the channel list with what the radio reports.
+  ///
+  /// The radio is the source of truth for its own slots, with one exception:
+  /// a team channel is owned by the phone. One the radio doesn't have is kept
+  /// and marked [Channels.firmwareConfirmed] false, so its history survives a
+  /// radio switch and the user can be offered to add it back.
+  ///
+  /// Those keep a negative sentinel slot index, matching the Team Link
+  /// branch, so they can never collide with a real slot.
   Future<void> replaceAllChannels(List<ChannelsCompanion> replacements) {
     return db.transaction(() async {
       final existing = await select(channels).get();
       final preserved = {
         for (final c in existing)
-          c.hash: (notificationMode: c.notificationMode, isFavorite: c.isFavorite)
+          c.hash: (
+            notificationMode: c.notificationMode,
+            isFavorite: c.isFavorite,
+            isTeam: c.isTeam,
+          )
       };
+      final fromFirmware = {for (final c in replacements) c.hash.value};
+
+      final orphanedTeam = existing
+          .where((c) => c.isTeam && !fromFirmware.contains(c.hash))
+          .toList();
 
       await delete(channels).go();
+
       for (final channel in replacements) {
         final saved = preserved[channel.hash.value];
         final merged = saved != null
             ? channel.copyWith(
                 notificationMode: Value(saved.notificationMode),
                 isFavorite: Value(saved.isFavorite),
+                isTeam: Value(saved.isTeam),
               )
             : channel;
         await into(channels).insertOnConflictUpdate(merged);
+      }
+
+      var sentinelIndex = -1;
+      for (final channel in orphanedTeam) {
+        await into(channels).insertOnConflictUpdate(
+          channel.toCompanion(false).copyWith(
+                channelIndex: Value(sentinelIndex--),
+                firmwareConfirmed: const Value(false),
+              ),
+        );
       }
     });
   }

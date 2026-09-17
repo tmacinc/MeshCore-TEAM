@@ -12,6 +12,7 @@ import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/models/app_language.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
+import 'package:meshcore_team/widgets/add_channel_to_radio.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
@@ -417,6 +418,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               : _findChannelNameByHashHex(
                                   privateChannels, v.toLowerCase());
                           await settings.setTelemetryChannelName(name);
+                          if (v == null || !context.mounted) return;
+
+                          // Tracking on a channel makes it a team channel, and
+                          // tracking needs the radio to hold it.
+                          final channel = privateChannels.firstWhere(
+                              (c) => c.hash.toRadixString(16).toLowerCase() == v);
+                          await context
+                              .read<ChannelRepository>()
+                              .setTeamChannel(channel, true);
+                          if (!context.mounted) return;
+                          if (channelNeedsRadio(channel)) {
+                            await promptAddChannelToRadio(context, channel);
+                          }
                         },
                       );
                     },

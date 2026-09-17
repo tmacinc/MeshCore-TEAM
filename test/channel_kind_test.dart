@@ -23,6 +23,8 @@ ChannelData _channel({
       createdAt: 0,
       notificationMode: 'all',
       isFavorite: false,
+      isTeam: false,
+      firmwareConfirmed: true,
     );
 
 void main() {
