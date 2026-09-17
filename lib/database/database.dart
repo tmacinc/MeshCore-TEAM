@@ -20,6 +20,7 @@ import 'daos/ack_records_dao.dart';
 import 'daos/companion_devices_dao.dart';
 import 'daos/offline_map_areas_dao.dart';
 import 'daos/imported_overlay_maps_dao.dart';
+import 'daos/peers_dao.dart';
 
 part 'database.g.dart';
 
@@ -29,8 +30,6 @@ typedef Channel = ChannelData;
 typedef Message = MessageData;
 typedef Waypoint = WaypointData;
 typedef CompanionDevice = CompanionDeviceData;
-typedef ContactDisplayState = ContactDisplayStateData;
-typedef ContactPositionHistory = ContactPositionHistoryData;
 typedef AckRecord = AckRecordData;
 
 /// Main database class for TEAM-Flutter
@@ -46,8 +45,9 @@ typedef AckRecord = AckRecordData;
     Messages,
     Waypoints,
     CompanionDevices,
-    ContactDisplayStates,
-    ContactPositionHistories,
+    Peers,
+    PeerLocations,
+    PeerPositionHistory,
     AckRecords,
     OfflineMapAreas,
     ImportedOverlayMaps,
@@ -61,6 +61,7 @@ typedef AckRecord = AckRecordData;
     CompanionDevicesDao,
     OfflineMapAreasDao,
     ImportedOverlayMapsDao,
+    PeersDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -70,7 +71,10 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 9;
+  // Jumps 9 -> 12: the Team Link branch (D0sockets) already uses 10 and 11,
+  // so dev skips them to keep the two branches mergeable. See
+  // docs/alias-peer-identity-plan.md §3.5.
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -78,22 +82,10 @@ class AppDatabase extends _$AppDatabase {
           await m.createAll();
         },
         beforeOpen: (details) async {
-          // Self-healing: ensure columns exist regardless of prior migration state.
-          // ALTER TABLE ADD COLUMN fails if column already exists — that's fine, we ignore it.
-          for (final sql in [
-            'ALTER TABLE contacts ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0',
-            "ALTER TABLE channels ADD COLUMN notification_mode TEXT NOT NULL DEFAULT 'normal'",
-            'ALTER TABLE channels ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0',
-            "ALTER TABLE imported_overlay_maps ADD COLUMN layer_type TEXT NOT NULL DEFAULT 'kmz'",
-            'ALTER TABLE imported_overlay_maps ADD COLUMN min_zoom INTEGER',
-            'ALTER TABLE imported_overlay_maps ADD COLUMN max_zoom INTEGER',
-            'ALTER TABLE imported_overlay_maps ADD COLUMN opacity REAL NOT NULL DEFAULT 1.0',
-            'ALTER TABLE imported_overlay_maps ADD COLUMN size_bytes INTEGER NOT NULL DEFAULT 0',
-          ]) {
-            try {
-              await customStatement(sql);
-            } catch (_) {}
-          }
+          // Converge the live schema onto what drift expects, whatever state
+          // this database was left in (see _reconcileSchema).
+          await _reconcileSchema();
+
           // Patch any NULLs left by a partial earlier migration.
           await customStatement(
             'UPDATE contacts SET is_favorite = 0 WHERE is_favorite IS NULL',
@@ -148,13 +140,9 @@ class AppDatabase extends _$AppDatabase {
             print('[Migration] Added isAutonomousDevice to contacts table');
           }
 
-          // Migration from schema version 6 to 7: Add isAutonomousDevice to contact_display_states
-          if (from <= 6 && to >= 7) {
-            await m.addColumn(
-                contactDisplayStates, contactDisplayStates.isAutonomousDevice);
-            print(
-                '[Migration] Added isAutonomousDevice to contact_display_states table');
-          }
+          // Schema version 6 to 7 added is_autonomous_device to
+          // contact_display_states. That table is replaced in v12 (below), and
+          // the v12 copy doesn't read the column, so there is nothing to do.
 
           // Migration from schema version 7 to 8: new tables, favorites, channel notification mode
           if (from <= 7 && to >= 8) {
@@ -181,8 +169,168 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(importedOverlayMaps, importedOverlayMaps.sizeBytes);
             print('[Migration] v8->v9: imported_overlay_maps layer_type/zoom/opacity/size_bytes');
           }
+
+          // Versions 10 and 11 belong to the Team Link branch (D0sockets); dev
+          // never used them. Their additive changes are covered by
+          // _reconcileSchema when that branch merges.
+
+          // Migration to schema version 12: peer identity. Replaces the
+          // per-radio contact_display_states / contact_position_histories with
+          // radio-independent peer tables. Last known positions are copied
+          // over; the short position trail is dropped.
+          if (from <= 11 && to >= 12) {
+            await m.createTable(peers);
+            await m.createTable(peerLocations);
+            await m.createTable(peerPositionHistory);
+            await m.addColumn(messages, messages.senderPeerId);
+            final copied = await _copyLegacyDisplayStates();
+            await customStatement(
+                'DROP TABLE IF EXISTS contact_position_histories');
+            await customStatement('DROP TABLE IF EXISTS contact_display_states');
+            print(
+                '[Migration] v11->v12: peers created, $copied last known positions kept');
+          }
         },
       );
+
+  /// Copies each legacy contact_display_states row into a peer plus its last
+  /// known location. Returns the number of rows copied.
+  Future<int> _copyLegacyDisplayStates() async {
+    final tables = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type = 'table' "
+      "AND name = 'contact_display_states'",
+    ).get();
+    if (tables.isEmpty) return 0;
+
+    final rows = await customSelect(
+      'SELECT s.public_key_hex, s.last_seen, s.last_latitude, '
+      's.last_longitude, s.last_path_len, s.is_manually_hidden, s.hidden_at, '
+      's.name, s.first_seen, s.total_telemetry_received, '
+      '(SELECT c.hash FROM channels c '
+      ' WHERE c.channel_index = s.last_channel_idx '
+      ' AND c.companion_device_key = s.companion_device_key LIMIT 1) '
+      'AS channel_hash '
+      'FROM contact_display_states s',
+    ).get();
+
+    var copied = 0;
+    for (final row in rows) {
+      final keyHex = row.read<String>('public_key_hex');
+      final lastSeen = row.read<int>('last_seen');
+      final firstSeen = row.read<int>('first_seen');
+
+      // Team Link builds store radio-less peers under synthetic CLOUD: keys.
+      Uint8List? radioKey;
+      String? appId;
+      if (RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(keyHex)) {
+        radioKey = _hexToBytes(keyHex);
+      } else if (keyHex.startsWith('CLOUD:U:')) {
+        appId = keyHex.substring('CLOUD:U:'.length).toLowerCase();
+      }
+
+      if (radioKey != null) {
+        final key = radioKey;
+        final existing = await (select(peers)
+              ..where((t) => t.radioPublicKey.equals(key)))
+            .getSingleOrNull();
+        if (existing != null) continue;
+      }
+
+      final channelHash = row.readNullable<int>('channel_hash');
+      final peerId = await into(peers).insert(PeersCompanion.insert(
+        radioPublicKey: Value(radioKey),
+        radioKeyPrefix:
+            Value(radioKey == null ? null : keyHex.substring(0, 12).toLowerCase()),
+        appIdentityId: Value(appId),
+        radioName: Value(row.readNullable<String>('name')),
+        isTeamMember: const Value(true),
+        lastTeamChannelHash: Value(channelHash),
+        firstSeen: firstSeen,
+        lastSeen: lastSeen,
+      ));
+
+      ContactData? contact;
+      if (radioKey != null) {
+        final key = radioKey;
+        contact = await (select(contacts)
+              ..where((t) => t.publicKey.equals(key))
+              ..limit(1))
+            .getSingleOrNull();
+      }
+
+      await into(peerLocations).insert(PeerLocationsCompanion.insert(
+        peerId: Value(peerId),
+        lastSeen: lastSeen,
+        lastLatitude: Value(row.readNullable<double>('last_latitude')),
+        lastLongitude: Value(row.readNullable<double>('last_longitude')),
+        // 0 when the channel is gone: kept on record, not shown on the map.
+        lastChannelHash: channelHash ?? 0,
+        lastPathLen: row.read<int>('last_path_len'),
+        companionBatteryMilliVolts: Value(contact?.companionBatteryMilliVolts),
+        phoneBatteryMilliVolts: Value(contact?.phoneBatteryMilliVolts),
+        isAutonomousDevice: Value(contact?.isAutonomousDevice ?? false),
+        isManuallyHidden: Value(row.read<int>('is_manually_hidden') != 0),
+        hiddenAt: Value(row.readNullable<int>('hidden_at')),
+        firstSeen: firstSeen,
+        totalTelemetryReceived:
+            Value(row.read<int>('total_telemetry_received')),
+      ));
+      copied++;
+    }
+    return copied;
+  }
+
+  static Uint8List _hexToBytes(String hex) {
+    final bytes = Uint8List(hex.length ~/ 2);
+    for (var i = 0; i < bytes.length; i++) {
+      bytes[i] = int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16);
+    }
+    return bytes;
+  }
+
+  /// Brings the live database up to the schema drift expects, regardless of
+  /// the version it was last opened at or which branch's build wrote it.
+  ///
+  /// `schemaVersion` is a single counter, but `dev` and `D0sockets` advance it
+  /// independently, so the integer alone cannot tell us which tables and
+  /// columns a given database has. This inspects the database itself and adds
+  /// whatever is missing.
+  ///
+  /// Additive only: it creates missing tables and columns, and never drops,
+  /// renames, or retypes. Anything else needs an explicit [onUpgrade] step.
+  /// New non-nullable columns must carry a default, and added columns must
+  /// not be UNIQUE (SQLite can't add those with ALTER TABLE).
+  Future<void> _reconcileSchema() async {
+    final existingTables = (await customSelect(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    ).get())
+        .map((row) => row.read<String>('name'))
+        .toSet();
+
+    final m = createMigrator();
+
+    for (final table in allTables) {
+      if (!existingTables.contains(table.actualTableName)) {
+        await m.createTable(table);
+        print('[Schema] Created missing table ${table.actualTableName}');
+        continue;
+      }
+
+      final existingColumns = (await customSelect(
+        'PRAGMA table_info(${table.actualTableName})',
+      ).get())
+          .map((row) => row.read<String>('name'))
+          .toSet();
+
+      for (final column in table.$columns) {
+        if (!existingColumns.contains(column.name)) {
+          await m.addColumn(table, column);
+          print(
+              '[Schema] Added missing column ${table.actualTableName}.${column.name}');
+        }
+      }
+    }
+  }
 }
 
 /// Opens a connection to the database

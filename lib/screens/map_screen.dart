@@ -4,7 +4,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:drift/drift.dart' hide Column;
 import 'package:material_ui/material_ui.dart';
@@ -16,6 +15,9 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:meshcore_team/database/database.dart';
+import 'package:meshcore_team/database/daos/peers_dao.dart';
+import 'package:meshcore_team/models/team_map_visibility.dart';
+import 'package:meshcore_team/services/peer_directory.dart';
 import 'package:meshcore_team/utils/location_settings.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/models/map_tile_providers.dart';
@@ -96,7 +98,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
 
   bool _isGroupStatusOpen = false;
 
-  Set<String> _contactPathsVisible = <String>{};
+  Set<int> _contactPathsVisible = <int>{};
   bool _pendingPathsSelectAll = false;
 
   LatLng? _navTarget;
@@ -417,28 +419,13 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     );
   }
 
-  Uint8List _hexToBytes(String hex) {
-    final cleaned = hex.trim();
-    if (cleaned.length % 2 != 0) {
-      throw ArgumentError('Hex string length must be even');
-    }
-    final bytes = <int>[];
-    for (int i = 0; i < cleaned.length; i += 2) {
-      bytes.add(int.parse(cleaned.substring(i, i + 2), radix: 16));
-    }
-    return Uint8List.fromList(bytes);
-  }
+  void _showContactQuickInfo(PeerWithLocation member) {
+    final peers = context.read<PeerDirectory>();
+    final name = peers.displayName(member.peer);
+    final idShort = peers.shortId(member.peer);
 
-  void _showContactQuickInfo(ContactDisplayStateData state) {
-    final name = (state.name == null || state.name!.trim().isEmpty)
-        ? 'Unknown'
-        : state.name!.trim();
-    final idShort = state.publicKeyHex.length >= 8
-        ? state.publicKeyHex.substring(0, 8).toUpperCase()
-        : state.publicKeyHex.toUpperCase();
-
-    final hopCount = state.lastPathLen;
-    final lastHeard = _formatRelativeTime(state.lastSeen);
+    final hopCount = member.location.lastPathLen;
+    final lastHeard = _formatRelativeTime(member.location.lastSeen);
 
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -449,72 +436,82 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// The member's contact on the current radio, if any. DMs need one.
+  Future<ContactData?> _contactFor(AppDatabase db, PeerData peer) async {
+    final key = peer.radioPublicKey;
+    if (key == null) return null;
+    try {
+      return await db.contactsDao.getContactByPublicKey(key);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _togglePath(int peerId) {
+    setState(() {
+      if (_contactPathsVisible.contains(peerId)) {
+        _contactPathsVisible.remove(peerId);
+      } else {
+        _contactPathsVisible.add(peerId);
+      }
+    });
+    // Sync global toggle when all contacts have been individually hidden.
+    final svc = context.read<SettingsService>();
+    if (_contactPathsVisible.isEmpty && svc.settings.mapShowContactPaths) {
+      svc.setMapShowContactPaths(false);
+    } else if (_contactPathsVisible.isNotEmpty &&
+        !svc.settings.mapShowContactPaths) {
+      svc.setMapShowContactPaths(true);
+    }
+  }
+
   Future<void> _showContactDetailsDialog(
     AppDatabase db,
-    ContactDisplayStateData state,
+    PeerWithLocation member,
   ) async {
-    final name = (state.name == null || state.name!.trim().isEmpty)
-        ? 'Unknown'
-        : state.name!.trim();
-
-    final Future<ContactData?> contactFuture = () async {
-      try {
-        final pkBytes = _hexToBytes(state.publicKeyHex);
-        return db.contactsDao.getContactByPublicKey(pkBytes);
-      } catch (_) {
-        return null;
-      }
-    }();
+    final peer = member.peer;
+    final location = member.location;
+    final name = context.read<PeerDirectory>().displayName(peer);
+    final contactFuture = _contactFor(db, peer);
 
     await showDialog<void>(
       context: context,
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
+        final lastHeard = _formatRelativeTime(location.lastSeen);
+        final lat = location.lastLatitude;
+        final lon = location.lastLongitude;
+        final isAutonomous = location.isAutonomousDevice;
+
+        String formatBatteryMv(int? mv) {
+          return mv != null ? '${mv}mV' : l10n.unknown;
+        }
+
         return AlertDialog(
           title: Text(name),
-          content: FutureBuilder<ContactData?>(
-            future: contactFuture,
-            builder: (context, snapshot) {
-              final contact = snapshot.data;
-              final lastHeard = _formatRelativeTime(state.lastSeen);
-
-              final lat = state.lastLatitude;
-              final lon = state.lastLongitude;
-
-              final companionBattMv = contact?.companionBatteryMilliVolts;
-              final isAutonomous = contact?.isAutonomousDevice ?? false;
-              final phoneBattMv =
-                  isAutonomous ? null : contact?.phoneBatteryMilliVolts;
-
-              String formatBatteryMv(int? mv) {
-                return mv != null ? '${mv}mV' : 'Unknown';
-              }
-
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.hopCountLabel(state.lastPathLen.toString())),
-                  const SizedBox(height: 6),
-                  Text(l10n.lastHeard(lastHeard)),
-                  const SizedBox(height: 10),
-                  Text(l10n.latWithValue(
-                      lat?.toStringAsFixed(6) ?? l10n.unknown)),
-                  const SizedBox(height: 6),
-                  Text(l10n.lonWithValue(
-                      lon?.toStringAsFixed(6) ?? l10n.unknown)),
-                  const SizedBox(height: 10),
-                  Text(l10n.battery),
-                  const SizedBox(height: 6),
-                  Text(l10n.companionBattery(formatBatteryMv(companionBattMv))),
-                  const SizedBox(height: 6),
-                  if (isAutonomous)
-                    Text(l10n.phoneAutonomousNoPhone)
-                  else
-                    Text(l10n.phoneBattery(formatBatteryMv(phoneBattMv))),
-                ],
-              );
-            },
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.hopCountLabel(location.lastPathLen.toString())),
+              const SizedBox(height: 6),
+              Text(l10n.lastHeard(lastHeard)),
+              const SizedBox(height: 10),
+              Text(l10n.latWithValue(lat?.toStringAsFixed(6) ?? l10n.unknown)),
+              const SizedBox(height: 6),
+              Text(l10n.lonWithValue(lon?.toStringAsFixed(6) ?? l10n.unknown)),
+              const SizedBox(height: 10),
+              Text(l10n.battery),
+              const SizedBox(height: 6),
+              Text(l10n.companionBattery(
+                  formatBatteryMv(location.companionBatteryMilliVolts))),
+              const SizedBox(height: 6),
+              if (isAutonomous)
+                Text(l10n.phoneAutonomousNoPhone)
+              else
+                Text(l10n.phoneBattery(
+                    formatBatteryMv(location.phoneBatteryMilliVolts))),
+            ],
           ),
           actions: [
             TextButton(
@@ -523,75 +520,50 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
             ),
             TextButton(
               onPressed: () {
-                final key = state.publicKeyHex;
-                setState(() {
-                  if (_contactPathsVisible.contains(key)) {
-                    _contactPathsVisible.remove(key);
-                  } else {
-                    _contactPathsVisible.add(key);
-                  }
-                });
-                // Sync global toggle when all contacts have been individually hidden.
-                final svc = context.read<SettingsService>();
-                if (_contactPathsVisible.isEmpty &&
-                    svc.settings.mapShowContactPaths) {
-                  svc.setMapShowContactPaths(false);
-                } else if (_contactPathsVisible.isNotEmpty &&
-                    !svc.settings.mapShowContactPaths) {
-                  svc.setMapShowContactPaths(true);
-                }
+                _togglePath(peer.id);
                 Navigator.of(context).pop();
               },
               child: Text(
-                _contactPathsVisible.contains(state.publicKeyHex)
+                _contactPathsVisible.contains(peer.id)
                     ? l10n.hidePath
                     : l10n.showPath,
               ),
             ),
-            if (state.lastLatitude != null && state.lastLongitude != null)
+            if (lat != null && lon != null)
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  _startNavigation(
-                    LatLng(state.lastLatitude!, state.lastLongitude!),
-                    name,
-                  );
+                  _startNavigation(LatLng(lat, lon), name);
                 },
                 child: Text(l10n.navigate),
               ),
             TextButton(
               onPressed: () async {
-                final nowMs = DateTime.now().millisecondsSinceEpoch;
-                await (db.update(db.contactDisplayStates)
-                      ..where((t) =>
-                          t.publicKeyHex.equals(state.publicKeyHex) &
-                          t.companionDeviceKey
-                              .equals(state.companionDeviceKey)))
-                    .write(
-                  ContactDisplayStatesCompanion(
-                    isManuallyHidden: const Value(true),
-                    hiddenAt: Value(nowMs),
-                  ),
-                );
+                await db.peersDao.setHidden(peer.id, hidden: true);
                 if (context.mounted) Navigator.of(context).pop();
               },
               child: Text(l10n.removeFromGroup),
             ),
-            FilledButton(
-              onPressed: () async {
-                final contact = await contactFuture;
-                if (contact == null) return;
-
-                if (!context.mounted) return;
-                Navigator.of(context).pop();
-                Navigator.push(
-                  this.context,
-                  MaterialPageRoute(
-                    builder: (context) => DirectMessageScreen(contact: contact),
-                  ),
+            FutureBuilder<ContactData?>(
+              future: contactFuture,
+              builder: (context, snapshot) {
+                final contact = snapshot.data;
+                return FilledButton(
+                  onPressed: contact == null
+                      ? null
+                      : () {
+                          Navigator.of(context).pop();
+                          Navigator.push(
+                            this.context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  DirectMessageScreen(contact: contact),
+                            ),
+                          );
+                        },
+                  child: Text(l10n.directMessage),
                 );
               },
-              child: Text(l10n.directMessage),
             ),
           ],
         );
@@ -599,10 +571,10 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _showGroupMemberActions(AppDatabase db, ContactDisplayStateData state) {
-    final name = (state.name == null || state.name!.trim().isEmpty)
-        ? state.publicKeyHex.substring(0, 8).toUpperCase()
-        : state.name!.trim();
+  void _showGroupMemberActions(AppDatabase db, PeerWithLocation member) {
+    final peer = member.peer;
+    final location = member.location;
+    final name = context.read<PeerDirectory>().displayName(peer);
 
     showModalBottomSheet<void>(
       context: context,
@@ -626,18 +598,14 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                 title: Text(l10n.directMessage),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
-                  try {
-                    final pkBytes = _hexToBytes(state.publicKeyHex);
-                    final contact =
-                        await db.contactsDao.getContactByPublicKey(pkBytes);
-                    if (contact == null || !mounted) return;
-                    Navigator.push(
-                      this.context,
-                      MaterialPageRoute(
-                        builder: (_) => DirectMessageScreen(contact: contact),
-                      ),
-                    );
-                  } catch (_) {}
+                  final contact = await _contactFor(db, peer);
+                  if (contact == null || !mounted) return;
+                  Navigator.push(
+                    this.context,
+                    MaterialPageRoute(
+                      builder: (_) => DirectMessageScreen(contact: contact),
+                    ),
+                  );
                 },
               ),
               ListTile(
@@ -649,7 +617,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                   await _releaseCameraLockForExternalTarget();
                   if (!mounted) return;
                   _mapController.move(
-                    LatLng(state.lastLatitude!, state.lastLongitude!),
+                    LatLng(location.lastLatitude!, location.lastLongitude!),
                     _mapController.camera.zoom,
                   );
                 },
@@ -660,7 +628,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   _startNavigation(
-                    LatLng(state.lastLatitude!, state.lastLongitude!),
+                    LatLng(location.lastLatitude!, location.lastLongitude!),
                     name,
                   );
                 },
@@ -672,18 +640,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                     style: TextStyle(color: Colors.red[700])),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
-                  final nowMs = DateTime.now().millisecondsSinceEpoch;
-                  await (db.update(db.contactDisplayStates)
-                        ..where((t) =>
-                            t.publicKeyHex.equals(state.publicKeyHex) &
-                            t.companionDeviceKey
-                                .equals(state.companionDeviceKey)))
-                      .write(
-                    ContactDisplayStatesCompanion(
-                      isManuallyHidden: const Value(true),
-                      hiddenAt: Value(nowMs),
-                    ),
-                  );
+                  await db.peersDao.setHidden(peer.id, hidden: true);
                 },
               ),
               const SizedBox(height: 8),
@@ -2186,77 +2143,58 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                   if (selectedChannel == null) return const SizedBox.shrink();
                   if (selectedChannel!.isPublic) return const SizedBox.shrink();
 
-                  final selectedChannelIdx = selectedChannel!.channelIndex;
+                  final trackingHash = selectedChannel.hash;
+                  final peers = context.read<PeerDirectory>();
 
-                  return StreamBuilder<List<ContactDisplayStateData>>(
-                    stream: (db.select(db.contactDisplayStates)
-                          ..where((t) =>
-                              t.companionDeviceKey.equals(companionKey)))
-                        .watch(),
+                  return StreamBuilder<List<PeerWithLocation>>(
+                    stream: db.peersDao.watchPeersWithLocation(),
                     builder: (context, snapshot) {
-                      final states =
-                          snapshot.data ?? const <ContactDisplayStateData>[];
+                      final members =
+                          snapshot.data ?? const <PeerWithLocation>[];
 
                       final nowMs = DateTime.now().millisecondsSinceEpoch;
-                      const windowMs = 12 * 60 * 60 * 1000; // 12 hours
-
-                      final visible = states.where((s) {
-                        if (s.isManuallyHidden) return false;
-                        if (s.isManuallyHidden) return false;
-                        if (s.totalTelemetryReceived <= 0) return false;
-                        if (s.lastChannelIdx != selectedChannelIdx) {
-                          return false;
-                        }
-                        if (s.lastLatitude == null || s.lastLongitude == null) {
-                          return false;
-                        }
-                        return (nowMs - s.lastSeen) <= windowMs;
-                      }).toList();
+                      final visible = members
+                          .where((m) => isVisibleOnTeamMap(
+                                m.location,
+                                trackingChannelHash: trackingHash,
+                                nowMs: nowMs,
+                              ))
+                          .toList();
 
                       if (visible.isEmpty) return const SizedBox.shrink();
 
                       // One-time populate when global toggle was just turned on.
                       if (_pendingPathsSelectAll) {
                         _pendingPathsSelectAll = false;
-                        for (final s in visible) {
-                          _contactPathsVisible.add(s.publicKeyHex);
+                        for (final m in visible) {
+                          _contactPathsVisible.add(m.peer.id);
                         }
                       }
 
                       // Contacts whose paths should be rendered.
                       final pathKeys = visible
-                          .where((s) =>
-                              _contactPathsVisible.contains(s.publicKeyHex))
-                          .map((s) => s.publicKeyHex)
+                          .map((m) => m.peer.id)
+                          .where(_contactPathsVisible.contains)
                           .toSet();
 
                       return Stack(
                         children: [
                           // Path polylines (rendered below markers).
                           if (pathKeys.isNotEmpty)
-                            StreamBuilder<List<ContactPositionHistoryData>>(
-                              stream: (db.select(db.contactPositionHistories)
-                                    ..where((t) =>
-                                        t.publicKeyHex.isIn(pathKeys) &
-                                        t.companionDeviceKey
-                                            .equals(companionKey!))
-                                    ..orderBy([
-                                      (t) =>
-                                          OrderingTerm(expression: t.timestamp),
-                                    ]))
-                                  .watch(),
+                            StreamBuilder<List<PeerPositionData>>(
+                              stream: db.peersDao.watchPositions(pathKeys),
                               builder: (context, pathSnap) {
                                 final allPoints = pathSnap.data ??
-                                    const <ContactPositionHistoryData>[];
+                                    const <PeerPositionData>[];
                                 if (allPoints.isEmpty) {
                                   return const SizedBox.shrink();
                                 }
 
-                                // Group by publicKeyHex.
-                                final grouped = <String,
-                                    List<ContactPositionHistoryData>>{};
+                                // Group by peer.
+                                final grouped =
+                                    <int, List<PeerPositionData>>{};
                                 for (final p in allPoints) {
-                                  (grouped[p.publicKeyHex] ??= []).add(p);
+                                  (grouped[p.peerId] ??= []).add(p);
                                 }
 
                                 final polylines = <Polyline>[];
@@ -2316,21 +2254,21 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                             ),
                           MarkerLayer(
                             markers: [
-                              for (final s in visible)
+                              for (final m in visible)
                                 Marker(
-                                  point:
-                                      LatLng(s.lastLatitude!, s.lastLongitude!),
+                                  point: LatLng(m.location.lastLatitude!,
+                                      m.location.lastLongitude!),
                                   width: showTrackedUserNames ? 108 : 44,
                                   height: showTrackedUserNames ? 68 : 44,
                                   child: _ContactMarker(
-                                    name: s.name,
+                                    name: peers.displayName(m.peer),
                                     showName: showTrackedUserNames,
-                                    pathLen: s.lastPathLen,
-                                    lastSeenMs: s.lastSeen,
-                                    isAutonomous: s.isAutonomousDevice,
+                                    pathLen: m.location.lastPathLen,
+                                    lastSeenMs: m.location.lastSeen,
+                                    isAutonomous: m.location.isAutonomousDevice,
                                     onTap: () =>
-                                        _showContactDetailsDialog(db, s),
-                                    onDoubleTap: () => _showContactQuickInfo(s),
+                                        _showContactDetailsDialog(db, m),
+                                    onDoubleTap: () => _showContactQuickInfo(m),
                                   ),
                                 ),
                             ],
@@ -3176,7 +3114,7 @@ class _GroupStatusPanel extends StatelessWidget {
   final SettingsService settingsService;
   final String Function(int timestampMs) formatRelativeTime;
   final VoidCallback onClose;
-  final void Function(ContactDisplayStateData) onMemberTap;
+  final void Function(PeerWithLocation) onMemberTap;
 
   const _GroupStatusPanel({
     required this.db,
@@ -3294,28 +3232,22 @@ class _GroupStatusPanel extends StatelessWidget {
           );
         }
 
-        final selectedChannelIdx = selectedChannel.channelIndex;
+        final trackingHash = selectedChannel.hash;
+        final peers = context.read<PeerDirectory>();
 
-        return StreamBuilder<List<ContactDisplayStateData>>(
-          stream: (db.select(db.contactDisplayStates)
-                ..where((t) => t.companionDeviceKey.equals(companionKey)))
-              .watch(),
+        return StreamBuilder<List<PeerWithLocation>>(
+          stream: db.peersDao.watchPeersWithLocation(),
           builder: (context, snapshot) {
             final nowMs = DateTime.now().millisecondsSinceEpoch;
-            const windowMs = 12 * 60 * 60 * 1000;
 
-            final visible =
-                (snapshot.data ?? const <ContactDisplayStateData>[]).where((s) {
-              if (s.isManuallyHidden) return false;
-              if (s.isManuallyHidden) return false;
-              if (s.totalTelemetryReceived <= 0) return false;
-              if (s.lastChannelIdx != selectedChannelIdx) return false;
-              if (s.lastLatitude == null || s.lastLongitude == null) {
-                return false;
-              }
-              return (nowMs - s.lastSeen) <= windowMs;
-            }).toList()
-                  ..sort((a, b) => b.lastSeen.compareTo(a.lastSeen));
+            final visible = (snapshot.data ?? const <PeerWithLocation>[])
+                .where((m) => isVisibleOnTeamMap(
+                      m.location,
+                      trackingChannelHash: trackingHash,
+                      nowMs: nowMs,
+                    ))
+                .toList()
+              ..sort((a, b) => b.location.lastSeen.compareTo(a.location.lastSeen));
 
             if (visible.isEmpty) {
               return Padding(
@@ -3333,10 +3265,9 @@ class _GroupStatusPanel extends StatelessWidget {
                 separatorBuilder: (_, __) =>
                     const Divider(height: 1, indent: 12, endIndent: 12),
                 itemBuilder: (context, i) {
-                  final s = visible[i];
-                  final name = (s.name?.trim().isNotEmpty ?? false)
-                      ? s.name!.trim()
-                      : s.publicKeyHex.substring(0, 8).toUpperCase();
+                  final m = visible[i];
+                  final s = m.location;
+                  final name = peers.displayName(m.peer);
                   final hopText = s.lastPathLen == 0
                       ? l10n.directConnection
                       : l10n.hopCount(s.lastPathLen);
@@ -3359,7 +3290,7 @@ class _GroupStatusPanel extends StatelessWidget {
                       '$hopText · ${formatRelativeTime(s.lastSeen)}',
                       style: const TextStyle(fontSize: 11),
                     ),
-                    onTap: () => onMemberTap(s),
+                    onTap: () => onMemberTap(m),
                   );
                 },
               ),

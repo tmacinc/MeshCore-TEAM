@@ -26,7 +26,8 @@ import 'package:meshcore_team/models/telemetry_message.dart';
 import 'package:meshcore_team/models/waypoint.dart' as waypoint_model;
 import 'package:meshcore_team/models/waypoint_mesh_message.dart';
 import 'package:meshcore_team/models/route_payload.dart';
-import 'package:meshcore_team/services/contact_capability_service.dart';
+import 'package:meshcore_team/services/peer_directory.dart';
+import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/models/telemetry_event.dart';
 import 'package:meshcore_team/models/topology_event.dart';
 import 'package:meshcore_team/models/topology_message.dart';
@@ -56,7 +57,7 @@ class MessageRepository {
   final ContactRepository _contactRepository;
   final MessageNotificationService _notificationService;
   final SettingsService _settingsService;
-  final ContactCapabilityService _capabilityService;
+  final PeerDirectory _peers;
   final NetworkTopology _networkTopology;
   final NeighborTracker _neighborTracker;
   final Uuid _uuid = const Uuid();
@@ -121,7 +122,7 @@ class MessageRepository {
     required ContactRepository contactRepository,
     required MessageNotificationService notificationService,
     required SettingsService settingsService,
-    required ContactCapabilityService capabilityService,
+    required PeerDirectory peerDirectory,
     NetworkTopology? networkTopology,
     NeighborTracker? neighborTracker,
   })  : _networkTopology = networkTopology ?? NetworkTopology(),
@@ -135,7 +136,7 @@ class MessageRepository {
         _contactRepository = contactRepository,
         _notificationService = notificationService,
         _settingsService = settingsService,
-        _capabilityService = capabilityService;
+        _peers = peerDirectory;
 
   // Expose messagesDao for backward compatibility
   // TODO: Remove this after migrating all screens to use repository methods
@@ -659,6 +660,8 @@ class MessageRepository {
         id: messageId,
         senderId: resolvedSenderPublicKey,
         senderName: drift.Value(senderName), // Store sender name in message
+        senderPeerId: drift.Value(
+            _peers.byRadioKey(resolvedSenderPublicKey.sublist(0, 6))?.id),
         channelHash: contactHash, // Use full contact hash for DMs
         content: response.text,
         timestamp: response.timestamp * 1000, // Convert to milliseconds
@@ -736,6 +739,7 @@ class MessageRepository {
         await _handleCapabilityChannelMessage(
           senderName: senderName,
           content: messageContent,
+          receivedChannelIdx: response.channelIndex,
         );
         return;
       }
@@ -825,6 +829,7 @@ class MessageRepository {
         id: messageId,
         senderId: Uint8List(32), // Unknown sender - use empty array
         senderName: drift.Value(senderName), // Store sender name from message
+        senderPeerId: drift.Value(_peers.uniqueByRadioName(senderName)?.id),
         channelHash: channel.hash, // Use actual channel hash, not index
         content: messageContent, // Content only, without sender prefix
         timestamp: response.timestamp * 1000, // Convert to milliseconds
@@ -1330,6 +1335,7 @@ class MessageRepository {
   Future<void> _handleCapabilityChannelMessage({
     required String senderName,
     required String content,
+    required int receivedChannelIdx,
   }) async {
     final msg = CapabilityMessage.parse(content);
     if (msg == null) {
@@ -1337,8 +1343,73 @@ class MessageRepository {
           '[Capability] ⚠️ Failed to parse #CAP payload from "$senderName"');
       return;
     }
-    await _capabilityService.updateFromMessage(senderName, msg);
+    final sender = await _resolveTeamSender(
+      senderName: senderName,
+      receivedChannelIdx: receivedChannelIdx,
+      logTag: 'Capability',
+    );
+    if (sender == null) return;
+    await _peers.recordCapability(sender.resolution.peer, msg);
     debugPrint('[Capability] ✅ Stored capability for "$senderName": $msg');
+  }
+
+  /// Resolves the sender of team traffic (#TEL, #T:, #CAP).
+  ///
+  /// Returns null when there is no companion context, or when the channel
+  /// can't be a team channel (public or hashtag): team identity is only
+  /// learned from private channels.
+  ///
+  /// A sender who isn't a contact on the current radio triggers a flood
+  /// self-advert, but only on the tracking channel. That is how a new group
+  /// finds each other: each side adverts on hearing the other's telemetry.
+  Future<_TeamSender?> _resolveTeamSender({
+    required String senderName,
+    required int receivedChannelIdx,
+    required String logTag,
+  }) async {
+    final companionKey = _settingsService.settings.currentCompanionPublicKey;
+    if (companionKey == null || companionKey.isEmpty) {
+      debugPrint(
+          '[$logTag] ⚠️ No companion context; ignoring message from $senderName');
+      return null;
+    }
+
+    final channels = await _channelsDao.getChannelsByCompanion(companionKey);
+    ChannelData? channel;
+    for (final c in channels) {
+      if (c.channelIndex == receivedChannelIdx) {
+        channel = c;
+        break;
+      }
+    }
+    if (channel == null || !channel.canBeTrackingChannel) {
+      debugPrint(
+          '[$logTag] ⏭️ Ignoring message from $senderName: channel $receivedChannelIdx is not private');
+      return null;
+    }
+
+    final contacts = await _contactsDao.getContactsByCompanion(companionKey);
+    final resolution = await _peers.resolveChannelSender(
+      radioName: senderName,
+      radioContacts: contacts,
+      channelHash: channel.hash,
+      isTeamChannel: true,
+    );
+
+    if (!resolution.isOnRadio && _isTrackingChannel(channel)) {
+      debugPrint(
+          '[$logTag] 📍 Sender \'$senderName\' not on radio (${resolution.state.name}) - triggering SEND_SELF_ADVERT');
+      await _bleService.sendSelfAdvert();
+    }
+
+    return _TeamSender(resolution, channel, companionKey);
+  }
+
+  bool _isTrackingChannel(ChannelData channel) {
+    final hex = _settingsService.settings.telemetryChannelHash;
+    if (hex == null || hex.isEmpty) return false;
+    final cleaned = hex.trim().toLowerCase().replaceFirst('0x', '');
+    return int.tryParse(cleaned, radix: 16) == channel.hash;
   }
 
   Future<void> _handleTelemetryChannelMessage({
@@ -1358,202 +1429,146 @@ class MessageRepository {
     debugPrint(
         '[TELREC] ✅ Parsed from=$senderName lat=${telemetry.latitude}, lon=${telemetry.longitude}, compBatt=${telemetry.companionBatteryMilliVolts}mV, phoneBatt=${telemetry.phoneBatteryMilliVolts}mV, needsFwd=${telemetry.needsForwarding}, maxPath=${telemetry.maxPathObserved}, autonomous=${telemetry.isAutonomousDevice}');
 
-    // Emit to forwarding strategies before any async DB work.
+    final sender = await _resolveTeamSender(
+      senderName: senderName,
+      receivedChannelIdx: receivedChannelIdx,
+      logTag: 'TELREC',
+    );
+    if (sender == null) return;
+    final peer = sender.resolution.peer;
+    final contact = sender.resolution.contact;
+
+    // Emit to forwarding strategies before the remaining DB work.
     _telemetryStreamController.add(TelemetryEvent(
       senderName: senderName,
+      peerId: peer.id,
+      radioPublicKey: peer.radioPublicKey,
       telemetry: telemetry,
       pathLen: pathLen,
       receivedAt: DateTime.fromMillisecondsSinceEpoch(nowMs),
     ));
 
-    final companionKey = _settingsService.settings.currentCompanionPublicKey;
-    if (companionKey == null || companionKey.isEmpty) {
+    if (contact != null) {
       debugPrint(
-          '[TELREC] ⚠️ No companion context; ignoring telemetry from $senderName');
-      return;
+          '[TELREC] 👤 Matched contact name=\'${contact.name}\' hops=$pathLen channelIdx=$receivedChannelIdx');
+
+      // Track as direct neighbor for outbound #T: bitmap.
+      if (pathLen == 0) {
+        _neighborTracker.onPacketReceived(_bytesToHex(
+            Uint8List.fromList(contact.publicKey.take(6).toList())));
+      }
+
+      await _contactsDao.upsertContact(ContactsCompanion(
+        publicKey: drift.Value(contact.publicKey),
+        hash: drift.Value(contact.hash),
+        name: drift.Value(senderName),
+        latitude: telemetry.latitude != null
+            ? drift.Value(telemetry.latitude)
+            : const drift.Value.absent(),
+        longitude: telemetry.longitude != null
+            ? drift.Value(telemetry.longitude)
+            : const drift.Value.absent(),
+        lastSeen: drift.Value(nowMs),
+        companionBatteryMilliVolts: telemetry.companionBatteryMilliVolts != null
+            ? drift.Value(telemetry.companionBatteryMilliVolts)
+            : const drift.Value.absent(),
+        phoneBatteryMilliVolts: telemetry.phoneBatteryMilliVolts != null
+            ? drift.Value(telemetry.phoneBatteryMilliVolts)
+            : const drift.Value.absent(),
+        isDirect: drift.Value(pathLen == 0),
+        hopCount: drift.Value(pathLen),
+        isAutonomousDevice: drift.Value(telemetry.isAutonomousDevice),
+        lastTelemetryChannelIdx: drift.Value(receivedChannelIdx),
+        lastTelemetryTimestamp: drift.Value(nowMs),
+        companionDeviceKey: drift.Value(sender.companionKey),
+      ));
+      debugPrint('[TELREC] 💾 Contact updated (telemetry freshness + fields)');
     }
 
-    final contacts = await _contactsDao.getContactsByCompanion(companionKey);
-    final contact = _findContactByExactName(contacts, senderName);
-
-    if (contact == null) {
-      debugPrint(
-          '[TELREC] 📍 Unknown sender \'$senderName\' - triggering SEND_SELF_ADVERT');
-      await _bleService.sendSelfAdvert();
-      return;
-    }
-
-    debugPrint(
-        '[TELREC] 👤 Matched contact name=\'${contact.name}\' hops=$pathLen channelIdx=$receivedChannelIdx');
-
-    // Track as direct neighbor for outbound #T: bitmap.
-    if (pathLen == 0) {
-      final hexPrefix = contact.publicKey
-          .take(6)
-          .map((b) => b.toRadixString(16).padLeft(2, '0'))
-          .join()
-          .toLowerCase();
-      _neighborTracker.onPacketReceived(hexPrefix);
-    }
-
-    final updatedName = senderName;
-
-    final updated = ContactsCompanion(
-      publicKey: drift.Value(contact.publicKey),
-      hash: drift.Value(contact.hash),
-      name: drift.Value(updatedName),
-      latitude: telemetry.latitude != null
-          ? drift.Value(telemetry.latitude)
-          : const drift.Value.absent(),
-      longitude: telemetry.longitude != null
-          ? drift.Value(telemetry.longitude)
-          : const drift.Value.absent(),
-      lastSeen: drift.Value(nowMs),
-      companionBatteryMilliVolts: telemetry.companionBatteryMilliVolts != null
-          ? drift.Value(telemetry.companionBatteryMilliVolts)
-          : const drift.Value.absent(),
-      phoneBatteryMilliVolts: telemetry.phoneBatteryMilliVolts != null
-          ? drift.Value(telemetry.phoneBatteryMilliVolts)
-          : const drift.Value.absent(),
-      isDirect: drift.Value(pathLen == 0),
-      hopCount: drift.Value(pathLen),
-      isAutonomousDevice: drift.Value(telemetry.isAutonomousDevice),
-      lastTelemetryChannelIdx: drift.Value(receivedChannelIdx),
-      lastTelemetryTimestamp: drift.Value(nowMs),
-      companionDeviceKey: drift.Value(companionKey),
+    await _recordPeerPosition(
+      peerId: peer.id,
+      nowMs: nowMs,
+      latitude: telemetry.latitude,
+      longitude: telemetry.longitude,
+      channelHash: sender.channel.hash,
+      pathLen: pathLen,
+      companionBatteryMilliVolts: telemetry.companionBatteryMilliVolts,
+      phoneBatteryMilliVolts: telemetry.phoneBatteryMilliVolts,
+      isAutonomousDevice: telemetry.isAutonomousDevice,
     );
-
-    await _contactsDao.upsertContact(updated);
-
-    debugPrint('[TELREC] 💾 Contact updated (telemetry freshness + fields)');
-
-    if (telemetry.latitude != null && telemetry.longitude != null) {
-      final publicKeyHex = _bytesToHex(contact.publicKey).toUpperCase();
-      await _upsertContactDisplayState(
-        publicKeyHex: publicKeyHex,
-        companionKey: companionKey,
-        lastSeen: nowMs,
-        latitude: telemetry.latitude!,
-        longitude: telemetry.longitude!,
-        channelIdx: receivedChannelIdx,
-        pathLen: pathLen,
-        name: updatedName,
-        isAutonomousDevice: telemetry.isAutonomousDevice,
-      );
-
-      await _addPositionHistoryPoint(
-        publicKeyHex: publicKeyHex,
-        companionKey: companionKey,
-        timestamp: nowMs,
-        latitude: telemetry.latitude!,
-        longitude: telemetry.longitude!,
-        channelIdx: receivedChannelIdx,
-        pathLen: pathLen,
-      );
-
-      debugPrint('[TELREC] 🗺️ Display state + history persisted');
-    }
   }
 
-  /// Channel messages identify the sender only by the radio name the firmware
-  /// prepends, so the match must be exact. A near-miss is treated as unknown,
-  /// which triggers a self-advert, rather than guessed: a wrong guess would
-  /// overwrite an unrelated contact's name and position and suppress discovery.
-  ContactData? _findContactByExactName(
-    List<ContactData> contacts,
-    String senderName,
-  ) {
-    for (final c in contacts) {
-      if ((c.name ?? '') == senderName) return c;
-    }
-    return null;
-  }
-
-  Future<void> _upsertContactDisplayState({
-    required String publicKeyHex,
-    required String companionKey,
-    required int lastSeen,
-    required double latitude,
-    required double longitude,
-    required int channelIdx,
+  /// Updates the peer's last known location and position trail. Telemetry
+  /// without a fix leaves both unchanged.
+  Future<void> _recordPeerPosition({
+    required int peerId,
+    required int nowMs,
+    required double? latitude,
+    required double? longitude,
+    required int channelHash,
     required int pathLen,
-    required String? name,
+    int? companionBatteryMilliVolts,
+    int? phoneBatteryMilliVolts,
     bool isAutonomousDevice = false,
   }) async {
-    final existing = await (_database.select(_database.contactDisplayStates)
-          ..where((t) => t.publicKeyHex.equals(publicKeyHex)))
-        .getSingleOrNull();
+    if (latitude == null || longitude == null) return;
 
-    if (existing != null) {
-      await (_database.update(_database.contactDisplayStates)
-            ..where((t) => t.publicKeyHex.equals(publicKeyHex)))
-          .write(ContactDisplayStatesCompanion(
-        companionDeviceKey: drift.Value(companionKey),
-        lastSeen: drift.Value(lastSeen),
-        lastLatitude: drift.Value(latitude),
-        lastLongitude: drift.Value(longitude),
-        lastChannelIdx: drift.Value(channelIdx),
-        lastPathLen: drift.Value(pathLen),
-        isManuallyHidden: const drift.Value(false),
-        hiddenAt: const drift.Value.absent(),
-        name: name != null ? drift.Value(name) : const drift.Value.absent(),
-        isAutonomousDevice: drift.Value(isAutonomousDevice),
-        totalTelemetryReceived:
-            drift.Value(existing.totalTelemetryReceived + 1),
-      ));
-    } else {
-      await _database.into(_database.contactDisplayStates).insert(
-            ContactDisplayStatesCompanion.insert(
-              publicKeyHex: publicKeyHex,
-              companionDeviceKey: companionKey,
-              lastSeen: lastSeen,
-              lastLatitude: drift.Value(latitude),
-              lastLongitude: drift.Value(longitude),
-              lastChannelIdx: channelIdx,
-              lastPathLen: pathLen,
-              isManuallyHidden: const drift.Value(false),
-              hiddenAt: const drift.Value.absent(),
-              name:
-                  name != null ? drift.Value(name) : const drift.Value.absent(),
-              isAutonomousDevice: drift.Value(isAutonomousDevice),
-              firstSeen: lastSeen,
-              totalTelemetryReceived: const drift.Value(1),
-            ),
-            mode: drift.InsertMode.insertOrReplace,
-          );
-    }
+    final dao = _database.peersDao;
+    final existing = await dao.getLocation(peerId);
+    await dao.upsertLocation(PeerLocationsCompanion(
+      peerId: drift.Value(peerId),
+      lastSeen: drift.Value(nowMs),
+      lastLatitude: drift.Value(latitude),
+      lastLongitude: drift.Value(longitude),
+      lastChannelHash: drift.Value(channelHash),
+      lastPathLen: drift.Value(pathLen),
+      companionBatteryMilliVolts: companionBatteryMilliVolts != null
+          ? drift.Value(companionBatteryMilliVolts)
+          : const drift.Value.absent(),
+      phoneBatteryMilliVolts: phoneBatteryMilliVolts != null
+          ? drift.Value(phoneBatteryMilliVolts)
+          : const drift.Value.absent(),
+      isAutonomousDevice: drift.Value(isAutonomousDevice),
+      isManuallyHidden: const drift.Value(false),
+      hiddenAt: const drift.Value(null),
+      firstSeen: drift.Value(existing?.firstSeen ?? nowMs),
+      totalTelemetryReceived:
+          drift.Value((existing?.totalTelemetryReceived ?? 0) + 1),
+    ));
+
+    await _addPositionHistoryPoint(
+      peerId: peerId,
+      timestamp: nowMs,
+      latitude: latitude,
+      longitude: longitude,
+      channelHash: channelHash,
+      pathLen: pathLen,
+    );
+    debugPrint('[TELREC] 🗺️ Location + history persisted for peer $peerId');
   }
 
   static const int _maxHistoryPoints = 50;
   static const double _stationaryGateMeters = 25.0;
 
   Future<void> _addPositionHistoryPoint({
-    required String publicKeyHex,
-    required String companionKey,
+    required int peerId,
     required int timestamp,
     required double latitude,
     required double longitude,
-    required int channelIdx,
+    required int channelHash,
     required int pathLen,
   }) async {
+    final dao = _database.peersDao;
+
     // De-dupe history inserts only (push + sync can deliver the same telemetry twice).
     // Never suppress telemetry processing as a whole, to preserve high refresh rates.
-    final lastRaw = await (_database.select(_database.contactPositionHistories)
-          ..where((t) =>
-              t.publicKeyHex.equals(publicKeyHex) &
-              t.companionDeviceKey.equals(companionKey))
-          ..orderBy([
-            (t) => drift.OrderingTerm(
-                expression: t.timestamp, mode: drift.OrderingMode.desc),
-          ])
-          ..limit(1))
-        .getSingleOrNull();
+    final lastRaw = await dao.getLatestPosition(peerId);
 
     if (lastRaw != null &&
         lastRaw.timestamp == timestamp &&
         lastRaw.latitude == latitude &&
         lastRaw.longitude == longitude &&
-        lastRaw.channelIdx == channelIdx &&
+        lastRaw.channelHash == channelHash &&
         lastRaw.pathLen == pathLen) {
       debugPrint('[TELREC] 🔁 Duplicate position point skipped');
       return;
@@ -1574,21 +1589,16 @@ class MessageRepository {
       }
     }
 
-    await _database.into(_database.contactPositionHistories).insert(
-          ContactPositionHistoriesCompanion.insert(
-            publicKeyHex: publicKeyHex,
-            companionDeviceKey: companionKey,
-            timestamp: timestamp,
-            latitude: latitude,
-            longitude: longitude,
-            channelIdx: channelIdx,
-            pathLen: pathLen,
-            binLevel: 0,
-            isAggregated: false,
-          ),
-        );
+    await dao.insertPosition(PeerPositionHistoryCompanion.insert(
+      peerId: peerId,
+      timestamp: timestamp,
+      latitude: latitude,
+      longitude: longitude,
+      channelHash: channelHash,
+      pathLen: pathLen,
+    ));
 
-    await _thinPositionHistory(publicKeyHex, companionKey);
+    await _thinPositionHistory(peerId);
   }
 
   /// Haversine distance in meters between two lat/lng points.
@@ -1609,21 +1619,12 @@ class MessageRepository {
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
   }
 
-  /// Thin the position history for a contact to at most [_maxHistoryPoints]
+  /// Thin the position history for a peer to at most [_maxHistoryPoints]
   /// real GPS points, keeping the first (oldest) and last (newest) and
   /// evenly-spaced points in between.
-  Future<void> _thinPositionHistory(
-    String publicKeyHex,
-    String companionKey,
-  ) async {
-    final all = await (_database.select(_database.contactPositionHistories)
-          ..where((t) =>
-              t.publicKeyHex.equals(publicKeyHex) &
-              t.companionDeviceKey.equals(companionKey))
-          ..orderBy([
-            (t) => drift.OrderingTerm(expression: t.timestamp),
-          ]))
-        .get();
+  Future<void> _thinPositionHistory(int peerId) async {
+    final dao = _database.peersDao;
+    final all = await dao.getPositions(peerId);
 
     if (all.length <= _maxHistoryPoints) return;
 
@@ -1658,9 +1659,7 @@ class MessageRepository {
     final deleteIds =
         all.where((p) => !keepIds.contains(p.id)).map((p) => p.id).toList();
     if (deleteIds.isNotEmpty) {
-      await (_database.delete(_database.contactPositionHistories)
-            ..where((t) => t.id.isIn(deleteIds)))
-          .go();
+      await dao.deletePositions(deleteIds);
     }
   }
 
@@ -1960,98 +1959,82 @@ class MessageRepository {
     }
 
     debugPrint(
-        '[Topology] ✅ Parsed lat=\${msg.latitude}, lon=\${msg.longitude}, nodeCount=\${msg.nodeCount}');
+        '[Topology] ✅ Parsed lat=${msg.latitude}, lon=${msg.longitude}, nodeCount=${msg.nodeCount}');
 
-    final companionKey = _settingsService.settings.currentCompanionPublicKey;
-    if (companionKey == null || companionKey.isEmpty) {
-      debugPrint('[Topology] ⚠️ No companion context; ignoring #T: message');
-      return;
-    }
-
-    final contacts = await _contactsDao.getContactsByCompanion(companionKey);
-    final contact = _findContactByExactName(contacts, senderName);
-
-    if (contact == null) {
-      debugPrint(
-          '[Topology] 📍 Unknown sender \'$senderName\' - triggering SEND_SELF_ADVERT');
-      await _bleService.sendSelfAdvert();
-      return;
-    }
-
-    // 12-char lowercase hex = first 6 bytes of the contact's public key.
-    final pubKeyHex12 = contact.publicKey
-        .take(6)
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join()
-        .toLowerCase();
-
-    // Update graph — before emitting event so listeners see current neighbors.
-    _networkTopology.updateFromTelemetry(
-        pubKeyHex12, msg.neighborBitmap, msg.nodeCount);
-
-    final neighbors = _networkTopology.getNeighbors(pubKeyHex12);
-
-    // Track as direct neighbor for outbound #T: bitmap.
-    if (pathLen == 0) _neighborTracker.onPacketReceived(pubKeyHex12);
-
-    // Emit topology event to strategy layer.
-    _topologyStreamController.add(TopologyEvent(
+    final sender = await _resolveTeamSender(
       senderName: senderName,
-      senderPubKeyHex: pubKeyHex12,
-      message: msg,
-      neighbors: neighbors,
-      pathLen: pathLen,
-      receivedAt: DateTime.fromMillisecondsSinceEpoch(nowMs),
-    ));
-
-    // DB update — same contact fields as #TEL: handler.
-    final updated = ContactsCompanion(
-      publicKey: drift.Value(contact.publicKey),
-      hash: drift.Value(contact.hash),
-      name: drift.Value(senderName),
-      latitude: msg.latitude != null
-          ? drift.Value(msg.latitude)
-          : const drift.Value.absent(),
-      longitude: msg.longitude != null
-          ? drift.Value(msg.longitude)
-          : const drift.Value.absent(),
-      lastSeen: drift.Value(nowMs),
-      companionBatteryMilliVolts: msg.companionBatteryMilliVolts != null
-          ? drift.Value(msg.companionBatteryMilliVolts)
-          : const drift.Value.absent(),
-      phoneBatteryMilliVolts: msg.phoneBatteryMilliVolts != null
-          ? drift.Value(msg.phoneBatteryMilliVolts)
-          : const drift.Value.absent(),
-      isDirect: drift.Value(pathLen == 0),
-      hopCount: drift.Value(pathLen),
-      lastTelemetryChannelIdx: drift.Value(receivedChannelIdx),
-      lastTelemetryTimestamp: drift.Value(nowMs),
-      companionDeviceKey: drift.Value(companionKey),
+      receivedChannelIdx: receivedChannelIdx,
+      logTag: 'Topology',
     );
-    await _contactsDao.upsertContact(updated);
+    if (sender == null) return;
+    final peer = sender.resolution.peer;
+    final contact = sender.resolution.contact;
 
-    if (msg.latitude != null && msg.longitude != null) {
-      final publicKeyHex = _bytesToHex(contact.publicKey).toUpperCase();
-      await _upsertContactDisplayState(
-        publicKeyHex: publicKeyHex,
-        companionKey: companionKey,
-        lastSeen: nowMs,
-        latitude: msg.latitude!,
-        longitude: msg.longitude!,
-        channelIdx: receivedChannelIdx,
+    // The graph is keyed by public key, so it needs the sender's key; the
+    // contact doesn't have to be on this radio.
+    final radioKey = peer.radioPublicKey;
+    if (radioKey != null) {
+      // 12-char lowercase hex = first 6 bytes of the sender's public key.
+      final pubKeyHex12 =
+          _bytesToHex(Uint8List.fromList(radioKey.take(6).toList()));
+
+      // Update graph — before emitting event so listeners see current neighbors.
+      _networkTopology.updateFromTelemetry(
+          pubKeyHex12, msg.neighborBitmap, msg.nodeCount);
+
+      final neighbors = _networkTopology.getNeighbors(pubKeyHex12);
+
+      // Track as direct neighbor for outbound #T: bitmap.
+      if (pathLen == 0) _neighborTracker.onPacketReceived(pubKeyHex12);
+
+      // Emit topology event to strategy layer.
+      _topologyStreamController.add(TopologyEvent(
+        senderName: senderName,
+        senderPubKeyHex: pubKeyHex12,
+        message: msg,
+        neighbors: neighbors,
         pathLen: pathLen,
-        name: senderName,
-      );
-      await _addPositionHistoryPoint(
-        publicKeyHex: publicKeyHex,
-        companionKey: companionKey,
-        timestamp: nowMs,
-        latitude: msg.latitude!,
-        longitude: msg.longitude!,
-        channelIdx: receivedChannelIdx,
-        pathLen: pathLen,
-      );
+        receivedAt: DateTime.fromMillisecondsSinceEpoch(nowMs),
+      ));
     }
+
+    if (contact != null) {
+      // DB update — same contact fields as #TEL: handler.
+      await _contactsDao.upsertContact(ContactsCompanion(
+        publicKey: drift.Value(contact.publicKey),
+        hash: drift.Value(contact.hash),
+        name: drift.Value(senderName),
+        latitude: msg.latitude != null
+            ? drift.Value(msg.latitude)
+            : const drift.Value.absent(),
+        longitude: msg.longitude != null
+            ? drift.Value(msg.longitude)
+            : const drift.Value.absent(),
+        lastSeen: drift.Value(nowMs),
+        companionBatteryMilliVolts: msg.companionBatteryMilliVolts != null
+            ? drift.Value(msg.companionBatteryMilliVolts)
+            : const drift.Value.absent(),
+        phoneBatteryMilliVolts: msg.phoneBatteryMilliVolts != null
+            ? drift.Value(msg.phoneBatteryMilliVolts)
+            : const drift.Value.absent(),
+        isDirect: drift.Value(pathLen == 0),
+        hopCount: drift.Value(pathLen),
+        lastTelemetryChannelIdx: drift.Value(receivedChannelIdx),
+        lastTelemetryTimestamp: drift.Value(nowMs),
+        companionDeviceKey: drift.Value(sender.companionKey),
+      ));
+    }
+
+    await _recordPeerPosition(
+      peerId: peer.id,
+      nowMs: nowMs,
+      latitude: msg.latitude,
+      longitude: msg.longitude,
+      channelHash: sender.channel.hash,
+      pathLen: pathLen,
+      companionBatteryMilliVolts: msg.companionBatteryMilliVolts,
+      phoneBatteryMilliVolts: msg.phoneBatteryMilliVolts,
+    );
   }
 
   /// Dispose resources
@@ -2094,4 +2077,13 @@ class _WaypointPartBuffer {
     required this.totalParts,
     required this.receivedAt,
   });
+}
+
+/// Resolved sender of team traffic, with the channel it arrived on.
+class _TeamSender {
+  final PeerResolution resolution;
+  final ChannelData channel;
+  final String companionKey;
+
+  const _TeamSender(this.resolution, this.channel, this.companionKey);
 }

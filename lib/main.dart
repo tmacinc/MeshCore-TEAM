@@ -41,7 +41,8 @@ import 'services/neighbor_tracker.dart';
 import 'viewmodels/connection_viewmodel.dart';
 import 'services/telemetry_send_service.dart';
 import 'services/forwarding_policy_service.dart';
-import 'services/contact_capability_service.dart';
+import 'services/peer_directory.dart';
+import 'services/retention_service.dart';
 import 'services/capability_publisher.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/direct_message_screen.dart';
@@ -223,7 +224,16 @@ Future<void> _runAppStartup() async {
       settingsService: settingsService,
     );
 
-    final contactCapabilityService = ContactCapabilityService(prefs);
+    // Legacy name-keyed capability cache, replaced by the peers table.
+    await prefs.remove('contact_capability_state_v1');
+
+    final peerDirectory = PeerDirectory(
+      peersDao: database.peersDao,
+      contactsDao: database.contactsDao,
+      settings: settingsService,
+    );
+    await peerDirectory.start();
+    RetentionService(database).start();
 
     final networkTopology = NetworkTopology();
     final neighborTracker = NeighborTracker();
@@ -238,7 +248,7 @@ Future<void> _runAppStartup() async {
       contactRepository: contactRepository,
       notificationService: messageNotificationService,
       settingsService: settingsService,
-      capabilityService: contactCapabilityService,
+      peerDirectory: peerDirectory,
       networkTopology: networkTopology,
       neighborTracker: neighborTracker,
     );
@@ -263,7 +273,7 @@ Future<void> _runAppStartup() async {
       settings: settingsService,
       connectionViewModel: connectionViewModel,
       contactsDao: database.contactsDao,
-      capabilityService: contactCapabilityService,
+      peerDirectory: peerDirectory,
       messageRepository: messageRepository,
       database: database,
       networkTopology: networkTopology,
@@ -323,7 +333,7 @@ Future<void> _runAppStartup() async {
         mapTileCacheService: mapTileCacheService,
         telemetrySendService: telemetrySendService,
         forwardingPolicyService: forwardingPolicyService,
-        contactCapabilityService: contactCapabilityService,
+        peerDirectory: peerDirectory,
         capabilityPublisher: capabilityPublisher,
       ));
     print('✅ App launched');
@@ -437,7 +447,7 @@ class TeamFlutterApp extends StatelessWidget {
   final MapTileCacheService mapTileCacheService;
   final TelemetrySendService telemetrySendService;
   final ForwardingPolicyService forwardingPolicyService;
-  final ContactCapabilityService contactCapabilityService;
+  final PeerDirectory peerDirectory;
   final CapabilityPublisher capabilityPublisher;
 
   const TeamFlutterApp({
@@ -455,7 +465,7 @@ class TeamFlutterApp extends StatelessWidget {
     required this.mapTileCacheService,
     required this.telemetrySendService,
     required this.forwardingPolicyService,
-    required this.contactCapabilityService,
+    required this.peerDirectory,
     required this.capabilityPublisher,
   });
 
@@ -512,9 +522,8 @@ class TeamFlutterApp extends StatelessWidget {
         ChangeNotifierProvider<ForwardingPolicyService>.value(
           value: forwardingPolicyService),
 
-        // Peer capability tracking (populated from #CAP: channel messages)
-        ChangeNotifierProvider<ContactCapabilityService>.value(
-          value: contactCapabilityService),
+        // Peer identity: resolves wire identifiers to local peers
+        ChangeNotifierProvider<PeerDirectory>.value(value: peerDirectory),
 
         // Capability publisher (sends #CAP: on discovery and settings change)
         Provider<CapabilityPublisher>.value(value: capabilityPublisher),

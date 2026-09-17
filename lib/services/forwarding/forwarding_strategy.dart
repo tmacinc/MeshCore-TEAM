@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/models/telemetry_event.dart';
 import 'package:meshcore_team/models/topology_event.dart';
-import 'package:meshcore_team/services/contact_capability_service.dart';
+import 'package:meshcore_team/services/peer_directory.dart';
 
 class ForwardingDecision {
   final int maxHops;
@@ -33,15 +33,13 @@ class ForwardingDecision {
 class ForwardingStrategyInput {
   final List<ContactData> contacts;
 
-  /// Per-peer capability state keyed by sender name.
-  /// Strategies should call [ContactCapabilityService.hasConfirmedForwarding]
-  /// or inspect [ContactCapabilityState] directly. Missing or stale entries
-  /// must be treated as stock firmware (no confirmed capability).
-  final ContactCapabilityService capabilities;
+  /// Peer identity, including capability flags learned from `#CAP:`.
+  /// Missing or stale capability state must be treated as stock firmware.
+  final PeerDirectory peers;
 
   const ForwardingStrategyInput({
     required this.contacts,
-    required this.capabilities,
+    required this.peers,
   });
 }
 
