@@ -38,6 +38,11 @@ class AppSettings {
 
   /// The team-name prompt has been shown once (whether skipped or saved).
   final bool teamAliasPrompted;
+
+  /// The current radio's own manual-add setting, saved before tracking turned
+  /// chat auto-add off, so it can be put back. Null = we haven't changed it.
+  /// Per radio, because it belongs to the radio and other MeshCore apps see it.
+  final int? savedRadioAutoAdd;
   final int telemetryIntervalSeconds; // 30-180s
   final int telemetryMinDistanceMeters; // 50-500m
 
@@ -89,6 +94,7 @@ class AppSettings {
     this.telemetryChannelName,
     this.teamAlias,
     this.teamAliasPrompted = false,
+    this.savedRadioAutoAdd,
     this.telemetryIntervalSeconds = 60,
     this.telemetryMinDistanceMeters = 100,
     this.notificationsEnabled = true,
@@ -128,6 +134,8 @@ class AppSettings {
     String? teamAlias,
     bool clearTeamAlias = false,
     bool? teamAliasPrompted,
+    int? savedRadioAutoAdd,
+    bool clearSavedRadioAutoAdd = false,
     int? telemetryIntervalSeconds,
     int? telemetryMinDistanceMeters,
     bool? notificationsEnabled,
@@ -166,6 +174,9 @@ class AppSettings {
       telemetryChannelName: telemetryChannelName ?? this.telemetryChannelName,
       teamAlias: clearTeamAlias ? null : (teamAlias ?? this.teamAlias),
       teamAliasPrompted: teamAliasPrompted ?? this.teamAliasPrompted,
+      savedRadioAutoAdd: clearSavedRadioAutoAdd
+          ? null
+          : (savedRadioAutoAdd ?? this.savedRadioAutoAdd),
       telemetryIntervalSeconds:
           telemetryIntervalSeconds ?? this.telemetryIntervalSeconds,
       telemetryMinDistanceMeters:

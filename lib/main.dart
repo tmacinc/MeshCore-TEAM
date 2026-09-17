@@ -42,6 +42,7 @@ import 'viewmodels/connection_viewmodel.dart';
 import 'services/telemetry_send_service.dart';
 import 'services/forwarding_policy_service.dart';
 import 'services/peer_directory.dart';
+import 'services/team_radio_service.dart';
 import 'services/retention_service.dart';
 import 'services/capability_publisher.dart';
 import 'screens/main_navigation_screen.dart';
@@ -299,6 +300,18 @@ Future<void> _runAppStartup() async {
       messageRepository: messageRepository,
     )..start();
 
+    // Carries team contacts onto a newly paired radio and keeps the radio's
+    // contact table from filling with strangers while tracking is on.
+    final teamRadioService = TeamRadioService(
+      settings: settingsService,
+      connectionViewModel: connectionViewModel,
+      bleService: bleService,
+      bleManager: bleManager,
+      contactsDao: database.contactsDao,
+      contactRepository: contactRepository,
+      peers: peerDirectory,
+    )..start();
+
     // Startup reconnect behavior:
     // - Android: native foreground service owns BLE and reconnection.
     // - Others: keep existing Dart-based auto-reconnect.
@@ -336,6 +349,7 @@ Future<void> _runAppStartup() async {
         forwardingPolicyService: forwardingPolicyService,
         peerDirectory: peerDirectory,
         capabilityPublisher: capabilityPublisher,
+        teamRadioService: teamRadioService,
       ));
     print('✅ App launched');
   } catch (e, stackTrace) {
@@ -450,6 +464,7 @@ class TeamFlutterApp extends StatelessWidget {
   final ForwardingPolicyService forwardingPolicyService;
   final PeerDirectory peerDirectory;
   final CapabilityPublisher capabilityPublisher;
+  final TeamRadioService teamRadioService;
 
   const TeamFlutterApp({
     super.key,
@@ -468,6 +483,7 @@ class TeamFlutterApp extends StatelessWidget {
     required this.forwardingPolicyService,
     required this.peerDirectory,
     required this.capabilityPublisher,
+    required this.teamRadioService,
   });
 
   @override
@@ -528,6 +544,9 @@ class TeamFlutterApp extends StatelessWidget {
 
         // Capability publisher (sends #CAP: on discovery and settings change)
         Provider<CapabilityPublisher>.value(value: capabilityPublisher),
+
+        // Team radio setup (contact push, auto-add policy)
+        Provider<TeamRadioService>.value(value: teamRadioService),
       ],
       child: Consumer<SettingsService>(
         builder: (context, settings, _) {
