@@ -14,6 +14,7 @@ import 'package:meshcore_team/ble/ble_constants.dart';
 import 'package:meshcore_team/ble/ble_responses.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/database/daos/channels_dao.dart';
+import 'package:meshcore_team/models/channel.dart' as channel_model;
 import 'package:meshcore_team/models/sync_status.dart';
 import 'package:meshcore_team/models/unread_models.dart';
 import 'package:meshcore_team/services/settings_service.dart';
@@ -120,16 +121,9 @@ class ChannelRepository {
         '[Channel] Updated maxPrivateChannels to $_maxPrivateChannels (firmware supports $maxChannels total)');
   }
 
-  /// Derive PSK for a hashtag channel from its name.
-  ///
-  /// PSK = first 16 bytes of SHA256(name), where [name] includes the '#' prefix
-  /// (e.g. "#public"). This is the same derivation used by the reference firmware
-  /// so any device that knows the channel name arrives at the same AES key.
-  static Uint8List hashtagChannelPsk(String name) {
-    final bytes = utf8.encode(name);
-    final digest = sha256.convert(bytes);
-    return Uint8List.fromList(digest.bytes.sublist(0, 16));
-  }
+  /// Derive PSK for a hashtag channel from its name. See [channel_model.hashtagChannelPsk].
+  static Uint8List hashtagChannelPsk(String name) =>
+      channel_model.hashtagChannelPsk(name);
 
   /// Create (or join) a hashtag channel whose PSK is derived from [name].
   ///

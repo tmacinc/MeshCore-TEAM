@@ -9,6 +9,7 @@ import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/database/daos/channels_dao.dart';
 import 'package:meshcore_team/database/daos/contacts_dao.dart';
 import 'package:meshcore_team/models/capability_message.dart';
+import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 
@@ -165,6 +166,11 @@ class CapabilityPublisher {
     if (channel == null) {
       debugPrint(
           '[CapabilityPublisher] ⏭️ Skip publish ($trigger): channel not found');
+      return;
+    }
+    if (!channel.canBeTrackingChannel) {
+      debugPrint(
+          '[CapabilityPublisher] ⏭️ Skip publish ($trigger): channel is public or hashtag');
       return;
     }
 

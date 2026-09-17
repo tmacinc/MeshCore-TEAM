@@ -1374,16 +1374,7 @@ class MessageRepository {
     }
 
     final contacts = await _contactsDao.getContactsByCompanion(companionKey);
-
-    ContactData? contact;
-    for (final c in contacts) {
-      if ((c.name ?? '') == senderName) {
-        contact = c;
-        break;
-      }
-    }
-
-    contact ??= _findBestContactMatch(contacts, senderName);
+    final contact = _findContactByExactName(contacts, senderName);
 
     if (contact == null) {
       debugPrint(
@@ -1464,49 +1455,17 @@ class MessageRepository {
     }
   }
 
-  ContactData? _findBestContactMatch(
+  /// Channel messages identify the sender only by the radio name the firmware
+  /// prepends, so the match must be exact. A near-miss is treated as unknown,
+  /// which triggers a self-advert, rather than guessed: a wrong guess would
+  /// overwrite an unrelated contact's name and position and suppress discovery.
+  ContactData? _findContactByExactName(
     List<ContactData> contacts,
     String senderName,
   ) {
-    if (contacts.isEmpty) return null;
-
-    final senderLower = senderName.toLowerCase();
-
-    bool isDeviceIdLike(String name) {
-      final hex8 = RegExp(r'^[A-Fa-f0-9]{8}$');
-      if (hex8.hasMatch(name)) return true;
-      final lowered = name.toLowerCase();
-      return lowered.contains('meshcore') || lowered.contains('testunit');
-    }
-
-    bool isCustomNameLike(String name) {
-      final hex8 = RegExp(r'^[A-Fa-f0-9]{8}$');
-      final lowered = name.toLowerCase();
-      if (hex8.hasMatch(name)) return false;
-      if (lowered.contains('meshcore') || lowered.contains('testunit')) {
-        return false;
-      }
-      return name.length < 20;
-    }
-
-    // DeviceId->Alias upgrade match.
     for (final c in contacts) {
-      final existingName = c.name;
-      if (existingName == null) continue;
-      if (isDeviceIdLike(existingName) && isCustomNameLike(senderName)) {
-        return c;
-      }
+      if ((c.name ?? '') == senderName) return c;
     }
-
-    // Partial match.
-    for (final c in contacts) {
-      final existing = (c.name ?? '').toLowerCase();
-      if (existing.isEmpty) continue;
-      if (existing.contains(senderLower) || senderLower.contains(existing)) {
-        return c;
-      }
-    }
-
     return null;
   }
 
@@ -2010,14 +1969,7 @@ class MessageRepository {
     }
 
     final contacts = await _contactsDao.getContactsByCompanion(companionKey);
-    ContactData? contact;
-    for (final c in contacts) {
-      if ((c.name ?? '') == senderName) {
-        contact = c;
-        break;
-      }
-    }
-    contact ??= _findBestContactMatch(contacts, senderName);
+    final contact = _findContactByExactName(contacts, senderName);
 
     if (contact == null) {
       debugPrint(

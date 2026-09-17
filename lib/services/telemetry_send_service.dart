@@ -9,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:meshcore_team/ble/ble_service.dart';
 import 'package:meshcore_team/database/daos/channels_dao.dart';
+import 'package:meshcore_team/database/database.dart';
+import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/models/telemetry_message.dart';
 import 'package:meshcore_team/models/topology_message.dart';
 import 'package:meshcore_team/models/network_topology.dart';
@@ -278,6 +280,10 @@ class TelemetrySendService extends ChangeNotifier {
           '[TelemetrySend] ❌ Channel not found for hash: $channelHashHex');
       return;
     }
+    if (!channel.canBeTrackingChannel) {
+      await _rejectIneligibleChannel(channel);
+      return;
+    }
 
     // Resolve topology data for current forwarding strategy.
     final strategyMode = _forwardingPolicy?.lastAppliedStrategy ??
@@ -471,6 +477,10 @@ class TelemetrySendService extends ChangeNotifier {
           '[TelemetrySend] ❌ Channel not found for hash: $channelHashHex');
       return;
     }
+    if (!channel.canBeTrackingChannel) {
+      await _rejectIneligibleChannel(channel);
+      return;
+    }
 
     final phoneBatteryMv = await _getPhoneBatteryMvCached();
 
@@ -518,6 +528,15 @@ class TelemetrySendService extends ChangeNotifier {
 
     debugPrint(
         '[TelemetrySend] ✅ Sent ($reason) on channelIndex=${channel.channelIndex}');
+  }
+
+  /// Tracking must never broadcast on a channel anyone can join. Clearing the
+  /// setting stops sending and shows "none" in the picker, so a tracking
+  /// channel saved before this check existed gets reset rather than used.
+  Future<void> _rejectIneligibleChannel(ChannelData channel) async {
+    debugPrint(
+        '[TelemetrySend] 🚫 "${channel.name}" is public or hashtag - clearing tracking channel');
+    await _settings.setTelemetryChannelHash(null);
   }
 
   int? _tryParseChannelHash(String hashHex) {

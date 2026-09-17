@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/models/app_language.dart';
 import 'package:meshcore_team/models/app_settings.dart';
+import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
@@ -386,7 +387,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     stream: context.read<ChannelRepository>().getAllChannels(),
                     builder: (context, snapshot) {
                       final privateChannels = (snapshot.data ?? [])
-                          .where((c) => !c.isPublic)
+                          .where((c) => c.canBeTrackingChannel)
                           .toList();
 
                       String? currentHash = s.telemetryChannelHash;
