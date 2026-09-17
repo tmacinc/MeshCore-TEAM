@@ -229,9 +229,25 @@ On Android, you'll also be prompted about **battery optimization**. Disabling op
 
 On subsequent connects to the same companion, the app runs an **incremental sync** (contacts + messages only, skipping channels) for a faster reconnect.
 
+### 2b) Your two names: team name and radio name
+
+You have two names, and they are visible to different people.
+
+- **Radio name** — the name your radio advertises. **Everyone on the mesh can see it**, including people outside your team. You are asked for it the first time you connect a radio, and can change it from the Connection screen. Many people pick something anonymous here.
+- **Team name** — an in-app name that **only members of your team channel can see**. It travels in a small capability message on the tracking channel, not with every position update. You are asked for it once when the app first starts, and can change it any time in **Settings → Team name**.
+
+If you leave the team name blank, or skip the prompt, your team simply sees your radio name — the app behaves as it always did.
+
+Where each one is used:
+
+- Your **team name** is what your team sees on the map, in the contact list, in chat and in notifications.
+- Your **radio name** is what people outside your team see, and it is what replies and @mentions use, so a team name is never sent into a public channel.
+- If two people pick the same team name, the app shows a short ID after each so you can tell them apart.
+
 ### 3) Contacts and direct messages
 
 - Open **Contacts** (second tab) to see synced devices.
+- Team members are shown by their **team name**, with their radio name underneath and a small group icon. Everyone else is shown by their radio name.
 - Tap a contact to open a **Direct Message** conversation.
 - If a contact is a **repeater**, direct messaging is disabled (you can still see it in the list).
 - Unread badges show on the Contacts tab icon when new messages arrive.

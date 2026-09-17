@@ -24,6 +24,7 @@ import '../widgets/add_channel_to_radio.dart';
 import '../widgets/chat_message_text.dart';
 import '../widgets/status_bar_actions.dart';
 import '../models/app_settings.dart';
+import '../services/peer_directory.dart';
 import '../services/settings_service.dart';
 import '../theme/night_theme.dart';
 import '../utils/message_time_format.dart';
@@ -485,7 +486,8 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
     final timestamp = DateTime.fromMillisecondsSinceEpoch(message.timestamp);
     final senderName = isFromMe
         ? 'You'
-        : (message.senderName ?? _getSenderName(message.senderId));
+        : _senderDisplayName(message);
+    final meshName = message.senderName ?? _getSenderName(message.senderId);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -497,10 +499,10 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
           Flexible(
             child: GestureDetector(
               onLongPress: (Platform.isAndroid || Platform.isIOS)
-                  ? () => _showMessageActions(message, senderName, isFromMe)
+                  ? () => _showMessageActions(message, meshName, isFromMe)
                   : null,
               onSecondaryTapDown: (!Platform.isAndroid && !Platform.isIOS)
-                  ? (d) => _showMessageActions(message, senderName, isFromMe)
+                  ? (d) => _showMessageActions(message, meshName, isFromMe)
                   : null,
               child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -588,7 +590,11 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
     _inputFocusNode.requestFocus();
   }
 
-  void _showMessageActions(MessageData message, String senderName, bool isFromMe) {
+  /// [meshName] is the sender's radio name, not what is shown: a reply
+  /// mentions them on the mesh, where the alias means nothing and would leak
+  /// a team name into a public channel.
+  void _showMessageActions(
+      MessageData message, String meshName, bool isFromMe) {
     showModalBottomSheet<void>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -615,7 +621,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                 title: Text(AppLocalizations.of(context)!.reply),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _seedReply(senderName);
+                  _seedReply(meshName);
                 },
               ),
           ],
@@ -755,6 +761,15 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
   /// A team channel can exist on the phone without the radio holding it
   /// (after a radio switch, or when its slots were full). The radio does the
   /// encryption, so offer to add it rather than sending into nothing.
+  /// The sender's team name when the message was attributed to a peer, else
+  /// the radio name stored with the message.
+  String _senderDisplayName(MessageData message) {
+    final peers = context.read<PeerDirectory>();
+    final peer = peers.byId(message.senderPeerId);
+    if (peer != null) return peers.displayName(peer);
+    return message.senderName ?? _getSenderName(message.senderId);
+  }
+
   Future<bool> _ensureChannelOnRadio() async {
     final channel = await _messageRepository.channelsDao
             .getChannelByHash(widget.channel.hash) ??

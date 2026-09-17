@@ -42,6 +42,7 @@ import 'viewmodels/connection_viewmodel.dart';
 import 'services/telemetry_send_service.dart';
 import 'services/forwarding_policy_service.dart';
 import 'services/peer_directory.dart';
+import 'widgets/team_name_prompt.dart';
 import 'services/team_radio_service.dart';
 import 'services/retention_service.dart';
 import 'services/capability_publisher.dart';
@@ -234,6 +235,7 @@ Future<void> _runAppStartup() async {
       settings: settingsService,
     );
     await peerDirectory.start();
+    messageNotificationService.peers = peerDirectory;
     RetentionService(database).start();
 
     // The tracking channel is a team channel by definition; make sure the
@@ -845,6 +847,19 @@ class _PermissionGateState extends State<_PermissionGate>
     }
   }
 
+  bool _teamNameAsked = false;
+
+  /// Asked once, past the permission gate and before any radio is needed:
+  /// the team name is the phone's, not the radio's.
+  void _maybeAskForTeamName() {
+    if (_teamNameAsked) return;
+    _teamNameAsked = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(showTeamNamePromptIfNeeded(context));
+    });
+  }
+
   void _onPermissionsGranted() {
     unawaited(_startDeferredReconnect());
     setState(() {
@@ -901,6 +916,7 @@ class _PermissionGateState extends State<_PermissionGate>
     }
 
     // Show main app if permissions granted
+    _maybeAskForTeamName();
     return const MainNavigationScreen();
   }
 }

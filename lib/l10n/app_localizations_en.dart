@@ -2097,4 +2097,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get failedToAddChannel => 'Could not add the channel to your radio';
+
+  @override
+  String get teamName => 'Team name';
+
+  @override
+  String get teamNamePrompt => 'Set your team name';
+
+  @override
+  String get teamNameSaveExplanation =>
+      'Your team will see this name. Only people on your team channel can see it.';
+
+  @override
+  String get teamNameSkipExplanation =>
+      'Your team will see your radio name, which everyone on the mesh can see.';
+
+  @override
+  String get teamNameChangeLater =>
+      'You can set or change your team name later in Settings.';
+
+  @override
+  String teamNameUsingRadioName(String name) {
+    return 'Using radio name ($name)';
+  }
+
+  @override
+  String get radioNameExplanation =>
+      'This name is visible to everyone on the mesh, including people outside your team. Consider an anonymous name.';
 }

@@ -361,6 +361,16 @@ class ContactListTile extends StatelessWidget {
     final isNighttime = context.watch<SettingsService>().settings.appTheme ==
         AppThemeMode.nighttime;
 
+    // Team members are shown by their team name, with the radio name — the
+    // one the rest of the mesh sees — kept underneath.
+    final peers = context.watch<PeerDirectory>();
+    final peer = peers.byRadioKey(contact.publicKey);
+    final displayName = peer != null
+        ? peers.displayName(peer)
+        : (contact.name ?? l10n.unknown);
+    final radioName = contact.name ?? '';
+    final showRadioName = radioName.isNotEmpty && radioName != displayName;
+
     final minutesSinceLastSeen =
         (DateTime.now().millisecondsSinceEpoch - contact.lastSeen).toDouble();
     final connectivityColor =
@@ -433,9 +443,17 @@ class ContactListTile extends StatelessWidget {
         ),
         title: Row(
           children: [
+            if (peer?.isTeamMember ?? false)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Icon(Icons.group,
+                    size: 14,
+                    color:
+                        isNighttime ? NightColors.primary : Colors.blue),
+              ),
             Expanded(
               child: Text(
-                contact.name ?? l10n.unknown,
+                displayName,
                 style: TextStyle(
                   fontWeight:
                       unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
@@ -459,6 +477,15 @@ class ContactListTile extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (showRadioName)
+              Text(
+                radioName,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             Text(l10n.channelHash(contact.hash.toRadixString(16))),
             Text(l10n.lastSeen(lastSeenText)),
             if (hasLocation)

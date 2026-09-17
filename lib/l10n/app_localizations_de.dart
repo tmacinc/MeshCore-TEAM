@@ -2099,4 +2099,31 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get failedToAddChannel =>
       'Kanal konnte nicht zum Funkgerät hinzugefügt werden';
+
+  @override
+  String get teamName => 'Teamname';
+
+  @override
+  String get teamNamePrompt => 'Teamnamen festlegen';
+
+  @override
+  String get teamNameSaveExplanation =>
+      'Dein Team sieht diesen Namen. Nur Personen in deinem Teamkanal können ihn sehen.';
+
+  @override
+  String get teamNameSkipExplanation =>
+      'Dein Team sieht deinen Funkgerätnamen, den jeder im Mesh sehen kann.';
+
+  @override
+  String get teamNameChangeLater =>
+      'Du kannst deinen Teamnamen später in den Einstellungen festlegen oder ändern.';
+
+  @override
+  String teamNameUsingRadioName(String name) {
+    return 'Funkgerätname wird verwendet ($name)';
+  }
+
+  @override
+  String get radioNameExplanation =>
+      'Dieser Name ist für alle im Mesh sichtbar, auch außerhalb deines Teams. Erwäge einen anonymen Namen.';
 }

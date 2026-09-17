@@ -2118,4 +2118,31 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get failedToAddChannel => 'Kon het kanaal niet aan je radio toevoegen';
+
+  @override
+  String get teamName => 'Teamnaam';
+
+  @override
+  String get teamNamePrompt => 'Stel je teamnaam in';
+
+  @override
+  String get teamNameSaveExplanation =>
+      'Je team ziet deze naam. Alleen mensen in je teamkanaal kunnen hem zien.';
+
+  @override
+  String get teamNameSkipExplanation =>
+      'Je team ziet je radionaam, die iedereen op het mesh kan zien.';
+
+  @override
+  String get teamNameChangeLater =>
+      'Je kunt je teamnaam later instellen of wijzigen in Instellingen.';
+
+  @override
+  String teamNameUsingRadioName(String name) {
+    return 'Radionaam wordt gebruikt ($name)';
+  }
+
+  @override
+  String get radioNameExplanation =>
+      'Deze naam is zichtbaar voor iedereen op het mesh, ook buiten je team. Overweeg een anonieme naam.';
 }

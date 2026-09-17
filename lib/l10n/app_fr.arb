@@ -574,5 +574,12 @@
   "addChannelToRadioNoSlots": "Votre radio n'a plus d'emplacement de canal libre. Supprimez d'abord un canal de la radio.",
   "addedChannelToRadio": "{name} ajouté à votre radio",
   "teamOnly": "Équipe uniquement",
-  "failedToAddChannel": "Impossible d'ajouter le canal à votre radio"
+  "failedToAddChannel": "Impossible d'ajouter le canal à votre radio",
+  "teamName": "Nom d'équipe",
+  "teamNamePrompt": "Choisissez votre nom d'équipe",
+  "teamNameSaveExplanation": "Votre équipe verra ce nom. Seules les personnes de votre canal d'équipe peuvent le voir.",
+  "teamNameSkipExplanation": "Votre équipe verra le nom de votre radio, visible par tout le réseau.",
+  "teamNameChangeLater": "Vous pourrez définir ou modifier votre nom d'équipe plus tard dans les Réglages.",
+  "teamNameUsingRadioName": "Nom de la radio utilisé ({name})",
+  "radioNameExplanation": "Ce nom est visible par tout le réseau, y compris hors de votre équipe. Envisagez un nom anonyme."
 }

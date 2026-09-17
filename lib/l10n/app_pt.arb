@@ -574,5 +574,12 @@
   "addChannelToRadioNoSlots": "O teu rádio não tem espaços de canal livres. Apaga primeiro um canal do rádio.",
   "addedChannelToRadio": "{name} adicionado ao teu rádio",
   "teamOnly": "Apenas equipa",
-  "failedToAddChannel": "Não foi possível adicionar o canal ao teu rádio"
+  "failedToAddChannel": "Não foi possível adicionar o canal ao teu rádio",
+  "teamName": "Nome de equipa",
+  "teamNamePrompt": "Define o teu nome de equipa",
+  "teamNameSaveExplanation": "A tua equipa vê este nome. Só quem está no teu canal de equipa o consegue ver.",
+  "teamNameSkipExplanation": "A tua equipa vê o nome do teu rádio, que todos na malha conseguem ver.",
+  "teamNameChangeLater": "Podes definir ou alterar o teu nome de equipa mais tarde nas Definições.",
+  "teamNameUsingRadioName": "A usar o nome do rádio ({name})",
+  "radioNameExplanation": "Este nome é visível para todos na malha, incluindo fora da tua equipa. Considera um nome anónimo."
 }

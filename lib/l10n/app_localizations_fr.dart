@@ -2125,4 +2125,31 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get failedToAddChannel =>
       'Impossible d\'ajouter le canal à votre radio';
+
+  @override
+  String get teamName => 'Nom d\'équipe';
+
+  @override
+  String get teamNamePrompt => 'Choisissez votre nom d\'équipe';
+
+  @override
+  String get teamNameSaveExplanation =>
+      'Votre équipe verra ce nom. Seules les personnes de votre canal d\'équipe peuvent le voir.';
+
+  @override
+  String get teamNameSkipExplanation =>
+      'Votre équipe verra le nom de votre radio, visible par tout le réseau.';
+
+  @override
+  String get teamNameChangeLater =>
+      'Vous pourrez définir ou modifier votre nom d\'équipe plus tard dans les Réglages.';
+
+  @override
+  String teamNameUsingRadioName(String name) {
+    return 'Nom de la radio utilisé ($name)';
+  }
+
+  @override
+  String get radioNameExplanation =>
+      'Ce nom est visible par tout le réseau, y compris hors de votre équipe. Envisagez un nom anonyme.';
 }

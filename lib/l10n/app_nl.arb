@@ -574,5 +574,12 @@
   "addChannelToRadioNoSlots": "Je radio heeft geen vrije kanaalplekken. Verwijder eerst een kanaal van de radio.",
   "addedChannelToRadio": "{name} toegevoegd aan je radio",
   "teamOnly": "Alleen team",
-  "failedToAddChannel": "Kon het kanaal niet aan je radio toevoegen"
+  "failedToAddChannel": "Kon het kanaal niet aan je radio toevoegen",
+  "teamName": "Teamnaam",
+  "teamNamePrompt": "Stel je teamnaam in",
+  "teamNameSaveExplanation": "Je team ziet deze naam. Alleen mensen in je teamkanaal kunnen hem zien.",
+  "teamNameSkipExplanation": "Je team ziet je radionaam, die iedereen op het mesh kan zien.",
+  "teamNameChangeLater": "Je kunt je teamnaam later instellen of wijzigen in Instellingen.",
+  "teamNameUsingRadioName": "Radionaam wordt gebruikt ({name})",
+  "radioNameExplanation": "Deze naam is zichtbaar voor iedereen op het mesh, ook buiten je team. Overweeg een anonieme naam."
 }

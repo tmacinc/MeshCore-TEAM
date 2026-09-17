@@ -1,6 +1,6 @@
 # Team Alias, Peer Identity and Hybrid Sync — Plan
 
-Status: Phases 0-3 are committed on branch `PeerIdentity`; none of it is device-tested yet. Phase 4 (alias UI + l10n) not started.
+Status: Phases 0-4 are committed on branch `PeerIdentity`; none of it is device-tested yet. Remaining: device testing, then Part B (Team Link) when `D0sockets` takes this.
 Target branch: `dev`. Team Link (`D0sockets`) adopts this afterwards; its changes are in [Part B](#part-b--team-link-d0sockets-update-spec).
 
 ---
@@ -379,7 +379,7 @@ Each phase can ship to beta on its own.
 | **1** ✅ | Port `_reconcileSchema`, v12 migration, `Peers` / `PeerLocations` / `PeerPositionHistory`, `PeerDirectory`, handlers resolve to peers, forwarding keyed by radio key, display via `displayName` (no alias yet, so it shows the radio name), retention pruning. Done in `d3d5426`; also restricted the discovery self-advert to the tracking channel and team attribution to private channels, and fixed the forwarding debug screen's key-case mismatch | `database/`, new `services/peer_directory.dart`, `message_repository.dart`, `forwarding/*`, `map_screen.dart`, `contacts_screen.dart`, `channel_chat_screen.dart`, `direct_message_screen.dart`, `message_notification_service.dart` |
 | **2** ✅ | CAP v2 + request; per-sender discovery state; 0x8A software add; new add-contact frame builder; auto-add handling with `SELF_INFO` fields; new-radio sequence; periodic CAP. Done in `7a387b8` + `3496977`. Deviations: chat auto-add is turned off while tracking with no setting yet (the toggle belongs with the Phase 4 UI), and the contact push fills at most 75% of the radio's table | `capability_message.dart`, `capability_publisher.dart`, `message_repository.dart`, `ble_commands.dart`, `ble_responses.dart`, `connection_viewmodel.dart` |
 | **3** ✅ | Channel types, `isTeam`, hybrid sync, not-on-radio UI and prompt, delete rules, team-only filter, persistence across radio switches. Schema 14. Deviations: team channels are offered to a new radio on use rather than pushed on connect (Tom: pushing is optional), and `_addColumnIfMissing` makes column additions tolerant of a database that already has them | `channel_repository.dart`, `channels_screen.dart`, `channel_chat_screen.dart`, `connection_viewmodel.dart` (`_clearCompanionSessionData`), `team_config_service.dart`, `settings_screen.dart` |
-| **4** | Alias setting, first-launch and upgrade prompt, radio-name wording, team badges, collision suffix, l10n ×7, `README.md` + `RELEASE_NOTES.md` | `main.dart`, `main_navigation_screen.dart`, `connection_screen.dart`, `settings_screen.dart`, `settings_service.dart`, `l10n/*.arb` |
+| **4** ✅ | Alias setting, first-launch and upgrade prompt, radio-name wording, team badges, collision suffix, l10n ×7, `README.md`. Deviation: the auto-add toggle discussed here was dropped entirely (see §6.5) | `main.dart`, `main_navigation_screen.dart`, `connection_screen.dart`, `settings_screen.dart`, `settings_service.dart`, `l10n/*.arb` |
 
 ## 12. Testing
 

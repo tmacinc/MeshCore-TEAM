@@ -17,6 +17,7 @@ import '../repositories/message_repository.dart';
 import '../services/message_notification_service.dart';
 import '../utils/message_time_format.dart';
 import '../widgets/app_bar_subtitle.dart';
+import '../services/peer_directory.dart';
 import '../widgets/chat_message_text.dart';
 import '../widgets/status_bar_actions.dart';
 
@@ -119,6 +120,12 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   }
 
   @override
+  String? _displayName(BuildContext context) {
+    final peers = context.watch<PeerDirectory>();
+    final peer = peers.byRadioKey(widget.contact.publicKey);
+    return peer != null ? peers.displayName(peer) : widget.contact.name;
+  }
+
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
@@ -133,7 +140,9 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
           StatusBarActions(),
         ],
         bottom: AppBarSubtitle(
-          title: widget.contact.name ?? l10n.unknownContact,
+          // Team members are shown by their team name; everyone else keeps
+          // the radio name, which is all we know them by.
+          title: _displayName(context) ?? l10n.unknownContact,
           subtitle: l10n.directMessage,
         ),
       ),

@@ -1026,5 +1026,12 @@
   "addChannelToRadioNoSlots": "Dein Funkgerät hat keine freien Kanalplätze. Lösche zuerst einen Kanal auf dem Funkgerät.",
   "addedChannelToRadio": "{name} zum Funkgerät hinzugefügt",
   "teamOnly": "Nur Team",
-  "failedToAddChannel": "Kanal konnte nicht zum Funkgerät hinzugefügt werden"
+  "failedToAddChannel": "Kanal konnte nicht zum Funkgerät hinzugefügt werden",
+  "teamName": "Teamname",
+  "teamNamePrompt": "Teamnamen festlegen",
+  "teamNameSaveExplanation": "Dein Team sieht diesen Namen. Nur Personen in deinem Teamkanal können ihn sehen.",
+  "teamNameSkipExplanation": "Dein Team sieht deinen Funkgerätnamen, den jeder im Mesh sehen kann.",
+  "teamNameChangeLater": "Du kannst deinen Teamnamen später in den Einstellungen festlegen oder ändern.",
+  "teamNameUsingRadioName": "Funkgerätname wird verwendet ({name})",
+  "radioNameExplanation": "Dieser Name ist für alle im Mesh sichtbar, auch außerhalb deines Teams. Erwäge einen anonymen Namen."
 }

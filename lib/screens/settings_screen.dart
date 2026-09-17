@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/models/app_language.dart';
 import 'package:meshcore_team/models/app_settings.dart';
+import 'package:meshcore_team/models/capability_message.dart';
 import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/widgets/add_channel_to_radio.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
@@ -53,6 +54,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: ListView(
         children: [
+          _buildTeamNameCard(context, l10n, settings),
+          const Divider(height: 1),
           _buildSection(
             context: context,
             settings: settings,
@@ -284,6 +287,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   static const _purgeDayOptions = [7, 14, 30, 60, 90, 180, 365, 0];
+
+  /// The team name, kept next to nothing else: it is the one name the user
+  /// picks for themselves, and it is separate from the radio name shown on
+  /// the Connection screen.
+  Widget _buildTeamNameCard(BuildContext context, AppLocalizations l10n,
+      SettingsService settingsService) {
+    final alias = settingsService.settings.teamAlias;
+    final radioName = context.watch<ConnectionViewModel>().deviceName.trim();
+
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      child: ListTile(
+        leading: const Icon(Icons.badge_outlined),
+        title: Text(l10n.teamName),
+        subtitle: Text(
+          alias != null && alias.isNotEmpty
+              ? alias
+              : l10n.teamNameUsingRadioName(
+                  radioName.isEmpty ? l10n.unknown : radioName),
+        ),
+        trailing: const Icon(Icons.edit_outlined),
+        onTap: () => _showTeamNameDialog(context, settingsService, radioName),
+      ),
+    );
+  }
+
+  Future<void> _showTeamNameDialog(
+    BuildContext context,
+    SettingsService settingsService,
+    String radioName,
+  ) async {
+    final controller =
+        TextEditingController(text: settingsService.settings.teamAlias ?? '');
+
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
+        return AlertDialog(
+          title: Text(l10n.teamName),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: controller,
+                autofocus: true,
+                maxLength: CapabilityMessage.maxAliasBytes,
+                decoration: InputDecoration(
+                  labelText: l10n.teamName,
+                  hintText: radioName.isEmpty ? null : radioName,
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(l10n.teamNameSaveExplanation),
+              const SizedBox(height: 8),
+              Text(l10n.teamNameSkipExplanation),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(controller.text.trim()),
+              child: Text(l10n.save),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null) return;
+    // Typing the radio name means the same as leaving it blank.
+    await settingsService.setTeamAlias(result == radioName ? null : result);
+  }
 
   Widget _buildAutoPurgeCard(BuildContext context, AppLocalizations l10n,
       SettingsService settingsService) {

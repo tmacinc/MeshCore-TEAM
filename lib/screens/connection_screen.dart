@@ -944,13 +944,21 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
             final l10n = AppLocalizations.of(context)!;
             return AlertDialog(
               title: Text(l10n.deviceName),
-              content: TextField(
-                controller: controller,
-                enabled: !isSaving,
-                decoration: InputDecoration(
-                  hintText: l10n.enterDeviceName,
-                ),
-                maxLength: 31,
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    enabled: !isSaving,
+                    decoration: InputDecoration(
+                      hintText: l10n.enterDeviceName,
+                    ),
+                    maxLength: 31,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(l10n.radioNameExplanation),
+                ],
               ),
               actions: [
                 TextButton(

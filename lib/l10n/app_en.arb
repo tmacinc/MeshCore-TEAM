@@ -1405,5 +1405,19 @@
     }
   },
   "teamOnly": "Team only",
-  "failedToAddChannel": "Could not add the channel to your radio"
+  "failedToAddChannel": "Could not add the channel to your radio",
+  "teamName": "Team name",
+  "teamNamePrompt": "Set your team name",
+  "teamNameSaveExplanation": "Your team will see this name. Only people on your team channel can see it.",
+  "teamNameSkipExplanation": "Your team will see your radio name, which everyone on the mesh can see.",
+  "teamNameChangeLater": "You can set or change your team name later in Settings.",
+  "teamNameUsingRadioName": "Using radio name ({name})",
+  "@teamNameUsingRadioName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "radioNameExplanation": "This name is visible to everyone on the mesh, including people outside your team. Consider an anonymous name."
 }
