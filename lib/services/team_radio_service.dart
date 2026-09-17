@@ -15,35 +15,29 @@ import 'package:meshcore_team/services/peer_directory.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 
-/// Prepares a radio for team use, and puts back what it changed.
-///
-/// Both jobs run on connecting, and the auto-add policy also re-runs when
-/// the "manage radio contacts" setting changes.
+/// Sets a radio up for team use on every connect.
 ///
 /// **Team contacts follow you to a new radio.** Team identity lives on the
 /// phone, so a radio that has never met the team can be given their contacts
 /// directly instead of waiting for everyone's next advert. One flood advert
 /// then tells the team about this radio, whose key they have never seen.
 ///
-/// **The radio stops auto-adding other people's devices.**
-/// In firmware, `manual_add_contacts` bit 0 clear means "store every advert
-/// you hear"; setting it defers to per-type bits in `autoadd_config`
-/// (chat 0x02, repeater 0x04, room server 0x08, sensor 0x10). This clears
-/// only the chat bit, so infrastructure is still picked up automatically and
-/// the user's own choices for it are untouched. Team members are still added,
-/// from the PUSH_NEW_ADVERT the radio sends when it declines to store one.
+/// **The radio stops auto-adding other people's devices.** In firmware,
+/// `manual_add_contacts` bit 0 clear means "store every advert you hear";
+/// setting it defers to per-type bits in `autoadd_config` (chat 0x02,
+/// repeater 0x04, room server 0x08, sensor 0x10). This clears only the chat
+/// bit, so infrastructure is still picked up automatically and the user's own
+/// choices for it are untouched.
 ///
-/// Consequences, documented for users in README §9:
-/// - Nobody outside the team is added silently any more. Their advert is
-///   listed under "heard nearby" on the Contacts screen, where the user adds
-///   or dismisses them.
-/// - The restore happens when the setting is turned off, or on the next
-///   connect with it already off. If the app is uninstalled while it is on,
-///   the radio keeps the app's setting until it is changed from some
-///   MeshCore app.
+/// Nothing is lost by that: team members are added in software from the
+/// PUSH_NEW_ADVERT the radio sends when it declines to store an advert, and
+/// everyone else is listed under "Heard nearby" on the Contacts screen. What
+/// it avoids is a small contact table filling up with passers-by.
 ///
-/// Both radio values are saved per radio before anything is changed, because
-/// they belong to the radio and every MeshCore app on it shares them.
+/// The app does not put the setting back: managed contacts are how the app
+/// works, so there is no saved state to restore and nothing to get out of
+/// step. Someone who stops using TEAM can turn auto-add back on from any
+/// MeshCore app. Documented for users in README §9.
 class TeamRadioService {
   /// Auto-add config bits (firmware `AUTO_ADD_*`).
   static const int autoAddChatBit = 0x02;
@@ -126,43 +120,33 @@ class TeamRadioService {
   /// Turns chat auto-add off while tracking is on, and back on afterwards.
   /// The saved value is kept per radio, because it is the radio's setting and
   /// other MeshCore apps share it.
+  /// Turns the radio's blanket auto-add off for other people's devices.
+  /// Idempotent: a radio already set that way is left alone, so reconnecting
+  /// doesn't rewrite its settings.
   Future<void> _applyAutoAddPolicy() async {
     final selfInfo = _bleService.selfInfo;
     if (selfInfo == null) return;
 
-    final manage = _settings.settings.manageRadioContacts;
-    final saved = _settings.settings.savedRadioAutoAdd;
+    final config = await _bleService.fetchAutoAddConfig();
+    if (config == null) {
+      debugPrint('[TeamRadio] ⏭️ Radio did not report its auto-add config');
+      return;
+    }
 
-    if (manage) {
-      if (saved != null) return; // already applied to this radio
+    final alreadyManaged =
+        !selfInfo.autoAddsAllContacts && (config & autoAddChatBit) == 0;
+    if (alreadyManaged) return;
 
-      final config = await _bleService.fetchAutoAddConfig();
-      if (config == null) {
-        debugPrint('[TeamRadio] ⏭️ Radio did not report its auto-add config');
-        return;
-      }
-
-      // Both values are the radio's, so both are saved before changing them.
-      await _settings
-          .setSavedRadioAutoAdd(_pack(selfInfo.manualAddContacts, config));
+    if (selfInfo.autoAddsAllContacts) {
       await _setOtherParams(selfInfo, manualAddContacts: 1);
+    }
+    if ((config & autoAddChatBit) != 0) {
       // Only the chat bit: repeater, room-server and sensor auto-add are the
       // user's choice and stay as they were.
       await _bleService.setAutoAddConfig(config & ~autoAddChatBit);
-      debugPrint('[TeamRadio] 🚫 Radio auto-add for people is now off');
-    } else {
-      if (saved == null) return;
-      await _setOtherParams(selfInfo, manualAddContacts: saved & 0xFF);
-      await _bleService.setAutoAddConfig((saved >> 8) & 0xFF);
-      await _settings.setSavedRadioAutoAdd(null);
-      debugPrint('[TeamRadio] ↩️ Restored the radio auto-add settings');
     }
+    debugPrint('[TeamRadio] 🚫 Radio auto-add for people is now off');
   }
-
-  /// One stored int holds both radio values: manual-add in the low byte,
-  /// per-type auto-add config in the next.
-  int _pack(int manualAdd, int autoAddConfig) =>
-      (manualAdd & 0xFF) | ((autoAddConfig & 0xFF) << 8);
 
   Future<void> _setOtherParams(
     SelfInfoResponse selfInfo, {

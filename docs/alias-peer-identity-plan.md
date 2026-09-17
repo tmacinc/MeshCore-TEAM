@@ -246,18 +246,17 @@ Verified in both upstream and tmacinc firmware (`BaseChatMesh::onAdvertRecv`, `M
 `BleCommands.buildAddUpdateContact` currently gets the flags, route and name encoding wrong; **replace it**. It has no callers.
 
 ### 6.5 Radio auto-add
-- **While tracking is enabled, turn off auto-add for chat nodes only**, so the radio stops filling up with strangers:
+- **Turn off auto-add for chat nodes, on every connect**, so the radio stops filling up with strangers:
   - Set the manual-add flag.
   - Clear only `AUTO_ADD_CHAT` in `autoadd_config`. Repeater, room-server and sensor auto-add stay as the user had them.
-- **Restore both** when tracking is turned off.
+  - Idempotent: a radio already set that way is left alone.
+- **No restore, and nothing saved.** Managed contacts are how the app works, so there is no mode to leave and no saved state to get out of step (an earlier draft had a `manageRadioContacts` setting and saved originals; both are gone). Someone who stops using TEAM turns auto-add back on from any MeshCore app.
 - **`CMD_SET_OTHER_PARAMS` (38)** also overwrites `telemetry_mode_*`, `advert_loc_policy` and `multi_acks`.
   - Parse them from `SELF_INFO` (bytes after lat/lon: `multi_acks`, `advert_loc_policy`, packed telemetry modes, `manual_add_contacts`).
   - Send them back unchanged.
 - **Consequences** (documented for users in README §9, and in `TeamRadioService`):
   - Adverts heard while the phone is disconnected aren't saved. Acceptable: TELs aren't processed then either, so discovery resumes on reconnect.
-  - While tracking is on, a stranger's advert is declined by the radio and ignored by the app, so they appear nowhere. Before this they were added automatically. A "heard nearby" list closes this (§7.7).
-  - The restore runs when tracking is switched off, or on the next connect with tracking off. If the app is uninstalled mid-tracking, the radio keeps the app's setting.
-- **Open:** it currently always applies while tracking, with no setting. The toggle lands with the Phase 4 UI.
+  - Nobody outside the team is added silently. Their advert is listed under "Heard nearby" on the Contacts screen (§7.7), where the user adds or dismisses them.
 
 ### 6.6 New radio
 On the first connection to a radio this phone hasn't used before:

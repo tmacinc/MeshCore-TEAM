@@ -404,12 +404,12 @@ This works network-wide — new members should appear on the map after a couple 
 
 #### Which contacts your radio stores
 
-By default the app manages your radio's contact list instead of letting the radio store every device it hears.
+The app manages your radio's contact list instead of letting the radio store every device it hears.
 
 - **What changes** — your radio normally adds every device it hears an advert from. The app switches that off **for other people's devices only**; repeaters, room servers and sensors are still added automatically, exactly as you had them set.
-- **Team members are added for you** — when the radio declines an advert it hands the details to the app instead, and the app adds anyone who is sharing location on your tracking channel. Tracking and direct messages keep working without you doing anything.
+- **Team members are added for you** — when the radio declines an advert it hands the details to the app instead, and the app adds anyone sharing location on your tracking channel. Tracking and direct messages keep working without you doing anything.
 - **Everyone else is listed, not lost** — other devices appear under **Heard nearby** at the top of the Contacts tab, with **Add** and **Dismiss**. Dismissing hides that device until it is heard again. The list is capped, and entries disappear after 7 days.
-- **Putting it back** — the app saves your radio's original settings (per radio) before changing them, and restores them if you turn this off. If you uninstall the app first, the setting stays as the app left it; you can change it back from any MeshCore app under the radio's contact settings.
+- **This stays set on the radio.** The app doesn't put it back, because managed contacts are how it works. If you stop using TEAM, turn auto-add back on from any MeshCore app under the radio's contact settings.
 
 #### Moving to a different radio
 

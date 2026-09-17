@@ -15,8 +15,6 @@ class SettingsService extends ChangeNotifier {
   static const String _keyTelemetryChannelHash = 'telemetry_channel_hash';
   static const String _keyTelemetryChannelName = 'telemetry_channel_name';
   static const String _keyTeamAlias = 'team_alias';
-  static const String _keyRadioAutoAddPrefix = 'radio_autoadd_saved';
-  static const String _keyManageRadioContacts = 'manage_radio_contacts';
   static const String _keyTeamAliasPrompted = 'team_alias_prompted';
   static const String _keyTelemetryIntervalSeconds =
       'telemetry_interval_seconds';
@@ -89,16 +87,6 @@ class SettingsService extends ChangeNotifier {
         _prefs.getString(_keyTelemetryChannelHash);
   }
 
-  String _radioAutoAddKeyForCompanion(String companionPublicKeyHex) =>
-      '${_keyRadioAutoAddPrefix}_$companionPublicKeyHex';
-
-  int? _getSavedRadioAutoAddForCompanion(String? companionPublicKeyHex) {
-    if (companionPublicKeyHex == null || companionPublicKeyHex.isEmpty) {
-      return null;
-    }
-    return _prefs.getInt(_radioAutoAddKeyForCompanion(companionPublicKeyHex));
-  }
-
   String? _getTelemetryChannelNameForCompanion(String? companionPublicKeyHex) {
     if (companionPublicKeyHex == null || companionPublicKeyHex.isEmpty) {
       return _prefs.getString(_keyTelemetryChannelName);
@@ -166,10 +154,6 @@ class SettingsService extends ChangeNotifier {
       telemetryChannelHash: telemetryChannelHash,
       telemetryChannelName: telemetryChannelName,
       teamAlias: _prefs.getString(_keyTeamAlias),
-      manageRadioContacts:
-          _prefs.getBool(_keyManageRadioContacts) ?? true,
-      savedRadioAutoAdd:
-          _getSavedRadioAutoAddForCompanion(currentCompanionKey),
       teamAliasPrompted: _prefs.getBool(_keyTeamAliasPrompted) ?? false,
       telemetryIntervalSeconds:
           _prefs.getInt(_keyTelemetryIntervalSeconds) ?? 60,
@@ -273,29 +257,6 @@ class SettingsService extends ChangeNotifier {
     } else {
       await _prefs.setString(_keyTeamAlias, trimmed);
       _settings = _settings.copyWith(teamAlias: trimmed);
-    }
-    notifyListeners();
-  }
-
-  Future<void> setManageRadioContacts(bool enabled) async {
-    await _prefs.setBool(_keyManageRadioContacts, enabled);
-    _settings = _settings.copyWith(manageRadioContacts: enabled);
-    notifyListeners();
-  }
-
-  /// Remembers the radio's own auto-add setting before we change it, so it
-  /// can be restored. Null clears it (nothing of ours is applied).
-  Future<void> setSavedRadioAutoAdd(int? value) async {
-    final companionKey = _settings.currentCompanionPublicKey;
-    if (companionKey == null || companionKey.isEmpty) return;
-
-    final key = _radioAutoAddKeyForCompanion(companionKey);
-    if (value == null) {
-      await _prefs.remove(key);
-      _settings = _settings.copyWith(clearSavedRadioAutoAdd: true);
-    } else {
-      await _prefs.setInt(key, value);
-      _settings = _settings.copyWith(savedRadioAutoAdd: value);
     }
     notifyListeners();
   }
@@ -453,13 +414,10 @@ class SettingsService extends ChangeNotifier {
     // Update _settings synchronously FIRST so synchronous reads get new value immediately
     final telemetryHash = _getTelemetryChannelHashForCompanion(publicKeyHex);
     final telemetryName = _getTelemetryChannelNameForCompanion(publicKeyHex);
-    final savedAutoAdd = _getSavedRadioAutoAddForCompanion(publicKeyHex);
     _settings = _settings.copyWith(
       currentCompanionPublicKey: publicKeyHex,
       telemetryChannelHash: telemetryHash,
       telemetryChannelName: telemetryName,
-      savedRadioAutoAdd: savedAutoAdd,
-      clearSavedRadioAutoAdd: savedAutoAdd == null,
     );
     _companionKeyController.add(publicKeyHex); // Notify repositories
     notifyListeners();
