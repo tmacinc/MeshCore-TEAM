@@ -1,6 +1,5 @@
 {
   "@@locale": "fr",
-
   "cancel": "Annuler",
   "ok": "OK",
   "done": "Terminé",
@@ -42,7 +41,6 @@
   "scanQrCode": "Scanner un code QR",
   "fromFile": "Depuis un fichier",
   "fromQrCode": "Depuis un code QR",
-
   "settings": "Réglages",
   "about": "À propos",
   "appSettings": "Réglages de l'app",
@@ -58,7 +56,6 @@
   "exportLogs": "Exporter les journaux",
   "noLogEntries": "Aucune entrée de journal",
   "noLogsToExport": "Aucun journal à exporter",
-
   "connection": "Connexion",
   "notConnected": "Non connecté",
   "noDevicesFound": "Aucun appareil trouvé",
@@ -106,7 +103,6 @@
   "batteryOptimization": "Optimisation de la batterie",
   "battery": "Batterie",
   "storage": "Stockage",
-
   "channel": "Canal",
   "channelName": "Nom du canal",
   "addChannel": "Ajouter un canal",
@@ -134,7 +130,6 @@
   "channelCreated": "Créé : {name}",
   "channelJoined": "Rejoint : {name}",
   "channelAdded": "Ajouté : {name}",
-
   "directMessage": "Message direct",
   "directMessagesDisabledForRepeaters": "Les messages directs sont désactivés pour les répéteurs",
   "typeAMessage": "Saisissez un message...",
@@ -150,7 +145,6 @@
   "notificationModeMutedDesc": "Aucune alerte, aucune pastille",
   "sortByMessageCount": "Trier par nombre de messages",
   "sortByChannelNumber": "Trier par numéro de canal",
-
   "map": "Carte",
   "mapSettings": "Réglages de la carte",
   "mapType": "Type de carte",
@@ -175,7 +169,6 @@
   "gettingLocation": "Obtention de la position...",
   "featureComingSoon": "{feature} bientôt disponible",
   "contactInfo": "{name} ({id}) • sauts :{hops} • reçu :{heard}",
-
   "manageWaypointsAndRoutes": "Gérer les waypoints et itinéraires",
   "waypointName": "Nom du waypoint",
   "waypointType": "Type de waypoint",
@@ -223,23 +216,18 @@
   "localCount": "Locaux : {count}",
   "receivedCount": "Reçus : {count}",
   "routesCount": "Itinéraires : {count}",
-
   "permissionRequired": "Autorisation requise",
   "cameraPermissionRequired": "Autorisation d'accès à l'appareil photo requise",
   "continueToPermissions": "Continuer vers les autorisations",
   "storage2": "Stockage",
-
   "wipe": "Effacer",
   "wipeLocalData": "Effacer les données locales",
   "dataWipedSuccessfully": "Données effacées avec succès",
   "wipingData": "Effacement des données...",
   "areYouSure": "Êtes-vous sûr ?",
-
   "linkCopied": "Lien copié",
   "copied": "Copié",
-
   "debugLogsTitleWithCount": "Journaux de débogage ({count})",
-
   "exitApp": "Quitter l'app",
   "finished": "Terminé",
   "removeFromGroup": "Retirer du groupe",
@@ -247,33 +235,27 @@
   "thisWillStopTheConfigServer": "Cela arrêtera le serveur de configuration. ",
   "failedToApplySettings": "Impossible d'appliquer les réglages. Si vous activez le mode autonome, vérifiez que le GPS du companion est activé et dispose d'un point valide.",
   "noGroupStatusChannel": "Aucun canal de groupe actif",
-
   "channels": "Canaux",
   "search": "Rechercher",
   "contacts": "Contacts",
   "route": "Itinéraire",
   "waypointsAndRoutes": "Waypoints et itinéraires",
-
   "channelsWithPrivateCount": "Canaux ({count} privés)",
   "waypointsAndRoutesWithCount": "Waypoints et itinéraires ({count})",
   "offlineMapsWithCount": "Cartes hors ligne ({count} zones)",
   "offlineMapAreas": "Zones de carte hors ligne",
   "overlayMaps": "Cartes superposées",
-
   "genericError": "Erreur : {error}",
   "clearAllFailed": "Échec de l'effacement complet : {error}",
   "failedToAddWaypoint": "Impossible d'ajouter le waypoint : {error}",
   "wipeFailed": "Échec de l'effacement : {error}",
-
   "channelDeleted": "Supprimé : {name}",
   "channelHash": "Hash : {hash}",
   "channelIndex": "Index : {index}",
   "joinChannelConfirmation": "Rejoindre {tag} ?",
-
   "lastHeard": "Dernière réception : {time}",
   "lastSeen": "Vu pour la dernière fois : {time}",
   "hopCountLabel": "Nombre de sauts : {count}",
-
   "inspectForwardingMode": "Inspecter le mode de relais actif et la topologie",
   "forwardingPublicKey": "Clé publique : {key}",
   "forwardingDirect": "Direct : {value}",
@@ -285,22 +267,17 @@
   "forwardingLastApplied": "Dernière application : {time}",
   "forwardingLastError": "Dernière erreur : {error}",
   "forwardingCandidateReason": "Motif de candidature : {reason}",
-
   "zoomRange": "Plage de zoom : {min}–{max}",
   "minDistanceMeters": "Distance min. : {distance} m",
   "mapProviderLabel": "Fournisseur : {label}",
   "intervalSeconds": "Intervalle : {seconds} s",
-
   "companionBattery": "Companion : {battery}",
   "phoneBattery": "Téléphone : {battery}",
-
   "couldNotConfigureCompanionGps": "Impossible de configurer le GPS du companion — pas de matériel GPS ?",
   "scanChannelQr": "Scanner le QR du canal",
   "scanConfigQrCode": "Scanner le QR de configuration",
   "wipePermanentDeleteWarning": "Cette action supprimera définitivement les données sélectionnées.",
-
   "tileCount": "{count} tuiles",
-
   "channelTypePublic": "Type : public",
   "channelTypePrivate": "Type : privé",
   "publicChannel": "Canal public",
@@ -579,5 +556,12 @@
   "countTiles": "{count} {count, plural, =1{tuile} other{tuiles}}",
   "countOverlayMaps": "{count} {count, plural, =1{carte de superposition} other{cartes de superposition}}",
   "radioSettingsItem": "réglages radio",
-  "importedWithSkipped": "{imported} (ignoré : {skipped})"
+  "importedWithSkipped": "{imported} (ignoré : {skipped})",
+  "heardNearby": "Détectés à proximité ({count})",
+  "heardNearbyExplanation": "Appareils entendus par votre radio mais non ajoutés. Les membres de l'équipe sont ajoutés automatiquement.",
+  "dismiss": "Ignorer",
+  "contactAdded": "{name} ajouté",
+  "contactAddFailed": "Impossible d'ajouter {name}",
+  "roomServer": "Serveur de salon",
+  "sensor": "Capteur"
 }

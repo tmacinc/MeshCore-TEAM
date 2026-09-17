@@ -16,6 +16,7 @@ class SettingsService extends ChangeNotifier {
   static const String _keyTelemetryChannelName = 'telemetry_channel_name';
   static const String _keyTeamAlias = 'team_alias';
   static const String _keyRadioAutoAddPrefix = 'radio_autoadd_saved';
+  static const String _keyManageRadioContacts = 'manage_radio_contacts';
   static const String _keyTeamAliasPrompted = 'team_alias_prompted';
   static const String _keyTelemetryIntervalSeconds =
       'telemetry_interval_seconds';
@@ -165,6 +166,8 @@ class SettingsService extends ChangeNotifier {
       telemetryChannelHash: telemetryChannelHash,
       telemetryChannelName: telemetryChannelName,
       teamAlias: _prefs.getString(_keyTeamAlias),
+      manageRadioContacts:
+          _prefs.getBool(_keyManageRadioContacts) ?? true,
       savedRadioAutoAdd:
           _getSavedRadioAutoAddForCompanion(currentCompanionKey),
       teamAliasPrompted: _prefs.getBool(_keyTeamAliasPrompted) ?? false,
@@ -271,6 +274,12 @@ class SettingsService extends ChangeNotifier {
       await _prefs.setString(_keyTeamAlias, trimmed);
       _settings = _settings.copyWith(teamAlias: trimmed);
     }
+    notifyListeners();
+  }
+
+  Future<void> setManageRadioContacts(bool enabled) async {
+    await _prefs.setBool(_keyManageRadioContacts, enabled);
+    _settings = _settings.copyWith(manageRadioContacts: enabled);
     notifyListeners();
   }
 

@@ -3449,6 +3449,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{imported} (skipped {skipped})'**
   String importedWithSkipped(String imported, String skipped);
+
+  /// No description provided for @heardNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Heard nearby ({count})'**
+  String heardNearby(int count);
+
+  /// No description provided for @heardNearbyExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices your radio heard but did not add. Team members are added for you.'**
+  String get heardNearbyExplanation;
+
+  /// No description provided for @dismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get dismiss;
+
+  /// No description provided for @contactAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {name}'**
+  String contactAdded(String name);
+
+  /// No description provided for @contactAddFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not add {name}'**
+  String contactAddFailed(String name);
+
+  /// No description provided for @roomServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Room server'**
+  String get roomServer;
+
+  /// No description provided for @sensor.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensor'**
+  String get sensor;
 }
 
 class _AppLocalizationsDelegate

@@ -64,6 +64,7 @@ Future<void> _writeLegacyDatabase(File file) async {
   await db.close();
 
   final raw = sqlite3.open(file.path);
+  raw.execute('DROP TABLE heard_adverts');
   raw.execute('DROP TABLE peer_position_history');
   raw.execute('DROP TABLE peer_locations');
   raw.execute('DROP TABLE peers');
@@ -179,7 +180,8 @@ void main() {
     final located = await db.peersDao.watchPeersWithLocation().first;
 
     expect(located.length, 2);
-    expect(db.schemaVersion, 12);
+    // The peer tables arrived in v12; later versions must still migrate.
+    expect(db.schemaVersion, greaterThanOrEqualTo(12));
   });
 
   test('a mesh member keeps its key, name, position and battery', () async {
@@ -219,7 +221,9 @@ void main() {
 
     expect(names, isNot(contains('contact_display_states')));
     expect(names, isNot(contains('contact_position_histories')));
-    expect(names, containsAll(['peers', 'peer_locations', 'peer_position_history']));
+    expect(names,
+        containsAll(['peers', 'peer_locations', 'peer_position_history']));
+    expect(names, contains('heard_adverts'));
 
     final columns =
         await db.customSelect('PRAGMA table_info(messages)').get();

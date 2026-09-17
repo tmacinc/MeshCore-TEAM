@@ -1,6 +1,5 @@
 {
   "@@locale": "pt",
-
   "cancel": "Cancelar",
   "ok": "OK",
   "done": "Concluído",
@@ -42,7 +41,6 @@
   "scanQrCode": "Ler código QR",
   "fromFile": "A partir de ficheiro",
   "fromQrCode": "A partir de código QR",
-
   "settings": "Definições",
   "about": "Acerca de",
   "appSettings": "Definições da app",
@@ -58,7 +56,6 @@
   "exportLogs": "Exportar registos",
   "noLogEntries": "Sem entradas de registo",
   "noLogsToExport": "Não há registos para exportar",
-
   "connection": "Ligação",
   "notConnected": "Não ligado",
   "noDevicesFound": "Nenhum dispositivo encontrado",
@@ -106,7 +103,6 @@
   "batteryOptimization": "Otimização da bateria",
   "battery": "Bateria",
   "storage": "Armazenamento",
-
   "channel": "Canal",
   "channelName": "Nome do canal",
   "addChannel": "Adicionar canal",
@@ -134,7 +130,6 @@
   "channelCreated": "Criado: {name}",
   "channelJoined": "Aderiu: {name}",
   "channelAdded": "Adicionado: {name}",
-
   "directMessage": "Mensagem direta",
   "directMessagesDisabledForRepeaters": "As mensagens diretas estão desativadas para repetidores",
   "typeAMessage": "Escreva uma mensagem...",
@@ -150,7 +145,6 @@
   "notificationModeMutedDesc": "Sem alertas, sem emblema",
   "sortByMessageCount": "Ordenar por número de mensagens",
   "sortByChannelNumber": "Ordenar por número do canal",
-
   "map": "Mapa",
   "mapSettings": "Definições do mapa",
   "mapType": "Tipo de mapa",
@@ -175,7 +169,6 @@
   "gettingLocation": "A obter a localização...",
   "featureComingSoon": "{feature} brevemente",
   "contactInfo": "{name} ({id}) • saltos:{hops} • ouvido:{heard}",
-
   "manageWaypointsAndRoutes": "Gerir pontos de passagem e rotas",
   "waypointName": "Nome do ponto de passagem",
   "waypointType": "Tipo de ponto de passagem",
@@ -223,23 +216,18 @@
   "localCount": "Locais: {count}",
   "receivedCount": "Recebidos: {count}",
   "routesCount": "Rotas: {count}",
-
   "permissionRequired": "Permissão necessária",
   "cameraPermissionRequired": "É necessária permissão para a câmara",
   "continueToPermissions": "Continuar para as permissões",
   "storage2": "Armazenamento",
-
   "wipe": "Apagar",
   "wipeLocalData": "Apagar dados locais",
   "dataWipedSuccessfully": "Dados apagados com êxito",
   "wipingData": "A apagar dados...",
   "areYouSure": "Tem a certeza?",
-
   "linkCopied": "Link copiado",
   "copied": "Copiado",
-
   "debugLogsTitleWithCount": "Registos de depuração ({count})",
-
   "exitApp": "Sair da app",
   "finished": "Terminado",
   "removeFromGroup": "Remover do grupo",
@@ -247,33 +235,27 @@
   "thisWillStopTheConfigServer": "Isto irá parar o servidor de configuração. ",
   "failedToApplySettings": "Não foi possível aplicar as definições. Se estiver a ativar o modo autónomo, confirme que o GPS do companion está ativo e com posição válida.",
   "noGroupStatusChannel": "Nenhum canal de grupo ativo",
-
   "channels": "Canais",
   "search": "Pesquisar",
   "contacts": "Contactos",
   "route": "Rota",
   "waypointsAndRoutes": "Pontos de passagem e rotas",
-
   "channelsWithPrivateCount": "Canais ({count} privados)",
   "waypointsAndRoutesWithCount": "Pontos de passagem e rotas ({count})",
   "offlineMapsWithCount": "Mapas offline ({count} áreas)",
   "offlineMapAreas": "Áreas de mapa offline",
   "overlayMaps": "Mapas de sobreposição",
-
   "genericError": "Erro: {error}",
   "clearAllFailed": "Falha ao limpar tudo: {error}",
   "failedToAddWaypoint": "Não foi possível adicionar o ponto de passagem: {error}",
   "wipeFailed": "Falha ao apagar: {error}",
-
   "channelDeleted": "Eliminado: {name}",
   "channelHash": "Hash: {hash}",
   "channelIndex": "Índice: {index}",
   "joinChannelConfirmation": "Aderir a {tag}?",
-
   "lastHeard": "Ouvido pela última vez: {time}",
   "lastSeen": "Visto pela última vez: {time}",
   "hopCountLabel": "Número de saltos: {count}",
-
   "inspectForwardingMode": "Inspecionar o modo de reencaminhamento ativo e a topologia",
   "forwardingPublicKey": "Chave pública: {key}",
   "forwardingDirect": "Direto: {value}",
@@ -285,22 +267,17 @@
   "forwardingLastApplied": "Última aplicação: {time}",
   "forwardingLastError": "Último erro: {error}",
   "forwardingCandidateReason": "Motivo do candidato: {reason}",
-
   "zoomRange": "Intervalo de zoom: {min}–{max}",
   "minDistanceMeters": "Distância mín.: {distance} m",
   "mapProviderLabel": "Fornecedor: {label}",
   "intervalSeconds": "Intervalo: {seconds} s",
-
   "companionBattery": "Companion: {battery}",
   "phoneBattery": "Telemóvel: {battery}",
-
   "couldNotConfigureCompanionGps": "Não foi possível configurar o GPS do companion — não tem hardware GPS?",
   "scanChannelQr": "Ler QR do canal",
   "scanConfigQrCode": "Ler código QR de configuração",
   "wipePermanentDeleteWarning": "Isto irá eliminar permanentemente os dados selecionados.",
-
   "tileCount": "{count} mosaicos",
-
   "channelTypePublic": "Tipo: público",
   "channelTypePrivate": "Tipo: privado",
   "publicChannel": "Canal público",
@@ -579,5 +556,12 @@
   "countTiles": "{count} {count, plural, =1{mosaico} other{mosaicos}}",
   "countOverlayMaps": "{count} {count, plural, =1{mapa de sobreposição} other{mapas de sobreposição}}",
   "radioSettingsItem": "definições de rádio",
-  "importedWithSkipped": "{imported} (ignorado: {skipped})"
+  "importedWithSkipped": "{imported} (ignorado: {skipped})",
+  "heardNearby": "Detetados por perto ({count})",
+  "heardNearbyExplanation": "Dispositivos que o teu rádio ouviu mas não adicionou. Os membros da equipa são adicionados automaticamente.",
+  "dismiss": "Dispensar",
+  "contactAdded": "{name} adicionado",
+  "contactAddFailed": "Não foi possível adicionar {name}",
+  "roomServer": "Servidor de sala",
+  "sensor": "Sensor"
 }

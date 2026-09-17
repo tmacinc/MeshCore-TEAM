@@ -1,6 +1,5 @@
 {
   "@@locale": "de",
-
   "cancel": "Abbrechen",
   "ok": "OK",
   "done": "Fertig",
@@ -42,7 +41,6 @@
   "scanQrCode": "QR-Code scannen",
   "fromFile": "Aus Datei",
   "fromQrCode": "Aus QR-Code",
-
   "settings": "Einstellungen",
   "about": "Über",
   "appSettings": "App-Einstellungen",
@@ -58,7 +56,6 @@
   "exportLogs": "Protokolle exportieren",
   "noLogEntries": "Keine Protokolleinträge",
   "noLogsToExport": "Keine Protokolle zum Exportieren",
-
   "connection": "Verbindung",
   "notConnected": "Nicht verbunden",
   "noDevicesFound": "Keine Geräte gefunden",
@@ -106,7 +103,6 @@
   "batteryOptimization": "Akkuoptimierung",
   "battery": "Akku",
   "storage": "Speicher",
-
   "channel": "Kanal",
   "channelName": "Kanalname",
   "addChannel": "Kanal hinzufügen",
@@ -134,22 +130,27 @@
   "channelCreated": "Erstellt: {name}",
   "@channelCreated": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "channelJoined": "Beigetreten: {name}",
   "@channelJoined": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "channelAdded": "Hinzugefügt: {name}",
   "@channelAdded": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
-
   "directMessage": "Direktnachricht",
   "directMessagesDisabledForRepeaters": "Direktnachrichten sind für Repeater deaktiviert",
   "typeAMessage": "Nachricht eingeben...",
@@ -165,7 +166,6 @@
   "notificationModeMutedDesc": "Keine Alarme, kein Badge",
   "sortByMessageCount": "Nach Nachrichtenanzahl sortieren",
   "sortByChannelNumber": "Nach Kanalnummer sortieren",
-
   "map": "Karte",
   "mapSettings": "Karteneinstellungen",
   "mapType": "Kartentyp",
@@ -191,19 +191,28 @@
   "featureComingSoon": "{feature} demnächst verfügbar",
   "@featureComingSoon": {
     "placeholders": {
-      "feature": { "type": "String" }
+      "feature": {
+        "type": "String"
+      }
     }
   },
   "contactInfo": "{name} ({id}) • Hops:{hops} • Gehört:{heard}",
   "@contactInfo": {
     "placeholders": {
-      "name": { "type": "String" },
-      "id": { "type": "String" },
-      "hops": { "type": "String" },
-      "heard": { "type": "String" }
+      "name": {
+        "type": "String"
+      },
+      "id": {
+        "type": "String"
+      },
+      "hops": {
+        "type": "String"
+      },
+      "heard": {
+        "type": "String"
+      }
     }
   },
-
   "manageWaypointsAndRoutes": "Wegpunkte und Routen verwalten",
   "waypointName": "Wegpunktname",
   "waypointType": "Wegpunkttyp",
@@ -244,85 +253,102 @@
   "deleteFailed": "Löschen fehlgeschlagen: {error}",
   "@deleteFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "deletedWaypoints": "{count} Wegpunkt(e) gelöscht",
   "@deletedWaypoints": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "importedWaypoints": "{count} Wegpunkt(e) importiert",
   "@importedWaypoints": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "savedToPath": "Gespeichert in {path}",
   "@savedToPath": {
     "placeholders": {
-      "path": { "type": "String" }
+      "path": {
+        "type": "String"
+      }
     }
   },
   "exportFailedError": "Export fehlgeschlagen: {error}",
   "@exportFailedError": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "importFailedError": "Import fehlgeschlagen: {error}",
   "@importFailedError": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "totalCount": "Gesamt: {count}",
   "@totalCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "localCount": "Lokal: {count}",
   "@localCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "receivedCount": "Empfangen: {count}",
   "@receivedCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "routesCount": "Routen: {count}",
   "@routesCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "permissionRequired": "Berechtigung erforderlich",
   "cameraPermissionRequired": "Kameraberechtigung erforderlich",
   "continueToPermissions": "Zu Berechtigungen fortfahren",
   "storage2": "Speicher",
-
   "wipe": "Bereinigen",
   "wipeLocalData": "Lokale Daten bereinigen",
   "dataWipedSuccessfully": "Daten erfolgreich bereinigt",
   "wipingData": "Daten werden bereinigt...",
   "areYouSure": "Sind Sie sicher?",
-
   "linkCopied": "Link kopiert",
   "copied": "Kopiert",
-
   "debugLogsTitleWithCount": "Debug-Protokolle ({count})",
   "@debugLogsTitleWithCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "exitApp": "App beenden",
   "finished": "Fertig",
   "removeFromGroup": "Aus Gruppe entfernen",
@@ -330,216 +356,269 @@
   "thisWillStopTheConfigServer": "Dies beendet den Konfigurationsserver. ",
   "failedToApplySettings": "Einstellungen konnten nicht angewendet werden. Falls der autonome Modus aktiviert wird, stellen Sie sicher, dass das Companion-GPS aktiviert ist und einen gültigen Fix hat.",
   "noGroupStatusChannel": "Kein Gruppenkanal aktiv",
-
   "channels": "Kanäle",
   "search": "Suchen",
   "contacts": "Kontakte",
   "route": "Route",
   "waypointsAndRoutes": "Wegpunkte und Routen",
-
   "channelsWithPrivateCount": "Kanäle ({count} privat)",
   "@channelsWithPrivateCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "waypointsAndRoutesWithCount": "Wegpunkte und Routen ({count})",
   "@waypointsAndRoutesWithCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "offlineMapsWithCount": "Offline-Karten ({count} Bereiche)",
   "@offlineMapsWithCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "offlineMapAreas": "Offline-Kartenbereiche",
   "overlayMaps": "Überlagerungskarten",
-
   "genericError": "Fehler: {error}",
   "@genericError": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "clearAllFailed": "Alle löschen fehlgeschlagen: {error}",
   "@clearAllFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "failedToAddWaypoint": "Wegpunkt konnte nicht hinzugefügt werden: {error}",
   "@failedToAddWaypoint": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "wipeFailed": "Bereinigung fehlgeschlagen: {error}",
   "@wipeFailed": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
-
   "channelDeleted": "Gelöscht: {name}",
   "@channelDeleted": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "channelHash": "Hash: {hash}",
   "@channelHash": {
     "placeholders": {
-      "hash": { "type": "String" }
+      "hash": {
+        "type": "String"
+      }
     }
   },
   "channelIndex": "Index: {index}",
   "@channelIndex": {
     "placeholders": {
-      "index": { "type": "String" }
+      "index": {
+        "type": "String"
+      }
     }
   },
   "joinChannelConfirmation": "{tag} beitreten?",
   "@joinChannelConfirmation": {
     "placeholders": {
-      "tag": { "type": "String" }
+      "tag": {
+        "type": "String"
+      }
     }
   },
-
   "lastHeard": "Zuletzt gehört: {time}",
   "@lastHeard": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "lastSeen": "Zuletzt gesehen: {time}",
   "@lastSeen": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "hopCountLabel": "Hop-Anzahl: {count}",
   "@hopCountLabel": {
     "placeholders": {
-      "count": { "type": "String" }
+      "count": {
+        "type": "String"
+      }
     }
   },
-
   "inspectForwardingMode": "Aktiven Weiterleitungsmodus und Topologie prüfen",
   "forwardingPublicKey": "Öffentlicher Schlüssel: {key}",
   "@forwardingPublicKey": {
     "placeholders": {
-      "key": { "type": "String" }
+      "key": {
+        "type": "String"
+      }
     }
   },
   "forwardingDirect": "Direkt: {value}",
   "@forwardingDirect": {
     "placeholders": {
-      "value": { "type": "String" }
+      "value": {
+        "type": "String"
+      }
     }
   },
   "forwardingRepeater": "Repeater: {value}",
   "@forwardingRepeater": {
     "placeholders": {
-      "value": { "type": "String" }
+      "value": {
+        "type": "String"
+      }
     }
   },
   "forwardingOutOfRange": "Außer Reichweite: {value}",
   "@forwardingOutOfRange": {
     "placeholders": {
-      "value": { "type": "String" }
+      "value": {
+        "type": "String"
+      }
     }
   },
   "forwardingMode": "Modus: {mode}",
   "@forwardingMode": {
     "placeholders": {
-      "mode": { "type": "String" }
+      "mode": {
+        "type": "String"
+      }
     }
   },
   "forwardingLastMaxHops": "Letzter max. Hops: {hops}",
   "@forwardingLastMaxHops": {
     "placeholders": {
-      "hops": { "type": "String" }
+      "hops": {
+        "type": "String"
+      }
     }
   },
   "forwardingLastTrigger": "Letzter Auslöser: {trigger}",
   "@forwardingLastTrigger": {
     "placeholders": {
-      "trigger": { "type": "String" }
+      "trigger": {
+        "type": "String"
+      }
     }
   },
   "forwardingLastApplied": "Zuletzt angewendet: {time}",
   "@forwardingLastApplied": {
     "placeholders": {
-      "time": { "type": "String" }
+      "time": {
+        "type": "String"
+      }
     }
   },
   "forwardingLastError": "Letzter Fehler: {error}",
   "@forwardingLastError": {
     "placeholders": {
-      "error": { "type": "String" }
+      "error": {
+        "type": "String"
+      }
     }
   },
   "forwardingCandidateReason": "Kandidatengrund: {reason}",
   "@forwardingCandidateReason": {
     "placeholders": {
-      "reason": { "type": "String" }
+      "reason": {
+        "type": "String"
+      }
     }
   },
-
   "zoomRange": "Zoombereich: {min}–{max}",
   "@zoomRange": {
     "placeholders": {
-      "min": { "type": "String" },
-      "max": { "type": "String" }
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
     }
   },
   "minDistanceMeters": "Mindestabstand: {distance}m",
   "@minDistanceMeters": {
     "placeholders": {
-      "distance": { "type": "String" }
+      "distance": {
+        "type": "String"
+      }
     }
   },
   "mapProviderLabel": "Anbieter: {label}",
   "@mapProviderLabel": {
     "placeholders": {
-      "label": { "type": "String" }
+      "label": {
+        "type": "String"
+      }
     }
   },
   "intervalSeconds": "Intervall: {seconds}s",
   "@intervalSeconds": {
     "placeholders": {
-      "seconds": { "type": "String" }
+      "seconds": {
+        "type": "String"
+      }
     }
   },
-
   "companionBattery": "Companion: {battery}",
   "@companionBattery": {
     "placeholders": {
-      "battery": { "type": "String" }
+      "battery": {
+        "type": "String"
+      }
     }
   },
   "phoneBattery": "Telefon: {battery}",
   "@phoneBattery": {
     "placeholders": {
-      "battery": { "type": "String" }
+      "battery": {
+        "type": "String"
+      }
     }
   },
-
   "couldNotConfigureCompanionGps": "Companion-GPS konnte nicht konfiguriert werden – keine GPS-Hardware?",
   "scanChannelQr": "Kanal-QR-Code scannen",
   "scanConfigQrCode": "Konfigurations-QR-Code scannen",
   "wipePermanentDeleteWarning": "Dies löscht die ausgewählten Daten dauerhaft.",
-
   "tileCount": "{count} Kacheln",
   "@tileCount": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
-
   "channelTypePublic": "Typ: Öffentlich",
   "channelTypePrivate": "Typ: Privat",
   "publicChannel": "Öffentlicher Kanal",
@@ -558,21 +637,31 @@
   "firmwareInfo": "FW: {type} • {forwarding} • {autonomous}",
   "@firmwareInfo": {
     "placeholders": {
-      "type": { "type": "String" },
-      "forwarding": { "type": "String" },
-      "autonomous": { "type": "String" }
+      "type": {
+        "type": "String"
+      },
+      "forwarding": {
+        "type": "String"
+      },
+      "autonomous": {
+        "type": "String"
+      }
     }
   },
   "deviceId": "ID: {address}",
   "@deviceId": {
     "placeholders": {
-      "address": { "type": "String" }
+      "address": {
+        "type": "String"
+      }
     }
   },
   "batteryVoltage": "Akku: {voltage}V",
   "@batteryVoltage": {
     "placeholders": {
-      "voltage": { "type": "String" }
+      "voltage": {
+        "type": "String"
+      }
     }
   },
   "idle": "Leerlauf",
@@ -592,13 +681,17 @@
   "campModeForwardingActive": "Camp-Modus – Weiterleitung aktiv ({hops, plural, one{1 Hop} other{{hops} Hops}})",
   "@campModeForwardingActive": {
     "placeholders": {
-      "hops": { "type": "int" }
+      "hops": {
+        "type": "int"
+      }
     }
   },
   "policyEngineForwardingActive": "Regelwerk: Weiterleitung aktiv ({hops, plural, one{1 Hop} other{{hops} Hops}})",
   "@policyEngineForwardingActive": {
     "placeholders": {
-      "hops": { "type": "int" }
+      "hops": {
+        "type": "int"
+      }
     }
   },
   "forwardingModeCamp": "Weiterleitungsmodus: Camp",
@@ -606,7 +699,9 @@
   "typeAMessageToChannel": "Nachricht an {channel} eingeben...",
   "@typeAMessageToChannel": {
     "placeholders": {
-      "channel": { "type": "String" }
+      "channel": {
+        "type": "String"
+      }
     }
   },
   "noMessagesInChannel": "Keine Nachrichten in diesem Kanal",
@@ -617,7 +712,9 @@
   "hopCount": "{hops, plural, one{1 Hop} other{{hops} Hops}}",
   "@hopCount": {
     "placeholders": {
-      "hops": { "type": "int" }
+      "hops": {
+        "type": "int"
+      }
     }
   },
   "noMapMarkersOnly": "Keine Karte (nur Markierungen)",
@@ -640,8 +737,12 @@
   "locationCoordinates": "Standort: {lat}, {lon}",
   "@locationCoordinates": {
     "placeholders": {
-      "lat": { "type": "String" },
-      "lon": { "type": "String" }
+      "lat": {
+        "type": "String"
+      },
+      "lon": {
+        "type": "String"
+      }
     }
   },
   "location": "Standort",
@@ -651,14 +752,18 @@
   "contactDeletedName": "{name} geloescht",
   "@contactDeletedName": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "autoPurgeContacts": "Kontakte automatisch loeschen",
   "autoPurgeContactsDays": "{count} Tag(e)",
   "@autoPurgeContactsDays": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "autoPurgeContactsNever": "Nie",
@@ -669,14 +774,18 @@
   "channelsDeleted": "{count} Kanal/Kanaele geloescht",
   "@channelsDeleted": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "deleteAllContactsFavoritesNote": "Favoriten werden nicht geloescht.",
   "contactsDeleted": "{count} Kontakt(e) geloescht",
   "@contactsDeleted": {
     "placeholders": {
-      "count": { "type": "int" }
+      "count": {
+        "type": "int"
+      }
     }
   },
   "android": "Android",
@@ -684,8 +793,12 @@
   "trackingChannelIndex": "Tracking-Kanal-Index: {index} • Timeout: 12h • Sichtbare Nutzer: {count}",
   "@trackingChannelIndex": {
     "placeholders": {
-      "index": { "type": "String" },
-      "count": { "type": "int" }
+      "index": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
     }
   },
   "trackingChannelNotConfigured": "Tracking-Kanal nicht konfiguriert",
@@ -695,7 +808,9 @@
   "@willShareOnChannel": {
     "description": "Shows which channel location telemetry will be shared on",
     "placeholders": {
-      "channel": { "type": "String" }
+      "channel": {
+        "type": "String"
+      }
     }
   },
   "noChannelSelected": "Kein Kanal ausgewählt",
@@ -893,5 +1008,12 @@
   "countTiles": "{count} {count, plural, =1{Kachel} other{Kacheln}}",
   "countOverlayMaps": "{count} {count, plural, =1{Overlay-Karte} other{Overlay-Karten}}",
   "radioSettingsItem": "Funkeinstellungen",
-  "importedWithSkipped": "{imported} (übersprungen: {skipped})"
+  "importedWithSkipped": "{imported} (übersprungen: {skipped})",
+  "heardNearby": "In der Nähe gehört ({count})",
+  "heardNearbyExplanation": "Geräte, die dein Funkgerät gehört, aber nicht hinzugefügt hat. Teammitglieder werden automatisch hinzugefügt.",
+  "dismiss": "Ausblenden",
+  "contactAdded": "{name} hinzugefügt",
+  "contactAddFailed": "{name} konnte nicht hinzugefügt werden",
+  "roomServer": "Raum-Server",
+  "sensor": "Sensor"
 }

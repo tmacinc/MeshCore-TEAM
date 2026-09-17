@@ -2095,6 +2095,9 @@ class MessageRepository {
 
   final Map<String, _DiscoveryAttempt> _discovery = {};
 
+  /// Cap on the heard-nearby list, so a busy mesh can't grow it without end.
+  static const int maxHeardAdverts = 100;
+
   /// Tries to identify an unresolved sender, one packet per packet received.
   ///
   /// Alternates between the two halves of discovery:
@@ -2175,8 +2178,23 @@ class MessageRepository {
         _discovery.containsKey(contact.name);
 
     if (!wanted) {
+      // Not ours to add automatically, but not junk either: list it so the
+      // user can add them by hand instead of the advert being dropped.
       debugPrint(
-          '[Discovery] ⏭️ Ignoring unstored advert from "${contact.name}" (not a team member)');
+          '[Discovery] 📇 Listing unstored advert from "${contact.name}"');
+      await _database.heardAdvertsDao.record(
+        publicKey: contact.publicKey,
+        name: contact.name,
+        advertType: contact.isRepeater
+            ? 2
+            : contact.isRoomServer
+                ? 3
+                : 1,
+        lastAdvertTimestamp: contact.lastSeen,
+        latitude: contact.latitude,
+        longitude: contact.longitude,
+      );
+      await _database.heardAdvertsDao.trimTo(maxHeardAdverts);
       return;
     }
 
@@ -2190,6 +2208,7 @@ class MessageRepository {
     }
 
     _discovery.remove(contact.name)?.timer?.cancel();
+    await _database.heardAdvertsDao.remove(contact.publicKey);
 
     // Pull the contact back so the peer picks up its key and route.
     final companionKey = _settingsService.settings.currentCompanionPublicKey;

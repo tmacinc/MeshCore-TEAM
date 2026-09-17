@@ -39,9 +39,15 @@ class AppSettings {
   /// The team-name prompt has been shown once (whether skipped or saved).
   final bool teamAliasPrompted;
 
-  /// The current radio's own manual-add setting, saved before tracking turned
-  /// chat auto-add off, so it can be put back. Null = we haven't changed it.
-  /// Per radio, because it belongs to the radio and other MeshCore apps see it.
+  /// Let the app manage which contacts the radio stores: other people's
+  /// devices are added by the app (team members automatically, everyone else
+  /// from the heard-nearby list) instead of the radio storing every advert.
+  /// Turning this off puts the radio's own setting back.
+  final bool manageRadioContacts;
+
+  /// The radio's own settings, saved before the app changed them, so they can
+  /// be put back. Null = the app has changed nothing on this radio. Per
+  /// radio, because they belong to the radio and other MeshCore apps see them.
   final int? savedRadioAutoAdd;
   final int telemetryIntervalSeconds; // 30-180s
   final int telemetryMinDistanceMeters; // 50-500m
@@ -94,6 +100,7 @@ class AppSettings {
     this.telemetryChannelName,
     this.teamAlias,
     this.teamAliasPrompted = false,
+    this.manageRadioContacts = true,
     this.savedRadioAutoAdd,
     this.telemetryIntervalSeconds = 60,
     this.telemetryMinDistanceMeters = 100,
@@ -134,6 +141,7 @@ class AppSettings {
     String? teamAlias,
     bool clearTeamAlias = false,
     bool? teamAliasPrompted,
+    bool? manageRadioContacts,
     int? savedRadioAutoAdd,
     bool clearSavedRadioAutoAdd = false,
     int? telemetryIntervalSeconds,
@@ -174,6 +182,7 @@ class AppSettings {
       telemetryChannelName: telemetryChannelName ?? this.telemetryChannelName,
       teamAlias: clearTeamAlias ? null : (teamAlias ?? this.teamAlias),
       teamAliasPrompted: teamAliasPrompted ?? this.teamAliasPrompted,
+      manageRadioContacts: manageRadioContacts ?? this.manageRadioContacts,
       savedRadioAutoAdd: clearSavedRadioAutoAdd
           ? null
           : (savedRadioAutoAdd ?? this.savedRadioAutoAdd),

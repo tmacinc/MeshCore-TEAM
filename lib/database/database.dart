@@ -21,6 +21,7 @@ import 'daos/companion_devices_dao.dart';
 import 'daos/offline_map_areas_dao.dart';
 import 'daos/imported_overlay_maps_dao.dart';
 import 'daos/peers_dao.dart';
+import 'daos/heard_adverts_dao.dart';
 
 part 'database.g.dart';
 
@@ -48,6 +49,7 @@ typedef AckRecord = AckRecordData;
     Peers,
     PeerLocations,
     PeerPositionHistory,
+    HeardAdverts,
     AckRecords,
     OfflineMapAreas,
     ImportedOverlayMaps,
@@ -62,6 +64,7 @@ typedef AckRecord = AckRecordData;
     OfflineMapAreasDao,
     ImportedOverlayMapsDao,
     PeersDao,
+    HeardAdvertsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -74,7 +77,7 @@ class AppDatabase extends _$AppDatabase {
   // Jumps 9 -> 12: the Team Link branch (D0sockets) already uses 10 and 11,
   // so dev skips them to keep the two branches mergeable. See
   // docs/alias-peer-identity-plan.md §3.5.
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -189,6 +192,13 @@ class AppDatabase extends _$AppDatabase {
             await customStatement('DROP TABLE IF EXISTS contact_display_states');
             print(
                 '[Migration] v11->v12: peers created, $copied last known positions kept');
+          }
+
+          // Migration to schema version 13: adverts the radio declined to
+          // store, listed for the user instead of being dropped.
+          if (from <= 12 && to >= 13) {
+            await m.createTable(heardAdverts);
+            print('[Migration] v12->v13: heard_adverts');
           }
         },
       );

@@ -2058,4 +2058,32 @@ class AppLocalizationsFr extends AppLocalizations {
   String importedWithSkipped(String imported, String skipped) {
     return '$imported (ignoré : $skipped)';
   }
+
+  @override
+  String heardNearby(int count) {
+    return 'Détectés à proximité ($count)';
+  }
+
+  @override
+  String get heardNearbyExplanation =>
+      'Appareils entendus par votre radio mais non ajoutés. Les membres de l\'équipe sont ajoutés automatiquement.';
+
+  @override
+  String get dismiss => 'Ignorer';
+
+  @override
+  String contactAdded(String name) {
+    return '$name ajouté';
+  }
+
+  @override
+  String contactAddFailed(String name) {
+    return 'Impossible d\'ajouter $name';
+  }
+
+  @override
+  String get roomServer => 'Serveur de salon';
+
+  @override
+  String get sensor => 'Capteur';
 }

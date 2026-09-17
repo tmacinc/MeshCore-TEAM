@@ -14,6 +14,9 @@ class RetentionService {
   /// How long the position trail behind each team member is kept.
   static const Duration positionHistoryRetention = Duration(hours: 24);
 
+  /// How long a node stays in the heard-nearby list after its last advert.
+  static const Duration heardAdvertRetention = Duration(days: 7);
+
   static const Duration _interval = Duration(hours: 1);
 
   final AppDatabase _database;
@@ -41,6 +44,15 @@ class RetentionService {
           await _database.peersDao.deletePositionsOlderThan(cutoff);
       if (removed > 0) {
         debugPrint('[Retention] 🧹 Removed $removed position points');
+      }
+
+      final advertCutoff = DateTime.now()
+          .subtract(heardAdvertRetention)
+          .millisecondsSinceEpoch;
+      final staleAdverts =
+          await _database.heardAdvertsDao.deleteOlderThan(advertCutoff);
+      if (staleAdverts > 0) {
+        debugPrint('[Retention] 🧹 Removed $staleAdverts heard adverts');
       }
     } catch (e) {
       debugPrint('[Retention] ⚠️ Prune failed: $e');

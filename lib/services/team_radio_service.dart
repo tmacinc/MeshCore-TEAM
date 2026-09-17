@@ -18,14 +18,14 @@ import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 /// Prepares a radio for team use, and puts back what it changed.
 ///
 /// Both jobs run on connecting, and the auto-add policy also re-runs when
-/// tracking is switched on or off.
+/// the "manage radio contacts" setting changes.
 ///
 /// **Team contacts follow you to a new radio.** Team identity lives on the
 /// phone, so a radio that has never met the team can be given their contacts
 /// directly instead of waiting for everyone's next advert. One flood advert
 /// then tells the team about this radio, whose key they have never seen.
 ///
-/// **The radio stops auto-adding other people's devices while tracking.**
+/// **The radio stops auto-adding other people's devices.**
 /// In firmware, `manual_add_contacts` bit 0 clear means "store every advert
 /// you hear"; setting it defers to per-type bits in `autoadd_config`
 /// (chat 0x02, repeater 0x04, room server 0x08, sensor 0x10). This clears
@@ -33,14 +33,14 @@ import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 /// the user's own choices for it are untouched. Team members are still added,
 /// from the PUSH_NEW_ADVERT the radio sends when it declines to store one.
 ///
-/// Two consequences, documented for users in README §9:
-/// - While tracking is on, a stranger's advert is declined by the radio and
-///   ignored by the app, so they appear nowhere. Before this they would have
-///   been added automatically. A "heard nearby" list would give them back.
-/// - The restore happens when tracking is switched off, or on the next
-///   connect with tracking already off. If the app is uninstalled while
-///   tracking is on, the radio keeps the app's setting until it is changed
-///   from some MeshCore app.
+/// Consequences, documented for users in README §9:
+/// - Nobody outside the team is added silently any more. Their advert is
+///   listed under "heard nearby" on the Contacts screen, where the user adds
+///   or dismisses them.
+/// - The restore happens when the setting is turned off, or on the next
+///   connect with it already off. If the app is uninstalled while it is on,
+///   the radio keeps the app's setting until it is changed from some
+///   MeshCore app.
 ///
 /// Both radio values are saved per radio before anything is changed, because
 /// they belong to the radio and every MeshCore app on it shares them.
@@ -130,10 +130,10 @@ class TeamRadioService {
     final selfInfo = _bleService.selfInfo;
     if (selfInfo == null) return;
 
-    final tracking = _settings.settings.telemetryEnabled;
+    final manage = _settings.settings.manageRadioContacts;
     final saved = _settings.settings.savedRadioAutoAdd;
 
-    if (tracking) {
+    if (manage) {
       if (saved != null) return; // already applied to this radio
 
       final config = await _bleService.fetchAutoAddConfig();
@@ -149,7 +149,7 @@ class TeamRadioService {
       // Only the chat bit: repeater, room-server and sensor auto-add are the
       // user's choice and stay as they were.
       await _bleService.setAutoAddConfig(config & ~autoAddChatBit);
-      debugPrint('[TeamRadio] 🚫 Chat auto-add off while tracking');
+      debugPrint('[TeamRadio] 🚫 Radio auto-add for people is now off');
     } else {
       if (saved == null) return;
       await _setOtherParams(selfInfo, manualAddContacts: saved & 0xFF);

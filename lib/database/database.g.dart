@@ -5927,6 +5927,548 @@ class PeerPositionHistoryCompanion extends UpdateCompanion<PeerPositionData> {
   }
 }
 
+class $HeardAdvertsTable extends HeardAdverts
+    with TableInfo<$HeardAdvertsTable, HeardAdvertData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $HeardAdvertsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _publicKeyMeta = const VerificationMeta(
+    'publicKey',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> publicKey = GeneratedColumn<Uint8List>(
+    'public_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _advertTypeMeta = const VerificationMeta(
+    'advertType',
+  );
+  @override
+  late final GeneratedColumn<int> advertType = GeneratedColumn<int>(
+    'advert_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _latitudeMeta = const VerificationMeta(
+    'latitude',
+  );
+  @override
+  late final GeneratedColumn<double> latitude = GeneratedColumn<double>(
+    'latitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _longitudeMeta = const VerificationMeta(
+    'longitude',
+  );
+  @override
+  late final GeneratedColumn<double> longitude = GeneratedColumn<double>(
+    'longitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastHeardMeta = const VerificationMeta(
+    'lastHeard',
+  );
+  @override
+  late final GeneratedColumn<int> lastHeard = GeneratedColumn<int>(
+    'last_heard',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastAdvertTimestampMeta =
+      const VerificationMeta('lastAdvertTimestamp');
+  @override
+  late final GeneratedColumn<int> lastAdvertTimestamp = GeneratedColumn<int>(
+    'last_advert_timestamp',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dismissedAtMeta = const VerificationMeta(
+    'dismissedAt',
+  );
+  @override
+  late final GeneratedColumn<int> dismissedAt = GeneratedColumn<int>(
+    'dismissed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    publicKey,
+    name,
+    advertType,
+    latitude,
+    longitude,
+    lastHeard,
+    lastAdvertTimestamp,
+    dismissedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'heard_adverts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<HeardAdvertData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('public_key')) {
+      context.handle(
+        _publicKeyMeta,
+        publicKey.isAcceptableOrUnknown(data['public_key']!, _publicKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_publicKeyMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('advert_type')) {
+      context.handle(
+        _advertTypeMeta,
+        advertType.isAcceptableOrUnknown(data['advert_type']!, _advertTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_advertTypeMeta);
+    }
+    if (data.containsKey('latitude')) {
+      context.handle(
+        _latitudeMeta,
+        latitude.isAcceptableOrUnknown(data['latitude']!, _latitudeMeta),
+      );
+    }
+    if (data.containsKey('longitude')) {
+      context.handle(
+        _longitudeMeta,
+        longitude.isAcceptableOrUnknown(data['longitude']!, _longitudeMeta),
+      );
+    }
+    if (data.containsKey('last_heard')) {
+      context.handle(
+        _lastHeardMeta,
+        lastHeard.isAcceptableOrUnknown(data['last_heard']!, _lastHeardMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lastHeardMeta);
+    }
+    if (data.containsKey('last_advert_timestamp')) {
+      context.handle(
+        _lastAdvertTimestampMeta,
+        lastAdvertTimestamp.isAcceptableOrUnknown(
+          data['last_advert_timestamp']!,
+          _lastAdvertTimestampMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastAdvertTimestampMeta);
+    }
+    if (data.containsKey('dismissed_at')) {
+      context.handle(
+        _dismissedAtMeta,
+        dismissedAt.isAcceptableOrUnknown(
+          data['dismissed_at']!,
+          _dismissedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {publicKey};
+  @override
+  HeardAdvertData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return HeardAdvertData(
+      publicKey:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.blob,
+            data['${effectivePrefix}public_key'],
+          )!,
+      name:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}name'],
+          )!,
+      advertType:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.int,
+            data['${effectivePrefix}advert_type'],
+          )!,
+      latitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}latitude'],
+      ),
+      longitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}longitude'],
+      ),
+      lastHeard:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.int,
+            data['${effectivePrefix}last_heard'],
+          )!,
+      lastAdvertTimestamp:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.int,
+            data['${effectivePrefix}last_advert_timestamp'],
+          )!,
+      dismissedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dismissed_at'],
+      ),
+    );
+  }
+
+  @override
+  $HeardAdvertsTable createAlias(String alias) {
+    return $HeardAdvertsTable(attachedDatabase, alias);
+  }
+}
+
+class HeardAdvertData extends DataClass implements Insertable<HeardAdvertData> {
+  final Uint8List publicKey;
+  final String name;
+  final int advertType;
+  final double? latitude;
+  final double? longitude;
+  final int lastHeard;
+  final int lastAdvertTimestamp;
+
+  /// When the user dismissed it. A newer advert clears this, so dismissing
+  /// silences the entry without hiding the node forever.
+  final int? dismissedAt;
+  const HeardAdvertData({
+    required this.publicKey,
+    required this.name,
+    required this.advertType,
+    this.latitude,
+    this.longitude,
+    required this.lastHeard,
+    required this.lastAdvertTimestamp,
+    this.dismissedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['public_key'] = Variable<Uint8List>(publicKey);
+    map['name'] = Variable<String>(name);
+    map['advert_type'] = Variable<int>(advertType);
+    if (!nullToAbsent || latitude != null) {
+      map['latitude'] = Variable<double>(latitude);
+    }
+    if (!nullToAbsent || longitude != null) {
+      map['longitude'] = Variable<double>(longitude);
+    }
+    map['last_heard'] = Variable<int>(lastHeard);
+    map['last_advert_timestamp'] = Variable<int>(lastAdvertTimestamp);
+    if (!nullToAbsent || dismissedAt != null) {
+      map['dismissed_at'] = Variable<int>(dismissedAt);
+    }
+    return map;
+  }
+
+  HeardAdvertsCompanion toCompanion(bool nullToAbsent) {
+    return HeardAdvertsCompanion(
+      publicKey: Value(publicKey),
+      name: Value(name),
+      advertType: Value(advertType),
+      latitude:
+          latitude == null && nullToAbsent
+              ? const Value.absent()
+              : Value(latitude),
+      longitude:
+          longitude == null && nullToAbsent
+              ? const Value.absent()
+              : Value(longitude),
+      lastHeard: Value(lastHeard),
+      lastAdvertTimestamp: Value(lastAdvertTimestamp),
+      dismissedAt:
+          dismissedAt == null && nullToAbsent
+              ? const Value.absent()
+              : Value(dismissedAt),
+    );
+  }
+
+  factory HeardAdvertData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return HeardAdvertData(
+      publicKey: serializer.fromJson<Uint8List>(json['publicKey']),
+      name: serializer.fromJson<String>(json['name']),
+      advertType: serializer.fromJson<int>(json['advertType']),
+      latitude: serializer.fromJson<double?>(json['latitude']),
+      longitude: serializer.fromJson<double?>(json['longitude']),
+      lastHeard: serializer.fromJson<int>(json['lastHeard']),
+      lastAdvertTimestamp: serializer.fromJson<int>(
+        json['lastAdvertTimestamp'],
+      ),
+      dismissedAt: serializer.fromJson<int?>(json['dismissedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'publicKey': serializer.toJson<Uint8List>(publicKey),
+      'name': serializer.toJson<String>(name),
+      'advertType': serializer.toJson<int>(advertType),
+      'latitude': serializer.toJson<double?>(latitude),
+      'longitude': serializer.toJson<double?>(longitude),
+      'lastHeard': serializer.toJson<int>(lastHeard),
+      'lastAdvertTimestamp': serializer.toJson<int>(lastAdvertTimestamp),
+      'dismissedAt': serializer.toJson<int?>(dismissedAt),
+    };
+  }
+
+  HeardAdvertData copyWith({
+    Uint8List? publicKey,
+    String? name,
+    int? advertType,
+    Value<double?> latitude = const Value.absent(),
+    Value<double?> longitude = const Value.absent(),
+    int? lastHeard,
+    int? lastAdvertTimestamp,
+    Value<int?> dismissedAt = const Value.absent(),
+  }) => HeardAdvertData(
+    publicKey: publicKey ?? this.publicKey,
+    name: name ?? this.name,
+    advertType: advertType ?? this.advertType,
+    latitude: latitude.present ? latitude.value : this.latitude,
+    longitude: longitude.present ? longitude.value : this.longitude,
+    lastHeard: lastHeard ?? this.lastHeard,
+    lastAdvertTimestamp: lastAdvertTimestamp ?? this.lastAdvertTimestamp,
+    dismissedAt: dismissedAt.present ? dismissedAt.value : this.dismissedAt,
+  );
+  HeardAdvertData copyWithCompanion(HeardAdvertsCompanion data) {
+    return HeardAdvertData(
+      publicKey: data.publicKey.present ? data.publicKey.value : this.publicKey,
+      name: data.name.present ? data.name.value : this.name,
+      advertType:
+          data.advertType.present ? data.advertType.value : this.advertType,
+      latitude: data.latitude.present ? data.latitude.value : this.latitude,
+      longitude: data.longitude.present ? data.longitude.value : this.longitude,
+      lastHeard: data.lastHeard.present ? data.lastHeard.value : this.lastHeard,
+      lastAdvertTimestamp:
+          data.lastAdvertTimestamp.present
+              ? data.lastAdvertTimestamp.value
+              : this.lastAdvertTimestamp,
+      dismissedAt:
+          data.dismissedAt.present ? data.dismissedAt.value : this.dismissedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HeardAdvertData(')
+          ..write('publicKey: $publicKey, ')
+          ..write('name: $name, ')
+          ..write('advertType: $advertType, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
+          ..write('lastHeard: $lastHeard, ')
+          ..write('lastAdvertTimestamp: $lastAdvertTimestamp, ')
+          ..write('dismissedAt: $dismissedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    $driftBlobEquality.hash(publicKey),
+    name,
+    advertType,
+    latitude,
+    longitude,
+    lastHeard,
+    lastAdvertTimestamp,
+    dismissedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is HeardAdvertData &&
+          $driftBlobEquality.equals(other.publicKey, this.publicKey) &&
+          other.name == this.name &&
+          other.advertType == this.advertType &&
+          other.latitude == this.latitude &&
+          other.longitude == this.longitude &&
+          other.lastHeard == this.lastHeard &&
+          other.lastAdvertTimestamp == this.lastAdvertTimestamp &&
+          other.dismissedAt == this.dismissedAt);
+}
+
+class HeardAdvertsCompanion extends UpdateCompanion<HeardAdvertData> {
+  final Value<Uint8List> publicKey;
+  final Value<String> name;
+  final Value<int> advertType;
+  final Value<double?> latitude;
+  final Value<double?> longitude;
+  final Value<int> lastHeard;
+  final Value<int> lastAdvertTimestamp;
+  final Value<int?> dismissedAt;
+  final Value<int> rowid;
+  const HeardAdvertsCompanion({
+    this.publicKey = const Value.absent(),
+    this.name = const Value.absent(),
+    this.advertType = const Value.absent(),
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
+    this.lastHeard = const Value.absent(),
+    this.lastAdvertTimestamp = const Value.absent(),
+    this.dismissedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  HeardAdvertsCompanion.insert({
+    required Uint8List publicKey,
+    required String name,
+    required int advertType,
+    this.latitude = const Value.absent(),
+    this.longitude = const Value.absent(),
+    required int lastHeard,
+    required int lastAdvertTimestamp,
+    this.dismissedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : publicKey = Value(publicKey),
+       name = Value(name),
+       advertType = Value(advertType),
+       lastHeard = Value(lastHeard),
+       lastAdvertTimestamp = Value(lastAdvertTimestamp);
+  static Insertable<HeardAdvertData> custom({
+    Expression<Uint8List>? publicKey,
+    Expression<String>? name,
+    Expression<int>? advertType,
+    Expression<double>? latitude,
+    Expression<double>? longitude,
+    Expression<int>? lastHeard,
+    Expression<int>? lastAdvertTimestamp,
+    Expression<int>? dismissedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (publicKey != null) 'public_key': publicKey,
+      if (name != null) 'name': name,
+      if (advertType != null) 'advert_type': advertType,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      if (lastHeard != null) 'last_heard': lastHeard,
+      if (lastAdvertTimestamp != null)
+        'last_advert_timestamp': lastAdvertTimestamp,
+      if (dismissedAt != null) 'dismissed_at': dismissedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  HeardAdvertsCompanion copyWith({
+    Value<Uint8List>? publicKey,
+    Value<String>? name,
+    Value<int>? advertType,
+    Value<double?>? latitude,
+    Value<double?>? longitude,
+    Value<int>? lastHeard,
+    Value<int>? lastAdvertTimestamp,
+    Value<int?>? dismissedAt,
+    Value<int>? rowid,
+  }) {
+    return HeardAdvertsCompanion(
+      publicKey: publicKey ?? this.publicKey,
+      name: name ?? this.name,
+      advertType: advertType ?? this.advertType,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      lastHeard: lastHeard ?? this.lastHeard,
+      lastAdvertTimestamp: lastAdvertTimestamp ?? this.lastAdvertTimestamp,
+      dismissedAt: dismissedAt ?? this.dismissedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (publicKey.present) {
+      map['public_key'] = Variable<Uint8List>(publicKey.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (advertType.present) {
+      map['advert_type'] = Variable<int>(advertType.value);
+    }
+    if (latitude.present) {
+      map['latitude'] = Variable<double>(latitude.value);
+    }
+    if (longitude.present) {
+      map['longitude'] = Variable<double>(longitude.value);
+    }
+    if (lastHeard.present) {
+      map['last_heard'] = Variable<int>(lastHeard.value);
+    }
+    if (lastAdvertTimestamp.present) {
+      map['last_advert_timestamp'] = Variable<int>(lastAdvertTimestamp.value);
+    }
+    if (dismissedAt.present) {
+      map['dismissed_at'] = Variable<int>(dismissedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HeardAdvertsCompanion(')
+          ..write('publicKey: $publicKey, ')
+          ..write('name: $name, ')
+          ..write('advertType: $advertType, ')
+          ..write('latitude: $latitude, ')
+          ..write('longitude: $longitude, ')
+          ..write('lastHeard: $lastHeard, ')
+          ..write('lastAdvertTimestamp: $lastAdvertTimestamp, ')
+          ..write('dismissedAt: $dismissedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AckRecordsTable extends AckRecords
     with TableInfo<$AckRecordsTable, AckRecordData> {
   @override
@@ -7979,6 +8521,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PeerLocationsTable peerLocations = $PeerLocationsTable(this);
   late final $PeerPositionHistoryTable peerPositionHistory =
       $PeerPositionHistoryTable(this);
+  late final $HeardAdvertsTable heardAdverts = $HeardAdvertsTable(this);
   late final $AckRecordsTable ackRecords = $AckRecordsTable(this);
   late final $OfflineMapAreasTable offlineMapAreas = $OfflineMapAreasTable(
     this,
@@ -7999,6 +8542,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final ImportedOverlayMapsDao importedOverlayMapsDao =
       ImportedOverlayMapsDao(this as AppDatabase);
   late final PeersDao peersDao = PeersDao(this as AppDatabase);
+  late final HeardAdvertsDao heardAdvertsDao = HeardAdvertsDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8012,6 +8558,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     peers,
     peerLocations,
     peerPositionHistory,
+    heardAdverts,
     ackRecords,
     offlineMapAreas,
     importedOverlayMaps,
@@ -11222,6 +11769,277 @@ typedef $$PeerPositionHistoryTableProcessedTableManager =
       PeerPositionData,
       PrefetchHooks Function({bool peerId})
     >;
+typedef $$HeardAdvertsTableCreateCompanionBuilder =
+    HeardAdvertsCompanion Function({
+      required Uint8List publicKey,
+      required String name,
+      required int advertType,
+      Value<double?> latitude,
+      Value<double?> longitude,
+      required int lastHeard,
+      required int lastAdvertTimestamp,
+      Value<int?> dismissedAt,
+      Value<int> rowid,
+    });
+typedef $$HeardAdvertsTableUpdateCompanionBuilder =
+    HeardAdvertsCompanion Function({
+      Value<Uint8List> publicKey,
+      Value<String> name,
+      Value<int> advertType,
+      Value<double?> latitude,
+      Value<double?> longitude,
+      Value<int> lastHeard,
+      Value<int> lastAdvertTimestamp,
+      Value<int?> dismissedAt,
+      Value<int> rowid,
+    });
+
+class $$HeardAdvertsTableFilterComposer
+    extends Composer<_$AppDatabase, $HeardAdvertsTable> {
+  $$HeardAdvertsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<Uint8List> get publicKey => $composableBuilder(
+    column: $table.publicKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get advertType => $composableBuilder(
+    column: $table.advertType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get latitude => $composableBuilder(
+    column: $table.latitude,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get longitude => $composableBuilder(
+    column: $table.longitude,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastHeard => $composableBuilder(
+    column: $table.lastHeard,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastAdvertTimestamp => $composableBuilder(
+    column: $table.lastAdvertTimestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dismissedAt => $composableBuilder(
+    column: $table.dismissedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$HeardAdvertsTableOrderingComposer
+    extends Composer<_$AppDatabase, $HeardAdvertsTable> {
+  $$HeardAdvertsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<Uint8List> get publicKey => $composableBuilder(
+    column: $table.publicKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get advertType => $composableBuilder(
+    column: $table.advertType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get latitude => $composableBuilder(
+    column: $table.latitude,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get longitude => $composableBuilder(
+    column: $table.longitude,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastHeard => $composableBuilder(
+    column: $table.lastHeard,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastAdvertTimestamp => $composableBuilder(
+    column: $table.lastAdvertTimestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dismissedAt => $composableBuilder(
+    column: $table.dismissedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$HeardAdvertsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $HeardAdvertsTable> {
+  $$HeardAdvertsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<Uint8List> get publicKey =>
+      $composableBuilder(column: $table.publicKey, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get advertType => $composableBuilder(
+    column: $table.advertType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get latitude =>
+      $composableBuilder(column: $table.latitude, builder: (column) => column);
+
+  GeneratedColumn<double> get longitude =>
+      $composableBuilder(column: $table.longitude, builder: (column) => column);
+
+  GeneratedColumn<int> get lastHeard =>
+      $composableBuilder(column: $table.lastHeard, builder: (column) => column);
+
+  GeneratedColumn<int> get lastAdvertTimestamp => $composableBuilder(
+    column: $table.lastAdvertTimestamp,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get dismissedAt => $composableBuilder(
+    column: $table.dismissedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$HeardAdvertsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $HeardAdvertsTable,
+          HeardAdvertData,
+          $$HeardAdvertsTableFilterComposer,
+          $$HeardAdvertsTableOrderingComposer,
+          $$HeardAdvertsTableAnnotationComposer,
+          $$HeardAdvertsTableCreateCompanionBuilder,
+          $$HeardAdvertsTableUpdateCompanionBuilder,
+          (
+            HeardAdvertData,
+            BaseReferences<_$AppDatabase, $HeardAdvertsTable, HeardAdvertData>,
+          ),
+          HeardAdvertData,
+          PrefetchHooks Function()
+        > {
+  $$HeardAdvertsTableTableManager(_$AppDatabase db, $HeardAdvertsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer:
+              () => $$HeardAdvertsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer:
+              () => $$HeardAdvertsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer:
+              () =>
+                  $$HeardAdvertsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<Uint8List> publicKey = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> advertType = const Value.absent(),
+                Value<double?> latitude = const Value.absent(),
+                Value<double?> longitude = const Value.absent(),
+                Value<int> lastHeard = const Value.absent(),
+                Value<int> lastAdvertTimestamp = const Value.absent(),
+                Value<int?> dismissedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => HeardAdvertsCompanion(
+                publicKey: publicKey,
+                name: name,
+                advertType: advertType,
+                latitude: latitude,
+                longitude: longitude,
+                lastHeard: lastHeard,
+                lastAdvertTimestamp: lastAdvertTimestamp,
+                dismissedAt: dismissedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required Uint8List publicKey,
+                required String name,
+                required int advertType,
+                Value<double?> latitude = const Value.absent(),
+                Value<double?> longitude = const Value.absent(),
+                required int lastHeard,
+                required int lastAdvertTimestamp,
+                Value<int?> dismissedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => HeardAdvertsCompanion.insert(
+                publicKey: publicKey,
+                name: name,
+                advertType: advertType,
+                latitude: latitude,
+                longitude: longitude,
+                lastHeard: lastHeard,
+                lastAdvertTimestamp: lastAdvertTimestamp,
+                dismissedAt: dismissedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper:
+              (p0) =>
+                  p0
+                      .map(
+                        (e) => (
+                          e.readTable(table),
+                          BaseReferences(db, table, e),
+                        ),
+                      )
+                      .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$HeardAdvertsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $HeardAdvertsTable,
+      HeardAdvertData,
+      $$HeardAdvertsTableFilterComposer,
+      $$HeardAdvertsTableOrderingComposer,
+      $$HeardAdvertsTableAnnotationComposer,
+      $$HeardAdvertsTableCreateCompanionBuilder,
+      $$HeardAdvertsTableUpdateCompanionBuilder,
+      (
+        HeardAdvertData,
+        BaseReferences<_$AppDatabase, $HeardAdvertsTable, HeardAdvertData>,
+      ),
+      HeardAdvertData,
+      PrefetchHooks Function()
+    >;
 typedef $$AckRecordsTableCreateCompanionBuilder =
     AckRecordsCompanion Function({
       required String messageId,
@@ -12261,6 +13079,8 @@ class $AppDatabaseManager {
       $$PeerLocationsTableTableManager(_db, _db.peerLocations);
   $$PeerPositionHistoryTableTableManager get peerPositionHistory =>
       $$PeerPositionHistoryTableTableManager(_db, _db.peerPositionHistory);
+  $$HeardAdvertsTableTableManager get heardAdverts =>
+      $$HeardAdvertsTableTableManager(_db, _db.heardAdverts);
   $$AckRecordsTableTableManager get ackRecords =>
       $$AckRecordsTableTableManager(_db, _db.ackRecords);
   $$OfflineMapAreasTableTableManager get offlineMapAreas =>

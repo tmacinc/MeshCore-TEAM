@@ -156,6 +156,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
           body: Column(
             children: [
               _buildSearchRow(l10n),
+              const _HeardNearbySection(),
               Expanded(
                 child: Builder(
                   builder: (context) {
@@ -307,6 +308,22 @@ class _ContactsScreenState extends State<ContactsScreen> {
   }
 }
 
+/// "Just now" / "5m ago" / "3h ago" / "2d ago" for a millisecond timestamp.
+String formatTimeAgo(AppLocalizations l10n, int timestampMs) {
+  final now = DateTime.now();
+  final then = DateTime.fromMillisecondsSinceEpoch(timestampMs);
+  final difference = then.isAfter(now) ? Duration.zero : now.difference(then);
+
+  if (difference.inMinutes < 1) {
+    return l10n.justNow;
+  } else if (difference.inMinutes < 60) {
+    return l10n.minutesAgo(difference.inMinutes);
+  } else if (difference.inHours < 24) {
+    return l10n.hoursAgo(difference.inHours);
+  }
+  return l10n.daysAgo(difference.inDays);
+}
+
 class ContactListTile extends StatelessWidget {
   final ContactData contact;
   final int unreadCount;
@@ -323,7 +340,7 @@ class ContactListTile extends StatelessWidget {
     final contactRepository = context.read<ContactRepository>();
     final hasLocation = contact.latitude != null && contact.longitude != null;
     final lastSeenText =
-        _formatLastSeen(AppLocalizations.of(context)!, contact.lastSeen);
+        formatTimeAgo(AppLocalizations.of(context)!, contact.lastSeen);
     final isNighttime = context.watch<SettingsService>().settings.appTheme ==
         AppThemeMode.nighttime;
 
@@ -542,22 +559,6 @@ class ContactListTile extends StatelessWidget {
     );
   }
 
-  String _formatLastSeen(AppLocalizations l10n, int timestamp) {
-    final now = DateTime.now();
-    final lastSeen = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final difference = lastSeen.isAfter(now) ? Duration.zero : now.difference(lastSeen);
-
-    if (difference.inMinutes < 1) {
-      return l10n.justNow;
-    } else if (difference.inMinutes < 60) {
-      return l10n.minutesAgo(difference.inMinutes);
-    } else if (difference.inHours < 24) {
-      return l10n.hoursAgo(difference.inHours);
-    } else {
-      return l10n.daysAgo(difference.inDays);
-    }
-  }
-
   Color _getConnectivityColor(int millisSinceLastSeen, bool isNighttime) {
     final minutesSince = millisSinceLastSeen / 60000.0;
 
@@ -574,5 +575,144 @@ class ContactListTile extends StatelessWidget {
     if (minutesSince < 10) return Colors.orange;
     if (minutesSince < 30) return Colors.red;
     return Colors.grey;
+  }
+}
+
+/// Nodes the radio heard but did not store, offered for adding by hand.
+///
+/// The radio declines an advert when the app manages its contacts (see
+/// [TeamRadioService]), when the sender is further away than its auto-add hop
+/// limit, or when its contact table is full. Team members are added
+/// automatically and never appear here.
+class _HeardNearbySection extends StatelessWidget {
+  const _HeardNearbySection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final db = context.read<AppDatabase>();
+
+    return StreamBuilder<List<HeardAdvertData>>(
+      stream: db.heardAdvertsDao.watchPending(),
+      builder: (context, snapshot) {
+        final heard = snapshot.data ?? const <HeardAdvertData>[];
+        if (heard.isEmpty) return const SizedBox.shrink();
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: ExpansionTile(
+            leading: const Icon(Icons.wifi_tethering),
+            title: Text(
+              l10n.heardNearby(heard.length),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              l10n.heardNearbyExplanation,
+              style: const TextStyle(fontSize: 11),
+            ),
+            children: [
+              for (final advert in heard)
+                _HeardAdvertTile(advert: advert),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HeardAdvertTile extends StatefulWidget {
+  final HeardAdvertData advert;
+
+  const _HeardAdvertTile({required this.advert});
+
+  @override
+  State<_HeardAdvertTile> createState() => _HeardAdvertTileState();
+}
+
+class _HeardAdvertTileState extends State<_HeardAdvertTile> {
+  bool _busy = false;
+
+  Future<void> _add() async {
+    final l10n = AppLocalizations.of(context)!;
+    final db = context.read<AppDatabase>();
+    final contactRepository = context.read<ContactRepository>();
+    final messenger = ScaffoldMessenger.of(context);
+    final advert = widget.advert;
+
+    setState(() => _busy = true);
+    final ok = await contactRepository.addHeardContact(
+      publicKey: advert.publicKey,
+      name: advert.name,
+      advertType: advert.advertType,
+      lastAdvertTimestamp: advert.lastAdvertTimestamp,
+      latitude: advert.latitude,
+      longitude: advert.longitude,
+    );
+
+    if (ok) await db.heardAdvertsDao.remove(advert.publicKey);
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    messenger.showSnackBar(SnackBar(
+      content: Text(
+        ok ? l10n.contactAdded(advert.name) : l10n.contactAddFailed(advert.name),
+      ),
+    ));
+  }
+
+  String _typeLabel(AppLocalizations l10n, int advertType) {
+    switch (advertType) {
+      case 2:
+        return l10n.repeater;
+      case 3:
+        return l10n.roomServer;
+      case 4:
+        return l10n.sensor;
+      default:
+        return l10n.contacts;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final advert = widget.advert;
+    final keyHex = advert.publicKey
+        .take(4)
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join()
+        .toUpperCase();
+
+    return ListTile(
+      dense: true,
+      title: Text(
+        advert.name.trim().isEmpty ? keyHex : advert.name,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        '${_typeLabel(l10n, advert.advertType)} · $keyHex · '
+        '${formatTimeAgo(l10n, advert.lastHeard)}',
+        style: const TextStyle(fontSize: 11),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextButton(
+            onPressed: _busy
+                ? null
+                : () => context
+                    .read<AppDatabase>()
+                    .heardAdvertsDao
+                    .dismiss(advert.publicKey),
+            child: Text(l10n.dismiss),
+          ),
+          FilledButton(
+            onPressed: _busy ? null : _add,
+            child: Text(l10n.add),
+          ),
+        ],
+      ),
+    );
   }
 }

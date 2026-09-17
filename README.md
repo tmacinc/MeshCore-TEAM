@@ -402,14 +402,14 @@ Contact discovery works in both directions, so new members appear on everyone's 
 
 This works network-wide — new members should appear on the map after a couple of telemetry intervals.
 
-#### Contact handling while tracking is on
+#### Which contacts your radio stores
 
-To keep your radio's contact list from filling up with strangers, the app changes one radio setting while tracking is enabled, and puts it back when you turn tracking off.
+By default the app manages your radio's contact list instead of letting the radio store every device it hears.
 
-- **What changes** — your radio normally stores every device it hears an advert from. While tracking is on, the app switches off automatic adding **for other people's devices only**. Repeaters, room servers and sensors are still added automatically, exactly as you had them set.
-- **Team members are added anyway** — when the radio declines to store an advert it hands the details to the app instead, and the app adds the ones that belong to your team, so tracking and direct messages keep working.
-- **What this means for you** — while tracking is on, people outside your team who advertise nearby will **not** appear in your contacts on their own. Turn tracking off if you want to pick up everyone in the area again.
-- **Putting it back** — the app saves your radio's original setting (per radio) before changing it, and restores it when you disable tracking or connect with tracking already off. If you uninstall the app while tracking is on, the setting stays as the app left it — you can change it back from any MeshCore app under the radio's contact settings.
+- **What changes** — your radio normally adds every device it hears an advert from. The app switches that off **for other people's devices only**; repeaters, room servers and sensors are still added automatically, exactly as you had them set.
+- **Team members are added for you** — when the radio declines an advert it hands the details to the app instead, and the app adds anyone who is sharing location on your tracking channel. Tracking and direct messages keep working without you doing anything.
+- **Everyone else is listed, not lost** — other devices appear under **Heard nearby** at the top of the Contacts tab, with **Add** and **Dismiss**. Dismissing hides that device until it is heard again. The list is capped, and entries disappear after 7 days.
+- **Putting it back** — the app saves your radio's original settings (per radio) before changing them, and restores them if you turn this off. If you uninstall the app first, the setting stays as the app left it; you can change it back from any MeshCore app under the radio's contact settings.
 
 #### Moving to a different radio
 

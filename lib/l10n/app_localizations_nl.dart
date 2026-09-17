@@ -2052,4 +2052,32 @@ class AppLocalizationsNl extends AppLocalizations {
   String importedWithSkipped(String imported, String skipped) {
     return '$imported (overgeslagen: $skipped)';
   }
+
+  @override
+  String heardNearby(int count) {
+    return 'In de buurt gehoord ($count)';
+  }
+
+  @override
+  String get heardNearbyExplanation =>
+      'Apparaten die je radio heeft gehoord maar niet heeft toegevoegd. Teamleden worden automatisch toegevoegd.';
+
+  @override
+  String get dismiss => 'Negeren';
+
+  @override
+  String contactAdded(String name) {
+    return '$name toegevoegd';
+  }
+
+  @override
+  String contactAddFailed(String name) {
+    return 'Kon $name niet toevoegen';
+  }
+
+  @override
+  String get roomServer => 'Kamerserver';
+
+  @override
+  String get sensor => 'Sensor';
 }

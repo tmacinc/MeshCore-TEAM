@@ -205,6 +205,31 @@ class PeerPositionHistory extends Table {
   IntColumn get pathLen => integer()();
 }
 
+/// Adverts the radio heard but did not store, so the user can add them by
+/// hand. The radio declines an advert when auto-add is off for that node
+/// type, when the advert came from further than the auto-add hop limit, or
+/// when its contact table is full — in every case it hands the whole contact
+/// record to the app instead (PUSH_NEW_ADVERT).
+///
+/// Team members are added automatically and never land here.
+@DataClassName('HeardAdvertData')
+class HeardAdverts extends Table {
+  BlobColumn get publicKey => blob()(); // 32-byte key (primary key)
+  TextColumn get name => text()();
+  IntColumn get advertType => integer()(); // ADV_TYPE_*: 1 chat, 2 repeater...
+  RealColumn get latitude => real().nullable()();
+  RealColumn get longitude => real().nullable()();
+  IntColumn get lastHeard => integer()(); // Unix timestamp ms
+  IntColumn get lastAdvertTimestamp => integer()(); // From the advert itself
+
+  /// When the user dismissed it. A newer advert clears this, so dismissing
+  /// silences the entry without hiding the node forever.
+  IntColumn get dismissedAt => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {publicKey};
+}
+
 /// ACK records table - tracks message acknowledgments
 /// Matches Android AckRecordEntity
 @DataClassName('AckRecordData')

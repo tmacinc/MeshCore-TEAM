@@ -2062,4 +2062,32 @@ class AppLocalizationsEs extends AppLocalizations {
   String importedWithSkipped(String imported, String skipped) {
     return '$imported (omitido: $skipped)';
   }
+
+  @override
+  String heardNearby(int count) {
+    return 'Detectados cerca ($count)';
+  }
+
+  @override
+  String get heardNearbyExplanation =>
+      'Dispositivos que tu radio ha oído pero no ha añadido. Los miembros del equipo se añaden automáticamente.';
+
+  @override
+  String get dismiss => 'Descartar';
+
+  @override
+  String contactAdded(String name) {
+    return '$name añadido';
+  }
+
+  @override
+  String contactAddFailed(String name) {
+    return 'No se pudo añadir a $name';
+  }
+
+  @override
+  String get roomServer => 'Servidor de sala';
+
+  @override
+  String get sensor => 'Sensor';
 }
