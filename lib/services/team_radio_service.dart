@@ -25,9 +25,10 @@ import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 /// **The radio stops auto-adding other people's devices.** In firmware,
 /// `manual_add_contacts` bit 0 clear means "store every advert you hear";
 /// setting it defers to per-type bits in `autoadd_config` (chat 0x02,
-/// repeater 0x04, room server 0x08, sensor 0x10). This clears only the chat
-/// bit, so infrastructure is still picked up automatically and the user's own
-/// choices for it are untouched.
+/// repeater 0x04, room server 0x08, sensor 0x10). Both prefs default to 0, so
+/// flipping the flag alone would stop a stock radio adding repeaters, room
+/// servers and sensors as well — those bits are set explicitly, leaving
+/// people as the only type that stops being added.
 ///
 /// Nothing is lost by that: team members are added in software from the
 /// PUSH_NEW_ADVERT the radio sends when it declines to store an advert, and
@@ -39,8 +40,18 @@ import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 /// step. Someone who stops using TEAM can turn auto-add back on from any
 /// MeshCore app. Documented for users in README §9.
 class TeamRadioService {
-  /// Auto-add config bits (firmware `AUTO_ADD_*`).
+  // Firmware AUTO_ADD_* bits (NodePrefs.autoadd_config). They are only
+  // consulted when manual_add_contacts bit 0 is set; with it clear the radio
+  // adds everything it hears, whatever these say.
+  static const int autoAddOverwriteOldestBit = 0x01;
   static const int autoAddChatBit = 0x02;
+  static const int autoAddRepeaterBit = 0x04;
+  static const int autoAddRoomServerBit = 0x08;
+  static const int autoAddSensorBit = 0x10;
+
+  /// Everything except other people's devices.
+  static const int autoAddInfrastructureBits =
+      autoAddRepeaterBit | autoAddRoomServerBit | autoAddSensorBit;
 
   /// Leave room for strangers the user may still want; never fill the table.
   static const double _contactTableBudget = 0.75;
@@ -120,7 +131,16 @@ class TeamRadioService {
   /// Turns chat auto-add off while tracking is on, and back on afterwards.
   /// The saved value is kept per radio, because it is the radio's setting and
   /// other MeshCore apps share it.
-  /// Turns the radio's blanket auto-add off for other people's devices.
+  /// Turns the radio's auto-add off for other people's devices, and leaves
+  /// everything else being added as before.
+  ///
+  /// The two firmware prefs interact: with `manual_add_contacts` clear the
+  /// radio adds every advert and ignores `autoadd_config` entirely. Both
+  /// default to 0, so simply setting the manual flag on a stock radio would
+  /// stop it adding repeaters, room servers and sensors too. Coming from that
+  /// state we therefore set their bits explicitly, so the only thing that
+  /// actually changes is people.
+  ///
   /// Idempotent: a radio already set that way is left alone, so reconnecting
   /// doesn't rewrite its settings.
   Future<void> _applyAutoAddPolicy() async {
@@ -133,19 +153,23 @@ class TeamRadioService {
       return;
     }
 
-    final alreadyManaged =
-        !selfInfo.autoAddsAllContacts && (config & autoAddChatBit) == 0;
-    if (alreadyManaged) return;
+    final addsEverything = selfInfo.autoAddsAllContacts;
+    final wantedConfig = addsEverything
+        // It was adding every type; keep doing that, minus people.
+        ? (config & autoAddOverwriteOldestBit) | autoAddInfrastructureBits
+        // Already per-type: keep the user's choices, minus people.
+        : config & ~autoAddChatBit;
 
-    if (selfInfo.autoAddsAllContacts) {
+    if (!addsEverything && wantedConfig == config) return;
+
+    if (addsEverything) {
       await _setOtherParams(selfInfo, manualAddContacts: 1);
     }
-    if ((config & autoAddChatBit) != 0) {
-      // Only the chat bit: repeater, room-server and sensor auto-add are the
-      // user's choice and stay as they were.
-      await _bleService.setAutoAddConfig(config & ~autoAddChatBit);
+    if (wantedConfig != config) {
+      await _bleService.setAutoAddConfig(wantedConfig);
     }
-    debugPrint('[TeamRadio] 🚫 Radio auto-add for people is now off');
+    debugPrint(
+        '[TeamRadio] 🚫 Radio auto-add for people off (config 0x${wantedConfig.toRadixString(16)})');
   }
 
   Future<void> _setOtherParams(

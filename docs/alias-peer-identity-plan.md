@@ -248,7 +248,7 @@ Verified in both upstream and tmacinc firmware (`BaseChatMesh::onAdvertRecv`, `M
 ### 6.5 Radio auto-add
 - **Turn off auto-add for chat nodes, on every connect**, so the radio stops filling up with strangers:
   - Set the manual-add flag.
-  - Clear only `AUTO_ADD_CHAT` in `autoadd_config`. Repeater, room-server and sensor auto-add stay as the user had them.
+  - `autoadd_config` is only consulted once the manual flag is set, and both prefs default to 0 — so on a stock radio the flag alone would stop repeaters, room servers and sensors being added as well. Coming from that state, set their bits explicitly (keeping `AUTO_ADD_OVERWRITE_OLDEST`); coming from a radio already in per-type mode, only clear `AUTO_ADD_CHAT`.
   - Idempotent: a radio already set that way is left alone.
 - **No restore, and nothing saved.** Managed contacts are how the app works, so there is no mode to leave and no saved state to get out of step (an earlier draft had a `manageRadioContacts` setting and saved originals; both are gone). Someone who stops using TEAM turns auto-add back on from any MeshCore app.
 - **`CMD_SET_OTHER_PARAMS` (38)** also overwrites `telemetry_mode_*`, `advert_loc_policy` and `multi_acks`.
