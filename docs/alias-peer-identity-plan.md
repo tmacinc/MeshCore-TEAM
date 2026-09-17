@@ -253,7 +253,10 @@ Verified in both upstream and tmacinc firmware (`BaseChatMesh::onAdvertRecv`, `M
 - **`CMD_SET_OTHER_PARAMS` (38)** also overwrites `telemetry_mode_*`, `advert_loc_policy` and `multi_acks`.
   - Parse them from `SELF_INFO` (bytes after lat/lon: `multi_acks`, `advert_loc_policy`, packed telemetry modes, `manual_add_contacts`).
   - Send them back unchanged.
-- **Consequence:** adverts heard while the phone is disconnected aren't saved. That's acceptable, because TELs aren't processed then either, so discovery resumes on reconnect.
+- **Consequences** (documented for users in README §9, and in `TeamRadioService`):
+  - Adverts heard while the phone is disconnected aren't saved. Acceptable: TELs aren't processed then either, so discovery resumes on reconnect.
+  - While tracking is on, a stranger's advert is declined by the radio and ignored by the app, so they appear nowhere. Before this they were added automatically. A "heard nearby" list closes this (§7.7).
+  - The restore runs when tracking is switched off, or on the next connect with tracking off. If the app is uninstalled mid-tracking, the radio keeps the app's setting.
 - **Open:** it currently always applies while tracking, with no setting. The toggle lands with the Phase 4 UI.
 
 ### 6.6 New radio

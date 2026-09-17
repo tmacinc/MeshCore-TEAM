@@ -17,18 +17,33 @@ import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 
 /// Prepares a radio for team use, and puts back what it changed.
 ///
-/// Two jobs, both triggered by connecting or by tracking being switched on:
+/// Both jobs run on connecting, and the auto-add policy also re-runs when
+/// tracking is switched on or off.
 ///
-/// - **Team contacts follow you to a new radio.** Team identity lives on the
-///   phone, so a radio that has never met the team can be given their
-///   contacts directly instead of waiting for everyone's next advert. One
-///   flood advert then tells the team about this radio, whose key they have
-///   never seen.
-/// - **The radio stops auto-adding every stranger it hears.** Team members
-///   are added in software from PUSH_NEW_ADVERT, so blanket auto-add only
-///   fills a limited contact table with passers-by. Only the chat bit is
-///   touched; repeater, room-server and sensor auto-add stay as the user set
-///   them, and everything is restored when tracking is switched off.
+/// **Team contacts follow you to a new radio.** Team identity lives on the
+/// phone, so a radio that has never met the team can be given their contacts
+/// directly instead of waiting for everyone's next advert. One flood advert
+/// then tells the team about this radio, whose key they have never seen.
+///
+/// **The radio stops auto-adding other people's devices while tracking.**
+/// In firmware, `manual_add_contacts` bit 0 clear means "store every advert
+/// you hear"; setting it defers to per-type bits in `autoadd_config`
+/// (chat 0x02, repeater 0x04, room server 0x08, sensor 0x10). This clears
+/// only the chat bit, so infrastructure is still picked up automatically and
+/// the user's own choices for it are untouched. Team members are still added,
+/// from the PUSH_NEW_ADVERT the radio sends when it declines to store one.
+///
+/// Two consequences, documented for users in README §9:
+/// - While tracking is on, a stranger's advert is declined by the radio and
+///   ignored by the app, so they appear nowhere. Before this they would have
+///   been added automatically. A "heard nearby" list would give them back.
+/// - The restore happens when tracking is switched off, or on the next
+///   connect with tracking already off. If the app is uninstalled while
+///   tracking is on, the radio keeps the app's setting until it is changed
+///   from some MeshCore app.
+///
+/// Both radio values are saved per radio before anything is changed, because
+/// they belong to the radio and every MeshCore app on it shares them.
 class TeamRadioService {
   /// Auto-add config bits (firmware `AUTO_ADD_*`).
   static const int autoAddChatBit = 0x02;

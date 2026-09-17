@@ -393,12 +393,31 @@ When tracking is enabled, the app broadcasts your position on the selected chann
 
 #### Automatic contact discovery
 
-Contact discovery works in two directions, so new members appear on everyone's map without manually exchanging keys:
+Contact discovery works in both directions, so new members appear on everyone's map without manually exchanging keys:
 
-- **Announcing yourself** — when a telemetry packet arrives on the private channel from a sender you don't yet have as a contact, the app broadcasts a flood (multi-hop) self-advert. That advert propagates across the mesh so every radio that hears it — including the unknown sender's — can add you.
-- **Learning about others** — whenever your companion radio receives an advert, the app runs a contact sync (incremental first, falling back to a full sync) to pull in the new or updated contact. It deliberately does **not** reply with a reciprocal advert; answering every advert with another advert would flood the mesh with duplicate traffic.
+- **Announcing yourself** — when a telemetry packet arrives on the tracking channel from a sender you don't have as a contact, the app broadcasts a flood (multi-hop) self-advert. Every radio that hears it, including that sender's, can add you.
+- **Asking them to announce themselves** — your own advert only tells them about you. If the sender stays unidentified, the app sends them a short request instead, and their app replies with one advert. This covers the cases your advert can't: a member who already has you, a one-way radio link, and someone who kept their radio name after switching radios.
+- The app alternates between the two on each packet it receives, so discovery still costs one packet per packet, with a few seconds of random delay so everyone doesn't transmit at once. It keeps trying until the sender is identified or stops transmitting.
+- **Learning about others** — whenever your radio receives an advert, the app runs a contact sync (incremental first, falling back to a full sync) to pull in the new or updated contact. It deliberately does **not** answer an advert with another advert; that would flood the mesh with duplicate traffic.
 
-This works network-wide — new members should be validated and appear on the map after a couple of telemetry intervals.
+This works network-wide — new members should appear on the map after a couple of telemetry intervals.
+
+#### Contact handling while tracking is on
+
+To keep your radio's contact list from filling up with strangers, the app changes one radio setting while tracking is enabled, and puts it back when you turn tracking off.
+
+- **What changes** — your radio normally stores every device it hears an advert from. While tracking is on, the app switches off automatic adding **for other people's devices only**. Repeaters, room servers and sensors are still added automatically, exactly as you had them set.
+- **Team members are added anyway** — when the radio declines to store an advert it hands the details to the app instead, and the app adds the ones that belong to your team, so tracking and direct messages keep working.
+- **What this means for you** — while tracking is on, people outside your team who advertise nearby will **not** appear in your contacts on their own. Turn tracking off if you want to pick up everyone in the area again.
+- **Putting it back** — the app saves your radio's original setting (per radio) before changing it, and restores it when you disable tracking or connect with tracking already off. If you uninstall the app while tracking is on, the setting stays as the app left it — you can change it back from any MeshCore app under the radio's contact settings.
+
+#### Moving to a different radio
+
+Your team is remembered by the app, not by the radio, so pairing a new radio doesn't cost you the group:
+
+- Team members' contacts are copied onto the new radio automatically, as long as it has room (the app leaves part of the table free for other contacts).
+- The app then sends one advert, because the team has never seen this radio's key and their contact for you still points at the old one.
+- Team channels, team chat history and everyone's last known position stay on the phone.
 
 ### 10) App settings (appearance, theme, and device options)
 
