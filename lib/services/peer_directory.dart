@@ -27,6 +27,18 @@ enum PeerResolutionState {
   ambiguous,
 }
 
+/// Result of recording a `#CAP:` message.
+class CapabilityOutcome {
+  final PeerData peer;
+
+  /// True when this radio name now belongs to a different radio key than the
+  /// one we had, i.e. they switched radios. Our self-advert doesn't help
+  /// there, so the caller asks them to advertise instead.
+  final bool keyMismatch;
+
+  const CapabilityOutcome(this.peer, {required this.keyMismatch});
+}
+
 class PeerResolution {
   final PeerData peer;
   final PeerResolutionState state;
@@ -206,15 +218,79 @@ class PeerDirectory extends ChangeNotifier {
     });
   }
 
-  /// Stores the capability flags from a `#CAP:` message.
-  Future<void> recordCapability(PeerData peer, CapabilityMessage cap) async {
-    await _update(
-      peer.id,
-      PeersCompanion(
-        capFlags: Value(cap.flags),
-        capObservedAt: Value(DateTime.now().millisecondsSinceEpoch),
-      ),
-    );
+  /// The peer whose radio key starts with [keyPrefix] (12 hex chars).
+  PeerData? byRadioKeyPrefix(String keyPrefix) {
+    final wanted = keyPrefix.toLowerCase();
+    for (final p in _byId.values) {
+      final key = p.radioPublicKey;
+      if (key != null) {
+        if (_hex(key.take(6)) == wanted) return p;
+      } else if (p.radioKeyPrefix == wanted) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  /// Stores what a `#CAP:` message says about its sender: capability flags,
+  /// and from v2 the alias and radio key prefix.
+  ///
+  /// The key prefix is what makes CAP more than flags. It binds the alias to a
+  /// radio rather than to a name, so it can merge two records that turn out to
+  /// be one person, and it reveals when a known name is now a different radio.
+  Future<CapabilityOutcome> recordCapability(
+      PeerData peer, CapabilityMessage cap) {
+    return _serialized(() async {
+      var target = peer;
+      var keyMismatch = false;
+      final capPrefix = cap.radioKeyPrefix;
+
+      if (capPrefix != null) {
+        final byPrefix = byRadioKeyPrefix(capPrefix);
+        if (byPrefix != null && byPrefix.id != target.id) {
+          // Same person, two records: keep the one that has the radio key.
+          final keep =
+              byPrefix.radioPublicKey != null ? byPrefix : target;
+          final drop = keep.id == byPrefix.id ? target : byPrefix;
+          debugPrint(
+              '[Peers] 🔀 Merging peer ${drop.id} into ${keep.id} (CAP key prefix)');
+          target = await _merge(keep: keep, drop: drop);
+        } else if (target.radioPublicKey != null) {
+          keyMismatch = _hex(target.radioPublicKey!.take(6)) != capPrefix;
+        } else if (target.radioKeyPrefix != capPrefix) {
+          target = await _update(
+              target.id, PeersCompanion(radioKeyPrefix: Value(capPrefix)));
+        }
+      }
+
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final alias = cap.alias?.trim();
+      target = await _update(
+        target.id,
+        PeersCompanion(
+          capFlags: Value(cap.flags),
+          capObservedAt: Value(nowMs),
+          // v1 carries no alias, so it must not clear one we already have.
+          alias: alias == null
+              ? const Value.absent()
+              : Value(alias.isEmpty ? null : alias),
+          aliasUpdatedAt:
+              alias == null ? const Value.absent() : Value(nowMs),
+        ),
+      );
+
+      return CapabilityOutcome(target, keyMismatch: keyMismatch);
+    });
+  }
+
+  Future<PeerData> _merge(
+      {required PeerData keep, required PeerData drop}) async {
+    await _dao.mergePeers(keepId: keep.id, dropId: drop.id);
+    _byId.remove(drop.id);
+    final merged = (await _dao.getPeer(keep.id))!;
+    _byId[keep.id] = merged;
+    notifyListeners();
+    return merged;
   }
 
   // --- Radio contact tracking ---

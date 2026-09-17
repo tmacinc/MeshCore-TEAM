@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:math' show Random;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart' as latlong2;
@@ -111,6 +112,16 @@ class MessageRepository {
   /// Stream of parsed #T: topology events. Each emission corresponds to one
   /// successfully parsed topology channel message after de-duplication.
   Stream<TopologyEvent> get topologyStream => _topologyStreamController.stream;
+
+  final StreamController<CapabilityRequest> _capabilityRequestController =
+      StreamController<CapabilityRequest>.broadcast();
+
+  /// Stream of `#CAP:R:` advert requests heard on a team channel. The
+  /// capability publisher answers the ones aimed at this radio.
+  Stream<CapabilityRequest> get capabilityRequestStream =>
+      _capabilityRequestController.stream;
+
+  final Random _random = Random();
 
   MessageRepository({
     required BleConnectionManager bleManager,
@@ -295,7 +306,8 @@ class MessageRepository {
       // PUSH_ADVERT, this only syncs contacts — it never sends a self-advert.
       if (responseCode == BleConstants.pushCodeNewAdvert) {
         debugPrint(
-            '[🔍DISC] 📣 PUSH_NEW_ADVERT received - syncing contacts...');
+            '[🔍DISC] 📣 PUSH_NEW_ADVERT received - radio did not store it');
+        unawaited(_handleNewAdvertPush(frame));
         unawaited(() async {
           try {
             await Future<void>.delayed(const Duration(milliseconds: 500));
@@ -730,6 +742,17 @@ class MessageRepository {
 
       debugPrint(
           '[MessageSync] 📩 Channel message from \'$senderName\': \'$messageContent\'');
+
+      // Advert requests ask one node to identify itself. Not stored in chat.
+      if (CapabilityRequest.isRequest(messageContent)) {
+        final request = CapabilityRequest.parse(messageContent);
+        if (request != null) {
+          debugPrint(
+              '[Discovery] 📡 Advert request from \'$senderName\': $request');
+          _capabilityRequestController.add(request);
+        }
+        return;
+      }
 
       // Peer capability messages update per-contact capability state.
       // Do not store in chat.
@@ -1349,8 +1372,22 @@ class MessageRepository {
       logTag: 'Capability',
     );
     if (sender == null) return;
-    await _peers.recordCapability(sender.resolution.peer, msg);
+
+    final outcome = await _peers.recordCapability(sender.resolution.peer, msg);
     debugPrint('[Capability] ✅ Stored capability for "$senderName": $msg');
+
+    if (outcome.keyMismatch && _isTrackingChannel(sender.channel)) {
+      // Same name, different radio: our own advert wouldn't help them, so ask
+      // them to advertise and give us the new key.
+      debugPrint(
+          '[Discovery] 🔑 "$senderName" is using a different radio than we have');
+      _scheduleDiscovery(
+        senderName: senderName,
+        channel: sender.channel,
+        peer: outcome.peer,
+        forceRequest: true,
+      );
+    }
   }
 
   /// Resolves the sender of team traffic (#TEL, #T:, #CAP).
@@ -1398,9 +1435,16 @@ class MessageRepository {
 
     if (!resolution.isOnRadio && _isTrackingChannel(channel)) {
       debugPrint(
-          '[$logTag] 📍 Sender \'$senderName\' not on radio (${resolution.state.name}) - triggering SEND_SELF_ADVERT');
-      await _bleService.sendSelfAdvert();
+          '[$logTag] 📍 Sender \'$senderName\' not on radio (${resolution.state.name})');
+      _scheduleDiscovery(
+        senderName: senderName,
+        channel: channel,
+        peer: resolution.peer,
+      );
+    } else if (resolution.isOnRadio) {
+      _discovery.remove(senderName)?.timer?.cancel();
     }
+    _pruneDiscovery();
 
     return _TeamSender(resolution, channel, companionKey);
   }
@@ -2037,11 +2081,134 @@ class MessageRepository {
     );
   }
 
+  // --- Discovery ---
+
+  /// How long after a sender's last packet we stop trying to identify them.
+  /// Matches the forwarding staleness window: once they stop transmitting,
+  /// there is nothing to resolve.
+  static const Duration _discoveryStaleAfter = Duration(minutes: 5);
+
+  /// Spread applied to discovery replies. Everyone who can't resolve a sender
+  /// hears the same packet at the same instant; replying immediately would
+  /// collide. It is not a backoff — the next packet retries straight away.
+  static const Duration _discoveryJitter = Duration(seconds: 3);
+
+  final Map<String, _DiscoveryAttempt> _discovery = {};
+
+  /// Tries to identify an unresolved sender, one packet per packet received.
+  ///
+  /// Alternates between the two halves of discovery:
+  /// - our own flood advert, so they can add us;
+  /// - a `#CAP:R:` request, so they advertise and we can add them.
+  ///
+  /// [forceRequest] skips straight to the request: used when a known radio
+  /// name turns up with a different key (they switched radios), where our own
+  /// advert tells them nothing new.
+  void _scheduleDiscovery({
+    required String senderName,
+    required ChannelData channel,
+    required PeerData peer,
+    bool forceRequest = false,
+  }) {
+    final now = DateTime.now();
+    final attempt = _discovery[senderName];
+
+    if (attempt?.timer?.isActive ?? false) return;
+
+    // A sender who went quiet and came back starts over.
+    final stale = attempt == null ||
+        now.difference(attempt.lastHeard) > _discoveryStaleAfter;
+    final count = stale ? 0 : attempt.count;
+
+    final sendRequest = forceRequest || count.isOdd;
+    final next = _DiscoveryAttempt(count: count + 1, lastHeard: now);
+    _discovery[senderName] = next;
+
+    next.timer = Timer(
+      Duration(milliseconds: _random.nextInt(_discoveryJitter.inMilliseconds)),
+      () async {
+        if (sendRequest) {
+          final request = CapabilityRequest(
+            targetRadioName: senderName,
+            targetKeyPrefix: peer.radioPublicKey == null
+                ? null
+                : _bytesToHex(
+                    Uint8List.fromList(peer.radioPublicKey!.take(6).toList())),
+          );
+          debugPrint(
+              '[Discovery] 📣 Asking "$senderName" to advertise: ${request.encode()}');
+          await _bleService.sendChannelMessage(
+              channel.channelIndex, request.encode());
+        } else {
+          debugPrint(
+              '[Discovery] 📤 Advertising ourselves for "$senderName"');
+          await _bleService.sendSelfAdvert();
+        }
+      },
+    );
+  }
+
+  /// Drops discovery state for senders that have gone quiet.
+  void _pruneDiscovery() {
+    final now = DateTime.now();
+    _discovery.removeWhere((_, attempt) {
+      final expired =
+          now.difference(attempt.lastHeard) > _discoveryStaleAfter * 2;
+      if (expired) attempt.timer?.cancel();
+      return expired;
+    });
+  }
+
+  /// Handles PUSH_NEW_ADVERT (0x8A): an advert the radio did NOT store,
+  /// because it is in manual-add mode, the advert came from too far, or the
+  /// contact table is full. The push carries the whole contact record, so the
+  /// contact can be added in software — but only for people we actually want:
+  /// a peer we already know by key, or a sender we are currently trying to
+  /// identify. Everyone else's advert is ignored, which is what manual-add
+  /// mode is for.
+  Future<void> _handleNewAdvertPush(Uint8List frame) async {
+    final contact = BleResponseParser.parseContactRecord(frame);
+    if (contact == null) return;
+
+    final known = _peers.byRadioKey(contact.publicKey);
+    final wanted = known != null && known.isTeamMember ||
+        _discovery.containsKey(contact.name);
+
+    if (!wanted) {
+      debugPrint(
+          '[Discovery] ⏭️ Ignoring unstored advert from "${contact.name}" (not a team member)');
+      return;
+    }
+
+    debugPrint(
+        '[Discovery] ➕ Adding "${contact.name}" from an unstored advert');
+    final ok = await _bleManager
+        .sendFrame(BleCommands.buildAddUpdateContactFromAdvert(frame));
+    if (!ok) {
+      debugPrint('[Discovery] ❌ Failed to add contact "${contact.name}"');
+      return;
+    }
+
+    _discovery.remove(contact.name)?.timer?.cancel();
+
+    // Pull the contact back so the peer picks up its key and route.
+    final companionKey = _settingsService.settings.currentCompanionPublicKey;
+    final since = (companionKey != null && companionKey.isNotEmpty)
+        ? _settingsService.getContactLastmod(companionKey)
+        : 0;
+    await _contactRepository.syncContactsComplete(since: since);
+  }
+
   /// Dispose resources
   void dispose() {
     stopPushListener();
+    for (final attempt in _discovery.values) {
+      attempt.timer?.cancel();
+    }
+    _discovery.clear();
     _telemetryStreamController.close();
     _topologyStreamController.close();
+    _capabilityRequestController.close();
   }
 }
 
@@ -2086,4 +2253,13 @@ class _TeamSender {
   final String companionKey;
 
   const _TeamSender(this.resolution, this.channel, this.companionKey);
+}
+
+/// One in-flight attempt to identify a sender we can't resolve.
+class _DiscoveryAttempt {
+  final int count;
+  final DateTime lastHeard;
+  Timer? timer;
+
+  _DiscoveryAttempt({required this.count, required this.lastHeard});
 }

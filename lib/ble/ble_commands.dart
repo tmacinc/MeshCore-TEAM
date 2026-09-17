@@ -189,6 +189,21 @@ class BleCommands {
   /// lastSeen: Last seen timestamp in milliseconds
   /// Format: [cmd][32-pubkey][type][flags][path_len][64-path][32-name][4-timestamp][4-lat][4-lon][4-lastmod]
   /// Total: 148 bytes
+  /// Turns a PUSH_NEW_ADVERT (0x8A) frame into CMD_ADD_UPDATE_CONTACT.
+  ///
+  /// The firmware sends that push only when it did NOT store the contact
+  /// (manual-add mode, past the auto-add hop limit, or a full contact table),
+  /// and its payload is byte-identical to the add-contact command from byte 1
+  /// on: pubkey, type, flags, out_path_len, out_path, name, last_advert,
+  /// lat, lon, lastmod. So adding the contact in software is the same bytes
+  /// with a different opcode, which keeps the radio's own values (including
+  /// the unknown/flood path) exactly as the advert delivered them.
+  static Uint8List buildAddUpdateContactFromAdvert(Uint8List pushFrame) {
+    final frame = Uint8List.fromList(pushFrame);
+    frame[0] = BleConstants.cmdAddUpdateContact;
+    return frame;
+  }
+
   static Uint8List buildAddUpdateContact({
     required List<int> publicKey,
     required String name,

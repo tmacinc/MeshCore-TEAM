@@ -30,6 +30,14 @@ class AppSettings {
   final bool telemetryEnabled;
   final String? telemetryChannelHash;
   final String? telemetryChannelName;
+
+  /// In-app team name, broadcast in #CAP: on the tracking channel and visible
+  /// only to members of it. Null or empty means "use the radio name", which
+  /// everyone on the mesh can see anyway.
+  final String? teamAlias;
+
+  /// The team-name prompt has been shown once (whether skipped or saved).
+  final bool teamAliasPrompted;
   final int telemetryIntervalSeconds; // 30-180s
   final int telemetryMinDistanceMeters; // 50-500m
 
@@ -79,6 +87,8 @@ class AppSettings {
     this.telemetryEnabled = false,
     this.telemetryChannelHash,
     this.telemetryChannelName,
+    this.teamAlias,
+    this.teamAliasPrompted = false,
     this.telemetryIntervalSeconds = 60,
     this.telemetryMinDistanceMeters = 100,
     this.notificationsEnabled = true,
@@ -115,6 +125,9 @@ class AppSettings {
     bool? telemetryEnabled,
     String? telemetryChannelHash,
     String? telemetryChannelName,
+    String? teamAlias,
+    bool clearTeamAlias = false,
+    bool? teamAliasPrompted,
     int? telemetryIntervalSeconds,
     int? telemetryMinDistanceMeters,
     bool? notificationsEnabled,
@@ -151,6 +164,8 @@ class AppSettings {
       telemetryEnabled: telemetryEnabled ?? this.telemetryEnabled,
       telemetryChannelHash: telemetryChannelHash ?? this.telemetryChannelHash,
       telemetryChannelName: telemetryChannelName ?? this.telemetryChannelName,
+      teamAlias: clearTeamAlias ? null : (teamAlias ?? this.teamAlias),
+      teamAliasPrompted: teamAliasPrompted ?? this.teamAliasPrompted,
       telemetryIntervalSeconds:
           telemetryIntervalSeconds ?? this.telemetryIntervalSeconds,
       telemetryMinDistanceMeters:

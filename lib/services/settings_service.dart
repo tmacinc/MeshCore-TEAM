@@ -14,6 +14,8 @@ class SettingsService extends ChangeNotifier {
   static const String _keyTelemetryEnabled = 'telemetry_enabled';
   static const String _keyTelemetryChannelHash = 'telemetry_channel_hash';
   static const String _keyTelemetryChannelName = 'telemetry_channel_name';
+  static const String _keyTeamAlias = 'team_alias';
+  static const String _keyTeamAliasPrompted = 'team_alias_prompted';
   static const String _keyTelemetryIntervalSeconds =
       'telemetry_interval_seconds';
   static const String _keyTelemetryMinDistanceMeters =
@@ -151,6 +153,8 @@ class SettingsService extends ChangeNotifier {
       telemetryEnabled: _prefs.getBool(_keyTelemetryEnabled) ?? false,
       telemetryChannelHash: telemetryChannelHash,
       telemetryChannelName: telemetryChannelName,
+      teamAlias: _prefs.getString(_keyTeamAlias),
+      teamAliasPrompted: _prefs.getBool(_keyTeamAliasPrompted) ?? false,
       telemetryIntervalSeconds:
           _prefs.getInt(_keyTelemetryIntervalSeconds) ?? 60,
       telemetryMinDistanceMeters:
@@ -240,6 +244,26 @@ class SettingsService extends ChangeNotifier {
       telemetryChannelName:
           hash == null ? null : _settings.telemetryChannelName,
     );
+    notifyListeners();
+  }
+
+  /// Sets the in-app team name. An empty value clears it, which means the
+  /// radio name is shown instead.
+  Future<void> setTeamAlias(String? alias) async {
+    final trimmed = alias?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      await _prefs.remove(_keyTeamAlias);
+      _settings = _settings.copyWith(clearTeamAlias: true);
+    } else {
+      await _prefs.setString(_keyTeamAlias, trimmed);
+      _settings = _settings.copyWith(teamAlias: trimmed);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setTeamAliasPrompted(bool prompted) async {
+    await _prefs.setBool(_keyTeamAliasPrompted, prompted);
+    _settings = _settings.copyWith(teamAliasPrompted: prompted);
     notifyListeners();
   }
 

@@ -296,6 +296,7 @@ Future<void> _runAppStartup() async {
       bleService: bleService,
       contactsDao: database.contactsDao,
       channelsDao: database.channelsDao,
+      messageRepository: messageRepository,
     )..start();
 
     // Startup reconnect behavior:

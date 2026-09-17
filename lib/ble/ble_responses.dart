@@ -392,6 +392,21 @@ class BleResponseParser {
     );
   }
 
+  /// Parses a contact record that arrived as something other than
+  /// RESP_CODE_CONTACT — currently PUSH_NEW_ADVERT (0x8A), which carries the
+  /// same layout. Returns null if the frame is too short or malformed.
+  static ContactResponse? parseContactRecord(Uint8List frame) {
+    if (frame.length < 1 + 32 + 3 + 64 + 32 + 4) return null;
+    try {
+      final reader = BufferReader(frame);
+      reader.readByte(); // response/push code
+      return _parseContact(reader);
+    } catch (e) {
+      debugPrint('[Parser] ❌ Failed to parse contact record: $e');
+      return null;
+    }
+  }
+
   static ContactResponse _parseContact(BufferReader reader) {
     // Bytes 1-32: Public key
     final publicKey = reader.readBytes(32);

@@ -13,6 +13,7 @@ import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meshcore_team/database/database.dart';
+import 'package:meshcore_team/models/capability_message.dart';
 import 'package:meshcore_team/services/peer_directory.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +25,9 @@ const int _trackingChannelHash = 0xABCD;
 
 Uint8List _key(int seed) =>
     Uint8List.fromList(List.generate(32, (i) => (seed + i) & 0xFF));
+
+String _hexPrefix(Uint8List key) =>
+    key.take(6).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
 ContactData _contact(String name, int seed) => ContactData(
       publicKey: _key(seed),
@@ -167,6 +171,97 @@ void main() {
       expect(after.peer.id, before.peer.id);
       expect(after.peer.radioName, 'Ghost');
       expect(peers.all.length, 1);
+    });
+  });
+
+  group('recordCapability', () {
+    test('stores flags and the alias from a v2 message', () async {
+      final resolution = await resolve('Scout');
+
+      final outcome = await peers.recordCapability(
+        resolution.peer,
+        CapabilityMessage.fromLocalState(
+          supportsForwarding: true,
+          radioKeyPrefix: '000102030405',
+          alias: 'Bravo 2',
+        ),
+      );
+
+      expect(outcome.keyMismatch, isFalse);
+      expect(outcome.peer.alias, 'Bravo 2');
+      expect(outcome.peer.capFlags, isNotNull);
+      expect(outcome.peer.radioKeyPrefix, '000102030405');
+      expect(peers.displayName(outcome.peer), 'Bravo 2');
+    });
+
+    test('a v1 message does not clear an alias we already have', () async {
+      final resolution = await resolve('Scout');
+      await peers.recordCapability(
+        resolution.peer,
+        CapabilityMessage.fromLocalState(alias: 'Bravo 2'),
+      );
+
+      final outcome = await peers.recordCapability(
+        peers.byId(resolution.peer.id)!,
+        const CapabilityMessage(version: 1, flags: 0x03),
+      );
+
+      expect(outcome.peer.alias, 'Bravo 2');
+      expect(outcome.peer.capFlags, 0x03);
+    });
+
+    test('an empty alias clears the stored one', () async {
+      final resolution = await resolve('Scout');
+      await peers.recordCapability(resolution.peer,
+          CapabilityMessage.fromLocalState(alias: 'Bravo 2'));
+
+      final outcome = await peers.recordCapability(
+        peers.byId(resolution.peer.id)!,
+        CapabilityMessage.fromLocalState(alias: ''),
+      );
+
+      expect(outcome.peer.alias, isNull);
+      expect(peers.displayName(outcome.peer), 'Scout');
+    });
+
+    test('a key prefix merges a placeholder into the peer holding that key',
+        () async {
+      // Known from the mesh under one name...
+      final onRadio = await resolve('Scout', contacts: [_contact('Scout', 1)]);
+      // ...and heard again under a name we can't resolve (e.g. renamed).
+      final placeholder = await resolve('Ghost');
+      expect(peers.all.length, 2);
+
+      final outcome = await peers.recordCapability(
+        placeholder.peer,
+        CapabilityMessage.fromLocalState(
+          radioKeyPrefix: _hexPrefix(_key(1)),
+          alias: 'Bravo 2',
+        ),
+      );
+
+      expect(peers.all.length, 1);
+      expect(outcome.peer.id, onRadio.peer.id);
+      expect(outcome.peer.radioPublicKey, _key(1));
+      expect(outcome.peer.alias, 'Bravo 2');
+    });
+
+    test('a different key under a known name is reported as a mismatch',
+        () async {
+      final resolution =
+          await resolve('Scout', contacts: [_contact('Scout', 1)]);
+
+      final outcome = await peers.recordCapability(
+        resolution.peer,
+        CapabilityMessage.fromLocalState(
+          radioKeyPrefix: 'ffffffffffff',
+          alias: 'Bravo 2',
+        ),
+      );
+
+      // They switched radios: the caller asks them to advertise.
+      expect(outcome.keyMismatch, isTrue);
+      expect(outcome.peer.radioPublicKey, _key(1));
     });
   });
 
