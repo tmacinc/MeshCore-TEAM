@@ -1,6 +1,6 @@
 # Team Alias, Peer Identity and Hybrid Sync — Plan
 
-Status: design approved in discussion (2026-09-17), not started. Phase 0 (two bug fixes) is committed as `2263fea`.
+Status: Phase 0 (`2263fea`) and Phase 1 (`d3d5426`) are committed on branch `PeerIdentity`; neither is device-tested yet. Phases 2-4 not started.
 Target branch: `dev`. Team Link (`D0sockets`) adopts this afterwards; its changes are in [Part B](#part-b--team-link-d0sockets-update-spec).
 
 ---
@@ -58,13 +58,13 @@ Target branch: `dev`. Team Link (`D0sockets`) adopts this afterwards; its change
 
 **`PeerPositionHistory`** replaces `ContactPositionHistories`
 - Keyed by `peerId`, with the same columns as today.
-- Kept for **24 hours**. Today nothing prunes position history at all.
+- Kept for **24 hours** (`RetentionService`). The trail was already thinned to 50 points per contact, but nothing pruned it by age.
 
 ### 3.2 Changed tables
 
 - **`Contacts`**
   - Stays a mirror of the current radio's contact list, still wiped on a radio switch.
-  - Add `peerId` (nullable). Team identity lives in `Peers`, so wiping contacts no longer loses anything that matters.
+  - No `peerId` column was added in the end: a contact is matched to its peer by public key, which can't go stale.
 - **`Channels`**
   - Add `isTeam`.
   - Add radio-presence tracking. **Use the same columns as `D0sockets`**, so the later merge converges: `firmwareConfirmed` (false = not on the current radio) and `isLocalOnly`.
@@ -374,7 +374,7 @@ Each phase can ship to beta on its own.
 | Phase | Scope | Main files |
 |---|---|---|
 | **0** ✅ | Hashtag tracking guard; exact-name matching | done (`2263fea`) |
-| **1** | Port `_reconcileSchema`, v12 migration, `Peers` / `PeerLocations` / `PeerPositionHistory`, `PeerDirectory`, handlers resolve to `peerId`, forwarding keyed by `peerId`, display via `displayName` (no alias yet, so it shows the radio name), retention pruning | `database/`, new `services/peer_directory.dart`, `message_repository.dart`, `forwarding/*`, `map_screen.dart`, `contacts_screen.dart`, `channel_chat_screen.dart`, `direct_message_screen.dart`, `message_notification_service.dart` |
+| **1** ✅ | Port `_reconcileSchema`, v12 migration, `Peers` / `PeerLocations` / `PeerPositionHistory`, `PeerDirectory`, handlers resolve to peers, forwarding keyed by radio key, display via `displayName` (no alias yet, so it shows the radio name), retention pruning. Done in `d3d5426`; also restricted the discovery self-advert to the tracking channel and team attribution to private channels, and fixed the forwarding debug screen's key-case mismatch | `database/`, new `services/peer_directory.dart`, `message_repository.dart`, `forwarding/*`, `map_screen.dart`, `contacts_screen.dart`, `channel_chat_screen.dart`, `direct_message_screen.dart`, `message_notification_service.dart` |
 | **2** | CAP v2 + request; per-sender discovery state; 0x8A software add; new add-contact frame builder; auto-add handling with `SELF_INFO` fields; new-radio sequence; periodic CAP | `capability_message.dart`, `capability_publisher.dart`, `message_repository.dart`, `ble_commands.dart`, `ble_responses.dart`, `connection_viewmodel.dart` |
 | **3** | Channel types, `isTeam`, hybrid sync, not-on-radio UI and prompt, delete rules, team-only filter, persistence across radio switches | `channel_repository.dart`, `channels_screen.dart`, `channel_chat_screen.dart`, `connection_viewmodel.dart` (`_clearCompanionSessionData`), `team_config_service.dart`, `settings_screen.dart` |
 | **4** | Alias setting, first-launch and upgrade prompt, radio-name wording, team badges, collision suffix, l10n ×7, `README.md` + `RELEASE_NOTES.md` | `main.dart`, `main_navigation_screen.dart`, `connection_screen.dart`, `settings_screen.dart`, `settings_service.dart`, `l10n/*.arb` |
