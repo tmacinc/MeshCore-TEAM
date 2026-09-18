@@ -9,8 +9,11 @@ import '../l10n/app_localizations.dart';
 
 /// True when the phone owns this channel but the connected radio doesn't
 /// hold it — after a radio switch, or when its slots were full.
+///
+/// Such channels are parked on negative sentinel slots. Slot 0 is real: it
+/// is the public channel, which is always on the radio.
 bool channelNeedsRadio(ChannelData channel) =>
-    !channel.firmwareConfirmed || channel.channelIndex <= 0;
+    !channel.firmwareConfirmed || channel.channelIndex < 0;
 
 /// Asks whether to put a channel the phone owns onto the connected radio.
 ///

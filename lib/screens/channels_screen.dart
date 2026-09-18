@@ -537,11 +537,16 @@ class ChannelListTile extends StatelessWidget {
     final mode = ChannelNotificationMode.fromString(channel.notificationMode);
     final isPublic = channel.isPublic;
 
+    // The sheet has grown (notifications, team switch, add to radio,
+    // delete) past the default bottom-sheet height on small screens, so it
+    // sizes to its content and scrolls when that is taller than the screen.
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) {
         return SafeArea(
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
@@ -623,6 +628,7 @@ class ChannelListTile extends StatelessWidget {
               ],
               const SizedBox(height: 8),
             ],
+          ),
           ),
         );
       },

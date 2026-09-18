@@ -6,12 +6,14 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/models/channel.dart';
+import 'package:meshcore_team/widgets/add_channel_to_radio.dart';
 
 ChannelData _channel({
   required String name,
   required Uint8List key,
   bool isPublic = false,
   int index = 1,
+  bool firmwareConfirmed = true,
 }) =>
     ChannelData(
       hash: 1,
@@ -24,7 +26,7 @@ ChannelData _channel({
       notificationMode: 'all',
       isFavorite: false,
       isTeam: false,
-      firmwareConfirmed: true,
+      firmwareConfirmed: firmwareConfirmed,
     );
 
 void main() {
@@ -52,6 +54,32 @@ void main() {
     test('the public channel can never be the tracking channel', () {
       final c = _channel(name: 'Public', key: secretKey, isPublic: true, index: 0);
       expect(c.canBeTrackingChannel, isFalse);
+    });
+  });
+
+  group('channelNeedsRadio', () {
+    // Regression: the public channel sits in slot 0 and was shown as
+    // "Not on this radio".
+    test('the public channel in slot 0 is on the radio', () {
+      final c = _channel(
+          name: 'Public', key: secretKey, isPublic: true, index: 0);
+      expect(channelNeedsRadio(c), isFalse);
+    });
+
+    test('a private channel in a real slot is on the radio', () {
+      expect(channelNeedsRadio(_channel(name: 'Team', key: secretKey)),
+          isFalse);
+    });
+
+    test('a channel parked on a sentinel slot needs the radio', () {
+      final c = _channel(name: 'Team', key: secretKey, index: -1);
+      expect(channelNeedsRadio(c), isTrue);
+    });
+
+    test('a channel the radio did not confirm needs the radio', () {
+      final c = _channel(
+          name: 'Team', key: secretKey, firmwareConfirmed: false);
+      expect(channelNeedsRadio(c), isTrue);
     });
   });
 }
