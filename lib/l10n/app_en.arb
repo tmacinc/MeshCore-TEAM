@@ -1420,5 +1420,7 @@
   "teamNameSettingsTitle": "Name (hidden outside your team)",
   "general": "General",
   "hideNonTeam": "Hide all but team channels and contacts",
-  "deleteChannelNeedsRadio": "This channel is stored on your radio. Connect to the radio to delete it."
+  "deleteChannelNeedsRadio": "This channel is stored on your radio. Connect to the radio to delete it.",
+  "trackingChannelPrompt": "Share your location on",
+  "trackingNeedsPrivateChannel": "Create a private channel first. Your location is only shared on a private channel."
 }

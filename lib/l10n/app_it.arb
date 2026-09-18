@@ -582,5 +582,7 @@
   "teamNameSettingsTitle": "Nome (nascosto fuori dal tuo team)",
   "general": "Generale",
   "hideNonTeam": "Mostra solo canali e contatti del team",
-  "deleteChannelNeedsRadio": "Questo canale è salvato sulla radio. Collegati alla radio per eliminarlo."
+  "deleteChannelNeedsRadio": "Questo canale è salvato sulla radio. Collegati alla radio per eliminarlo.",
+  "trackingChannelPrompt": "Condividi la posizione su",
+  "trackingNeedsPrivateChannel": "Crea prima un canale privato. La tua posizione viene condivisa solo su un canale privato."
 }

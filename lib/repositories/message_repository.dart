@@ -759,6 +759,15 @@ class MessageRepository {
           '[MessageSync] 📩 Channel message from \'$senderName\': \'$messageContent\'');
 
       // Advert requests ask one node to identify itself. Not stored in chat.
+      // The same channel message can arrive twice (push and sync); positions
+      // are already de-duplicated this way, and so are these now.
+      if (CapabilityMessage.isCapabilityMessage(messageContent) &&
+          _shouldSuppressTelemetryKey(
+              'cap:$senderName:${response.channelIndex}:${messageContent.hashCode}')) {
+        debugPrint('[Capability] 🔁 Duplicate #CAP suppressed');
+        return;
+      }
+
       if (CapabilityRequest.isRequest(messageContent)) {
         final request = CapabilityRequest.parse(messageContent);
         if (request != null) {
@@ -2145,6 +2154,14 @@ class MessageRepository {
     next.timer = Timer(
       Duration(milliseconds: _random.nextInt(_discoveryJitter.inMilliseconds)),
       () async {
+        // Resolution can land during the delay (their advert, or a contact
+        // sync); don't transmit for a sender we can already see.
+        if (await _isContactOnRadio(senderName)) {
+          debugPrint(
+              '[Discovery] ✅ "$senderName" resolved before sending; skipped');
+          _discovery.remove(senderName);
+          return;
+        }
         if (sendRequest) {
           final request = CapabilityRequest(
             targetRadioName: senderName,
@@ -2164,6 +2181,13 @@ class MessageRepository {
         }
       },
     );
+  }
+
+  Future<bool> _isContactOnRadio(String radioName) async {
+    final companionKey = _settingsService.settings.currentCompanionPublicKey;
+    if (companionKey == null || companionKey.isEmpty) return false;
+    final contacts = await _contactsDao.getContactsByCompanion(companionKey);
+    return contacts.any((c) => c.name == radioName);
   }
 
   /// Drops discovery state for senders that have gone quiet.

@@ -2157,4 +2157,11 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get deleteChannelNeedsRadio =>
       'Ce canal est enregistré sur votre radio. Connectez-vous à la radio pour le supprimer.';
+
+  @override
+  String get trackingChannelPrompt => 'Partager votre position sur';
+
+  @override
+  String get trackingNeedsPrivateChannel =>
+      'Créez d\'abord un canal privé. Votre position n\'est partagée que sur un canal privé.';
 }

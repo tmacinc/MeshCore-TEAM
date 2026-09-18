@@ -2130,4 +2130,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get deleteChannelNeedsRadio =>
       'Dieser Kanal ist auf deinem Funkgerät gespeichert. Verbinde dich mit dem Funkgerät, um ihn zu löschen.';
+
+  @override
+  String get trackingChannelPrompt => 'Standort teilen in';
+
+  @override
+  String get trackingNeedsPrivateChannel =>
+      'Erstelle zuerst einen privaten Kanal. Dein Standort wird nur in einem privaten Kanal geteilt.';
 }

@@ -1034,5 +1034,7 @@
   "teamNameSettingsTitle": "Name (außerhalb deines Teams verborgen)",
   "general": "Allgemein",
   "hideNonTeam": "Nur Team-Kanäle und -Kontakte anzeigen",
-  "deleteChannelNeedsRadio": "Dieser Kanal ist auf deinem Funkgerät gespeichert. Verbinde dich mit dem Funkgerät, um ihn zu löschen."
+  "deleteChannelNeedsRadio": "Dieser Kanal ist auf deinem Funkgerät gespeichert. Verbinde dich mit dem Funkgerät, um ihn zu löschen.",
+  "trackingChannelPrompt": "Standort teilen in",
+  "trackingNeedsPrivateChannel": "Erstelle zuerst einen privaten Kanal. Dein Standort wird nur in einem privaten Kanal geteilt."
 }

@@ -3605,6 +3605,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This channel is stored on your radio. Connect to the radio to delete it.'**
   String get deleteChannelNeedsRadio;
+
+  /// No description provided for @trackingChannelPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your location on'**
+  String get trackingChannelPrompt;
+
+  /// No description provided for @trackingNeedsPrivateChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a private channel first. Your location is only shared on a private channel.'**
+  String get trackingNeedsPrivateChannel;
 }
 
 class _AppLocalizationsDelegate

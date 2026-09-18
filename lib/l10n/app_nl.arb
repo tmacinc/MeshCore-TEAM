@@ -582,5 +582,7 @@
   "teamNameSettingsTitle": "Naam (verborgen buiten je team)",
   "general": "Algemeen",
   "hideNonTeam": "Alleen teamkanalen en -contacten tonen",
-  "deleteChannelNeedsRadio": "Dit kanaal staat op je radio. Maak verbinding met de radio om het te verwijderen."
+  "deleteChannelNeedsRadio": "Dit kanaal staat op je radio. Maak verbinding met de radio om het te verwijderen.",
+  "trackingChannelPrompt": "Je locatie delen op",
+  "trackingNeedsPrivateChannel": "Maak eerst een privékanaal. Je locatie wordt alleen op een privékanaal gedeeld."
 }

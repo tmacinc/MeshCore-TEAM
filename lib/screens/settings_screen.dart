@@ -14,6 +14,7 @@ import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/models/capability_message.dart';
 import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/widgets/add_channel_to_radio.dart';
+import 'package:meshcore_team/widgets/tracking_channel_chooser.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
@@ -486,7 +487,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: Text(l10n.locationTracking,
                 style: const TextStyle(fontWeight: FontWeight.w500)),
             value: s.telemetryEnabled,
-            onChanged: (v) => settings.setTelemetryEnabled(v),
+            onChanged: (v) async {
+              await settings.setTelemetryEnabled(v);
+              if (v && context.mounted) await ensureTrackingChannel(context);
+            },
           ),
           // Channel selection
           Padding(

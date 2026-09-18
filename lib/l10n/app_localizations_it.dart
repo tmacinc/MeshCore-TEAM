@@ -2149,4 +2149,11 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get deleteChannelNeedsRadio =>
       'Questo canale è salvato sulla radio. Collegati alla radio per eliminarlo.';
+
+  @override
+  String get trackingChannelPrompt => 'Condividi la posizione su';
+
+  @override
+  String get trackingNeedsPrivateChannel =>
+      'Crea prima un canale privato. La tua posizione viene condivisa solo su un canale privato.';
 }
