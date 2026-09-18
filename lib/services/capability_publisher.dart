@@ -259,6 +259,11 @@ class CapabilityPublisher {
           '[CapabilityPublisher] ⏭️ Skip publish ($trigger): channel is public or hashtag');
       return;
     }
+    if (!channel.isOnRadio) {
+      debugPrint(
+          '[CapabilityPublisher] ⏭️ Skip publish ($trigger): channel is not on this radio');
+      return;
+    }
 
     final caps = _connectionViewModel.deviceCapabilities;
     final appSettings = _settings.settings;

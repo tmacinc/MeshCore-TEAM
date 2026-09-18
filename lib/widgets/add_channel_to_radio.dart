@@ -4,6 +4,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:meshcore_team/database/database.dart';
+import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import '../l10n/app_localizations.dart';
 
@@ -12,8 +13,7 @@ import '../l10n/app_localizations.dart';
 ///
 /// Such channels are parked on negative sentinel slots. Slot 0 is real: it
 /// is the public channel, which is always on the radio.
-bool channelNeedsRadio(ChannelData channel) =>
-    !channel.firmwareConfirmed || channel.channelIndex < 0;
+bool channelNeedsRadio(ChannelData channel) => !channel.isOnRadio;
 
 /// Asks whether to put a channel the phone owns onto the connected radio.
 ///

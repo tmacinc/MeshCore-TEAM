@@ -153,4 +153,9 @@ extension ChannelDataKind on ChannelData {
   /// Location tracking may only use a private channel with a secret key:
   /// never the public channel and never a hashtag channel.
   bool get canBeTrackingChannel => !isPublic && !isHashtag;
+
+  /// Whether the connected radio holds this channel, so it can send and
+  /// receive on it. Channels the phone keeps without a radio slot are parked
+  /// on negative sentinel slots; slot 0 is real (the public channel).
+  bool get isOnRadio => firmwareConfirmed && channelIndex >= 0;
 }

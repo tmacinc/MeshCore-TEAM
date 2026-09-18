@@ -345,13 +345,7 @@ class ChannelRepository {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     if (_bleManager.isConnected && hasRadio) {
-      final existingChannels =
-          await _channelsDao.getChannelsByCompanion(companionKey);
-      final usedIndices = existingChannels
-          .where((c) => c.channelIndex > 0)
-          .map((c) => c.channelIndex)
-          .toSet();
-      final nextIndex = _nextAvailablePrivateIndex(usedIndices);
+      final nextIndex = await _findFreeSlotOnRadio(companionKey);
       if (nextIndex == null) throw StateError(maxReachedMessage);
 
       final result = await _registerChannelWithFirmware(
@@ -400,6 +394,58 @@ class ChannelRepository {
     final created = await _channelsDao.getChannelByHash(hash);
     if (created == null) throw StateError('Channel creation failed');
     return created;
+  }
+
+  /// Finds a slot that is empty on the radio itself.
+  ///
+  /// CMD_SET_CHANNEL overwrites a slot without asking, so trusting the
+  /// phone's saved view of the radio is not enough: if it were stale, adding
+  /// a channel would silently replace one of the radio's. Each candidate is
+  /// read back from the radio first; one that turns out to be taken is
+  /// skipped. Returns null when there is no free slot, and throws if the
+  /// radio doesn't answer, rather than write to a slot of unknown contents.
+  Future<int?> _findFreeSlotOnRadio(String? companionKey) async {
+    final known = companionKey == null || companionKey.isEmpty
+        ? await _channelsDao.getAllChannelsOnce()
+        : await _channelsDao.getChannelsByCompanion(companionKey);
+    final used = known
+        .where((c) => c.channelIndex > 0 && c.firmwareConfirmed)
+        .map((c) => c.channelIndex)
+        .toSet();
+
+    while (true) {
+      final candidate = _nextAvailablePrivateIndex(used);
+      if (candidate == null) return null;
+
+      final free = await _isSlotFreeOnRadio(candidate);
+      if (free == null) {
+        throw StateError(_l10n.failedToAddChannel);
+      }
+      if (free) return candidate;
+
+      debugPrint(
+          '[Channel] ⚠️ Slot $candidate is taken on the radio though the phone had it free; skipping');
+      used.add(candidate);
+    }
+  }
+
+  /// Reads one slot from the radio: true if empty, false if it holds a
+  /// channel, null if the radio didn't answer.
+  Future<bool?> _isSlotFreeOnRadio(int index) async {
+    final sub = _bleManager.receivedFrames.listen((frame) {
+      if (frame.isNotEmpty) _routeResponse(frame);
+    });
+    try {
+      final response = _waitForChannelOrError(index, timeoutMs: 2000);
+      if (!await _bleManager.sendFrame(BleCommands.buildGetChannel(index))) {
+        return null;
+      }
+      final result = await response;
+      if (result.isChannel) return result.channel!.name.isEmpty;
+      return null;
+    } finally {
+      await sub.cancel();
+    }
   }
 
   static bool _isHashtagKey(String name, Uint8List psk) {
@@ -544,15 +590,13 @@ class ChannelRepository {
     if (!_bleManager.isConnected) return AddChannelToRadioError.notConnected;
 
     final companionKey = _settingsService.settings.currentCompanionPublicKey;
-    final existing = companionKey == null || companionKey.isEmpty
-        ? await _channelsDao.getAllChannelsOnce()
-        : await _channelsDao.getChannelsByCompanion(companionKey);
 
-    final usedIndices = existing
-        .where((c) => c.channelIndex > 0 && c.hash != channel.hash)
-        .map((c) => c.channelIndex)
-        .toSet();
-    final index = _nextAvailablePrivateIndex(usedIndices);
+    final int? index;
+    try {
+      index = await _findFreeSlotOnRadio(companionKey);
+    } on StateError {
+      return AddChannelToRadioError.failed;
+    }
     if (index == null) return AddChannelToRadioError.noSlots;
 
     final result = await _registerChannelWithFirmware(

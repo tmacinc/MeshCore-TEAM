@@ -284,6 +284,13 @@ class TelemetrySendService extends ChangeNotifier {
       await _rejectIneligibleChannel(channel);
       return;
     }
+    if (!channel.isOnRadio) {
+      // Kept on the phone but not in a radio slot: there is no slot to send
+      // on. Tracking resumes once the channel is added to the radio.
+      debugPrint(
+          '[TelemetrySend] ⏭️ "${channel.name}" is not on this radio; not sending');
+      return;
+    }
 
     // Resolve topology data for current forwarding strategy.
     final strategyMode = _forwardingPolicy?.lastAppliedStrategy ??
@@ -479,6 +486,13 @@ class TelemetrySendService extends ChangeNotifier {
     }
     if (!channel.canBeTrackingChannel) {
       await _rejectIneligibleChannel(channel);
+      return;
+    }
+    if (!channel.isOnRadio) {
+      // Kept on the phone but not in a radio slot: there is no slot to send
+      // on. Tracking resumes once the channel is added to the radio.
+      debugPrint(
+          '[TelemetrySend] ⏭️ "${channel.name}" is not on this radio; not sending');
       return;
     }
 
