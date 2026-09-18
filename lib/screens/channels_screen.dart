@@ -736,7 +736,11 @@ class ChannelListTile extends StatelessWidget {
     final isTelemetryChannel =
         settings.telemetryEnabled && channel.hash == telemetryHashInt;
 
-    return Card(
+    // A channel the radio doesn't hold can be opened and read, not used:
+    // dim the whole row, which reads the same in every theme.
+    return Opacity(
+      opacity: channelNeedsRadio(channel) ? 0.5 : 1,
+      child: Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: GestureDetector(
         onLongPress: () => _showChannelOptions(context),
@@ -754,7 +758,11 @@ class ChannelListTile extends StatelessWidget {
                             : NightColors.surfaceHigh)
                         : (isPublic ? Colors.green : Colors.blue),
                 child: Icon(
-                  isPublic ? Icons.public : Icons.lock,
+                  channelNeedsRadio(channel)
+                      ? Icons.link_off
+                      : isPublic
+                          ? Icons.public
+                          : Icons.lock,
                   color: isNighttime ? NightColors.onSurface : Colors.white,
                 ),
               ),
@@ -791,10 +799,6 @@ class ChannelListTile extends StatelessWidget {
             style: TextStyle(
               fontWeight:
                   showBadge ? FontWeight.bold : FontWeight.normal,
-              // Dimmed while the radio doesn't hold it: readable, not usable.
-              color: channelNeedsRadio(channel)
-                  ? Theme.of(context).colorScheme.outline
-                  : null,
             ),
           ),
           subtitle: Column(
@@ -901,6 +905,7 @@ class ChannelListTile extends StatelessWidget {
           },
         ),
       ),
+    ),
     );
   }
 }
