@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:meshcore_team/ble/ble_commands.dart';
 import 'package:meshcore_team/ble/ble_connection_manager.dart';
+import 'package:meshcore_team/ble/ble_constants.dart';
 import 'package:meshcore_team/ble/ble_responses.dart';
 import 'package:meshcore_team/ble/ble_service.dart';
 import 'package:meshcore_team/database/daos/contacts_dao.dart';
@@ -106,18 +107,20 @@ class TeamRadioService {
     final companionKey = _settings.settings.currentCompanionPublicKey;
     if (companionKey == null || companionKey.isEmpty) return;
     if (_busy) return;
+    // SELF_INFO carries the radio's current settings; wait for it.
+    final selfInfo = _connectionViewModel.deviceCapabilities;
+    if (selfInfo == null) return;
+    if (_preparedCompanionKey == companionKey) return;
 
-    final firstPrepare = _preparedCompanionKey != companionKey;
     _preparedCompanionKey = companionKey;
-    unawaited(_prepare(companionKey, pushContacts: firstPrepare));
+    unawaited(_prepare(companionKey, selfInfo));
   }
 
-  Future<void> _prepare(String companionKey,
-      {required bool pushContacts}) async {
+  Future<void> _prepare(String companionKey, SelfInfoResponse selfInfo) async {
     _busy = true;
     try {
-      await _applyAutoAddPolicy();
-      if (pushContacts) await _pushTeamContacts(companionKey);
+      await _applyAutoAddPolicy(selfInfo);
+      await _pushTeamContacts(companionKey, selfInfo);
     } catch (e) {
       debugPrint('[TeamRadio] ⚠️ Setup failed: $e');
       _preparedCompanionKey = null;
@@ -128,9 +131,6 @@ class TeamRadioService {
 
   // --- Auto-add ---
 
-  /// Turns chat auto-add off while tracking is on, and back on afterwards.
-  /// The saved value is kept per radio, because it is the radio's setting and
-  /// other MeshCore apps share it.
   /// Turns the radio's auto-add off for other people's devices, and leaves
   /// everything else being added as before.
   ///
@@ -143,15 +143,16 @@ class TeamRadioService {
   ///
   /// Idempotent: a radio already set that way is left alone, so reconnecting
   /// doesn't rewrite its settings.
-  Future<void> _applyAutoAddPolicy() async {
-    final selfInfo = _bleService.selfInfo;
-    if (selfInfo == null) return;
-
-    final config = await _bleService.fetchAutoAddConfig();
-    if (config == null) {
-      debugPrint('[TeamRadio] ⏭️ Radio did not report its auto-add config');
+  Future<void> _applyAutoAddPolicy(SelfInfoResponse selfInfo) async {
+    final reply = await _request(BleCommands.buildGetAutoAddConfig(),
+        expect: BleConstants.respAutoAddConfig);
+    final parsed = reply == null ? null : BleResponseParser.parse(reply);
+    if (parsed is! AutoAddConfigResponse) {
+      debugPrint(
+          '[TeamRadio] ⚠️ Radio did not report its auto-add config; left as is');
       return;
     }
+    final config = parsed.autoAddConfig;
 
     final addsEverything = selfInfo.autoAddsAllContacts;
     final wantedConfig = addsEverything
@@ -160,42 +161,68 @@ class TeamRadioService {
         // Already per-type: keep the user's choices, minus people.
         : config & ~autoAddChatBit;
 
-    if (!addsEverything && wantedConfig == config) return;
-
-    if (addsEverything) {
-      await _setOtherParams(selfInfo, manualAddContacts: 1);
+    if (!addsEverything && wantedConfig == config) {
+      debugPrint(
+          '[TeamRadio] ✅ Radio auto-add for people already off (config 0x${config.toRadixString(16)})');
+      return;
     }
-    if (wantedConfig != config) {
-      await _bleService.setAutoAddConfig(wantedConfig);
+
+    // Per-type bits first: they only take effect once the manual flag is set,
+    // so the radio never passes through a state that drops infrastructure.
+    if (wantedConfig != config &&
+        !await _command(BleCommands.buildSetAutoAddConfig(wantedConfig))) {
+      debugPrint('[TeamRadio] ❌ Radio refused the auto-add config');
+      return;
+    }
+    if (addsEverything &&
+        !await _command(BleCommands.buildSetOtherParams(
+          manualAddContacts: 1,
+          // Sent back unchanged: the firmware rewrites all of them together.
+          telemetryModes: selfInfo.telemetryModes,
+          advertLocPolicy: selfInfo.advertLocPolicy,
+          multiAcks: selfInfo.multiAcks,
+        ))) {
+      debugPrint('[TeamRadio] ❌ Radio refused the manual-add setting');
+      return;
     }
     debugPrint(
-        '[TeamRadio] 🚫 Radio auto-add for people off (config 0x${wantedConfig.toRadixString(16)})');
+        '[TeamRadio] 🚫 Radio auto-add for people off (config 0x${config.toRadixString(16)} → 0x${wantedConfig.toRadixString(16)}, manual add was ${addsEverything ? 'off' : 'on'})');
   }
 
-  Future<void> _setOtherParams(
-    SelfInfoResponse selfInfo, {
-    required int manualAddContacts,
-  }) async {
-    await _bleManager.sendFrame(BleCommands.buildSetOtherParams(
-      manualAddContacts: manualAddContacts,
-      // Sent back unchanged: the firmware rewrites all of them together.
-      telemetryModes: selfInfo.telemetryModes,
-      advertLocPolicy: selfInfo.advertLocPolicy,
-      multiAcks: selfInfo.multiAcks,
-    ));
+  /// Sends [cmd] and returns the first frame whose code is [expect], or null
+  /// on RESP_ERR or timeout. Listens before sending so a fast reply isn't
+  /// missed.
+  Future<Uint8List?> _request(Uint8List cmd,
+      {required int expect, Duration timeout = const Duration(seconds: 3)}) async {
+    final reply = Completer<Uint8List?>();
+    final sub = _bleManager.receivedFrames.listen((frame) {
+      if (frame.isEmpty || reply.isCompleted) return;
+      if (frame[0] == expect) reply.complete(frame);
+      if (frame[0] == BleConstants.respErr) reply.complete(null);
+    });
+    try {
+      if (!await _bleManager.sendFrame(cmd)) return null;
+      return await reply.future.timeout(timeout, onTimeout: () => null);
+    } finally {
+      await sub.cancel();
+    }
   }
+
+  Future<bool> _command(Uint8List cmd) async =>
+      await _request(cmd, expect: BleConstants.respOk) != null;
 
   // --- Team contacts ---
 
-  Future<void> _pushTeamContacts(String companionKey) async {
+  Future<void> _pushTeamContacts(
+      String companionKey, SelfInfoResponse selfInfo) async {
     // Never the radio itself: after a radio swap, a teammate's old radio can
     // be the one this phone is now connected to.
-    final selfKey = _bleService.selfInfo?.publicKey;
+    final selfKey = selfInfo.publicKey;
     final teamPeers = _peers.all
         .where((p) =>
             p.isTeamMember &&
             p.radioPublicKey != null &&
-            !(selfKey != null && listEquals(p.radioPublicKey, selfKey)))
+            !listEquals(p.radioPublicKey, selfKey))
         .toList();
     if (teamPeers.isEmpty) return;
 

@@ -20,7 +20,6 @@ class BleService extends ChangeNotifier {
 
   StreamSubscription<Uint8List>? _frameSubscription;
   SelfInfoResponse? _selfInfo;
-  int? _autoAddConfig;
 
   // Getters
   BleConnectionState get connectionState => _connectionManager.state;
@@ -28,10 +27,6 @@ class BleService extends ChangeNotifier {
   String? get deviceName => _connectionManager.deviceName;
   String? get deviceAddress => _connectionManager.deviceAddress;
   SelfInfoResponse? get selfInfo => _selfInfo;
-
-  /// Per-type auto-add bits last read from the radio (see
-  /// [BleCommands.buildSetAutoAddConfig]). Null until read.
-  int? get autoAddConfig => _autoAddConfig;
 
   BleService({
     required BleConnectionManager connectionManager,
@@ -73,7 +68,6 @@ class BleService extends ChangeNotifier {
     await _frameSubscription?.cancel();
     _frameSubscription = null;
     _selfInfo = null;
-    _autoAddConfig = null;
     await _connectionManager.disconnect();
     notifyListeners();
   }
@@ -153,32 +147,6 @@ class BleService extends ChangeNotifier {
     debugPrint('📤 Syncing next message');
     final frame = BleCommands.buildSyncNextMessage();
     return await _connectionManager.sendFrame(frame);
-  }
-
-  /// Read the radio's per-type auto-add config, waiting for the response.
-  /// Returns null if the radio doesn't answer.
-  Future<int?> fetchAutoAddConfig(
-      {Duration timeout = const Duration(seconds: 2)}) async {
-    _autoAddConfig = null;
-    final sent =
-        await _connectionManager.sendFrame(BleCommands.buildGetAutoAddConfig());
-    if (!sent) return null;
-
-    final startTime = DateTime.now();
-    while (_autoAddConfig == null) {
-      if (DateTime.now().difference(startTime) > timeout) {
-        debugPrint('[BleService] ⌛ Timeout waiting for auto-add config');
-        return null;
-      }
-      await Future.delayed(const Duration(milliseconds: 50));
-    }
-    return _autoAddConfig;
-  }
-
-  Future<bool> setAutoAddConfig(int config) async {
-    debugPrint('📤 Setting auto-add config: 0x${config.toRadixString(16)}');
-    return _connectionManager
-        .sendFrame(BleCommands.buildSetAutoAddConfig(config));
   }
 
   /// Send SEND_SELF_ADVERT to trigger advertisement exchange / discovery.
@@ -268,10 +236,6 @@ class BleService extends ChangeNotifier {
         debugPrint('✅ Message sent');
       } else if (response is SendConfirmedPush) {
         await _handleSendConfirmed(response);
-      } else if (response is AutoAddConfigResponse) {
-        _autoAddConfig = response.autoAddConfig;
-        debugPrint(
-            '⚙️ Auto-add config: 0x${response.autoAddConfig.toRadixString(16)}');
       } else if (response is OkResponse) {
         debugPrint('✅ OK response received');
       }
