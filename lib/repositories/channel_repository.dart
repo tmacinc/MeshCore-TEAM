@@ -115,7 +115,50 @@ class ChannelRepository {
     required SettingsService settingsService,
   })  : _bleManager = bleManager,
         _channelsDao = channelsDao,
-        _settingsService = settingsService;
+        _settingsService = settingsService {
+    _settingsService.addListener(_onSettingsChanged);
+  }
+
+  bool _lastTrackingEnabled = false;
+  String? _lastTrackingHash;
+
+  /// The tracking rules live here rather than in the screens that change the
+  /// setting (the quick toggle and Settings), so they hold however tracking
+  /// is switched on.
+  void _onSettingsChanged() {
+    final s = _settingsService.settings;
+    if (s.telemetryEnabled == _lastTrackingEnabled &&
+        s.telemetryChannelHash == _lastTrackingHash) {
+      return;
+    }
+    _lastTrackingEnabled = s.telemetryEnabled;
+    _lastTrackingHash = s.telemetryChannelHash;
+    unawaited(_applyTrackingChannelRules());
+  }
+
+  /// Tracking switched on with no channel picks the only one it could use,
+  /// if there is exactly one; and whichever channel tracking uses is a team
+  /// channel.
+  Future<void> _applyTrackingChannelRules() async {
+    final s = _settingsService.settings;
+    final hash = s.telemetryChannelHash;
+    if (s.telemetryEnabled && (hash == null || hash.isEmpty)) {
+      final eligible = (await _channelsDao
+              .getVisibleChannels(s.currentCompanionPublicKey))
+          .where((c) => c.canBeTrackingChannel)
+          .toList();
+      if (eligible.length == 1) {
+        final only = eligible.single;
+        debugPrint(
+            '[Channel] 📍 Tracking on with no channel: using "${only.name}", the only one eligible');
+        await _settingsService
+            .setTelemetryChannelHash(only.hash.toRadixString(16).toLowerCase());
+        await _settingsService.setTelemetryChannelName(only.name);
+        return; // the change comes back through _onSettingsChanged
+      }
+    }
+    await markTrackingChannelAsTeam();
+  }
 
   /// Update maximum channel capacity based on device info.
   /// Matches Android behavior: maxPrivateChannels = maxChannels - 1 (index 0 reserved for Public)
@@ -1095,6 +1138,7 @@ class ChannelRepository {
 
   /// Dispose resources
   void dispose() {
+    _settingsService.removeListener(_onSettingsChanged);
     _frameSubscription?.cancel();
     _syncProgressController.close();
     _channelResponseController.close();

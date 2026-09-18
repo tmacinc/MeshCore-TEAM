@@ -507,39 +507,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         currentHash = null;
                       }
 
-                      return DropdownButtonFormField<String>(
-                        decoration: InputDecoration(labelText: l10n.channel),
-                        value: currentHash,
-                        items: [
-                          DropdownMenuItem<String>(
-                              value: null, child: Text(l10n.none)),
-                          for (final c in privateChannels)
-                            DropdownMenuItem<String>(
-                              value: c.hash.toRadixString(16).toLowerCase(),
-                              child: Text(c.name),
+                      ChannelData? selected;
+                      for (final c in privateChannels) {
+                        if (c.hash.toRadixString(16).toLowerCase() ==
+                            currentHash) {
+                          selected = c;
+                        }
+                      }
+
+                      // Choosing a channel only saves the setting. Marking it
+                      // as a team channel happens in ChannelRepository, and
+                      // adding it to the radio is the row below: doing either
+                      // from onChanged ran while the dropdown was still
+                      // closing, and tripped a framework assertion.
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          DropdownButtonFormField<String>(
+                            decoration:
+                                InputDecoration(labelText: l10n.channel),
+                            value: currentHash,
+                            items: [
+                              DropdownMenuItem<String>(
+                                  value: null, child: Text(l10n.none)),
+                              for (final c in privateChannels)
+                                DropdownMenuItem<String>(
+                                  value:
+                                      c.hash.toRadixString(16).toLowerCase(),
+                                  child: Text(c.name),
+                                ),
+                            ],
+                            onChanged: (v) async {
+                              await settings.setTelemetryChannelHash(v);
+                              final name = v == null
+                                  ? null
+                                  : _findChannelNameByHashHex(
+                                      privateChannels, v.toLowerCase());
+                              await settings.setTelemetryChannelName(name);
+                            },
+                          ),
+                          // Tracking can't send on a channel the radio
+                          // doesn't hold: say so where the choice is made.
+                          if (selected != null && channelNeedsRadio(selected))
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.warning_amber,
+                                  color: Colors.orange),
+                              title: Text(l10n.notOnRadio),
+                              subtitle: Text(l10n.addChannelToRadioExplanation),
+                              trailing: TextButton(
+                                onPressed: () => promptAddChannelToRadio(
+                                    context, selected!),
+                                child: Text(l10n.add),
+                              ),
                             ),
                         ],
-                        onChanged: (v) async {
-                          await settings.setTelemetryChannelHash(v);
-                          final name = v == null
-                              ? null
-                              : _findChannelNameByHashHex(
-                                  privateChannels, v.toLowerCase());
-                          await settings.setTelemetryChannelName(name);
-                          if (v == null || !context.mounted) return;
-
-                          // Tracking on a channel makes it a team channel, and
-                          // tracking needs the radio to hold it.
-                          final channel = privateChannels.firstWhere(
-                              (c) => c.hash.toRadixString(16).toLowerCase() == v);
-                          await context
-                              .read<ChannelRepository>()
-                              .setTeamChannel(channel, true);
-                          if (!context.mounted) return;
-                          if (channelNeedsRadio(channel)) {
-                            await promptAddChannelToRadio(context, channel);
-                          }
-                        },
                       );
                     },
                   )

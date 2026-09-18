@@ -94,11 +94,43 @@ class TelemetrySendService extends ChangeNotifier {
     _connectionViewModel.addListener(_onBatteryChanged);
     _forwardingPolicy?.addListener(_onForwardingPolicyChanged);
 
+    _watchTrackingChannel();
     _applyConfigAndMaybeStart();
   }
 
   void _onSettingsChanged() {
+    _watchTrackingChannel();
     _applyConfigAndMaybeStart();
+  }
+
+  StreamSubscription<ChannelData?>? _trackingChannelSub;
+  String? _watchedChannelHash;
+  bool? _trackingChannelOnRadio;
+
+  /// Sending is skipped while the tracking channel isn't on the radio. When
+  /// it is added (or lost), nothing about the settings or connection changes,
+  /// so without this the sender only noticed at some later, unrelated event.
+  void _watchTrackingChannel() {
+    final hashHex = _settings.settings.telemetryChannelHash;
+    if (hashHex == _watchedChannelHash) return;
+    _watchedChannelHash = hashHex;
+    _trackingChannelSub?.cancel();
+    _trackingChannelSub = null;
+    _trackingChannelOnRadio = null;
+
+    final hash = hashHex == null ? null : _tryParseChannelHash(hashHex);
+    if (hash == null) return;
+    _trackingChannelSub = _channelsDao.watchChannel(hash).listen((channel) {
+      final onRadio = channel?.isOnRadio;
+      final changed =
+          _trackingChannelOnRadio != null && onRadio != _trackingChannelOnRadio;
+      _trackingChannelOnRadio = onRadio;
+      if (changed) {
+        debugPrint(
+            '[TelemetrySend] 🔄 Tracking channel is ${onRadio == true ? 'now' : 'no longer'} on the radio');
+        _applyConfigAndMaybeStart();
+      }
+    });
   }
 
   void _onConnectionChanged() {
@@ -289,6 +321,11 @@ class TelemetrySendService extends ChangeNotifier {
       // on. Tracking resumes once the channel is added to the radio.
       debugPrint(
           '[TelemetrySend] ⏭️ "${channel.name}" is not on this radio; not sending');
+      try {
+        await _nativeTelemetryChannel.invokeMethod('stopNativeTelemetry');
+      } catch (e) {
+        debugPrint('[TelemetrySend] ⚠️ stopNativeTelemetry failed: $e');
+      }
       return;
     }
 
@@ -583,6 +620,7 @@ class TelemetrySendService extends ChangeNotifier {
   @override
   void dispose() {
     _stopInternal();
+    _trackingChannelSub?.cancel();
 
     if (_started) {
       _settings.removeListener(_onSettingsChanged);

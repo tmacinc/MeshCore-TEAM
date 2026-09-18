@@ -99,6 +99,8 @@ class CapabilityPublisher {
     _requestSub = _messageRepository.capabilityRequestStream
         .listen(_onCapabilityRequest);
 
+    _watchTrackingChannel();
+
     _schedulePeriodicPublish();
   }
 
@@ -110,6 +112,7 @@ class CapabilityPublisher {
     _contactsSub?.cancel();
     _companionKeySub?.cancel();
     _requestSub?.cancel();
+    _trackingChannelSub?.cancel();
 
     if (_started) {
       _settings.removeListener(_onSettingsOrCapabilityChanged);
@@ -120,7 +123,33 @@ class CapabilityPublisher {
   // --- Listeners ---
 
   void _onSettingsOrCapabilityChanged() {
+    _watchTrackingChannel();
     _scheduleChangePublish();
+  }
+
+  StreamSubscription<ChannelData?>? _trackingChannelSub;
+  String? _watchedChannelHash;
+  bool? _trackingChannelOnRadio;
+
+  /// Publishing is skipped while the tracking channel isn't on the radio, so
+  /// publish once it is added rather than waiting for the hourly refresh.
+  void _watchTrackingChannel() {
+    final hashHex = _settings.settings.telemetryChannelHash;
+    if (hashHex == _watchedChannelHash) return;
+    _watchedChannelHash = hashHex;
+    _trackingChannelSub?.cancel();
+    _trackingChannelSub = null;
+    _trackingChannelOnRadio = null;
+
+    final hash = parseTrackingChannelHash(hashHex);
+    if (hash == null) return;
+    _trackingChannelSub = _channelsDao.watchChannel(hash).listen((channel) {
+      final onRadio = channel?.isOnRadio;
+      final becameOnRadio =
+          _trackingChannelOnRadio == false && onRadio == true;
+      _trackingChannelOnRadio = onRadio;
+      if (becameOnRadio) _scheduleChangePublish();
+    });
   }
 
   void _switchCompanion(String? companionKey) {
