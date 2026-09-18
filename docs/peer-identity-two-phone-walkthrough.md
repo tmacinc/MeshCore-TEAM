@@ -71,8 +71,10 @@ For each step, note **pass / fail**, plus the relevant log lines for any failure
 
 ## Session 4 — A shared team channel (log A) · 10 min
 
-14. **Phone A:** create a private channel `TeamTest`. Share it to B (QR or link). **Phone B:** join it.
-15. **Both phones → Settings → Location Tracking:** enable tracking, select `TeamTest`.
+14. **Phone A:** create a private channel `TeamTest`. Share it to B (QR or link). **Phone B:** join it. Do this with both radios **connected**, so the channel lands on each radio.
+15. **Phone B — the quick toggle** (regression from the first run): make sure `TeamTest` is B's only private channel, then turn tracking on from the **sensor icon at the top of the Channels tab**. ✅ Settings → Location Tracking now shows `TeamTest` selected, not *None*. (With more than one private channel it can't guess, and stays *None*.)
+15a. **Phone A — the Settings picker:** Settings → Location Tracking → enable tracking and pick `TeamTest` from the list. ✅ No crash (the first run hit a framework assertion here). ✅ No popup opens.
+15b. **Both, still in Settings:** ✅ **no** orange *Not on this radio* row under the picker. If there **is** one, the channel isn't on that phone's radio: tap **Add**, and note it in the results — it means step 14 didn't put the channel on the radio.
 16. **Channels tab, both:** long-press `TeamTest`. ✅ The **Team channel** switch is **on** (tracking marked it). ✅ The subtitle shows the group icon and *Team channel*. ✅ The menu scrolls if it's taller than the screen — no overflow stripe.
 17. Long-press **Public**: ✅ no Team channel switch (it can't be one).
 
@@ -82,17 +84,25 @@ This is the most important session. It exercises the new discovery end to end, i
 
 18. **Make the phones strangers:** on A, **Contacts → long-press B's contact (`R2-radio`) → Delete**. On B, delete `R1-radio`. (This removes them from the radios too.) If either isn't there, fine.
 19. Make sure tracking is on for both, on `TeamTest`. Move each phone a few metres so they send positions.
+19a. **Check both phones are actually sending** — the first run failed here, silently. Each phone's own log should show its position going out every interval:
+    ```
+    [Native][I] [TELSEND] frame built {telemetryText: #TEL:…}
+    ```
+    On A in the USB log; on B in its in-app log. ✅ Both. If a phone isn't sending, look in its log for `[TelemetrySend] ⏭️ "TeamTest" is not on this radio; not sending` — then `TeamTest` isn't on that radio: add it (Settings → Location Tracking → **Add**, or tap the message box in the channel). ✅ Within a moment the log shows `[TelemetrySend] 🔄 Tracking channel is now on the radio` and `[TELSEND]` lines start.
 20. **Watch A's log.** Within one or two telemetry intervals:
     ```
+    [MessageSync] 📩 Channel message from 'R2-radio': '#TEL:…'   ← B's position arriving
     [TELREC] 📍 Sender 'R2-radio' not on radio (unresolved)
     [Discovery] 📤 Advertising ourselves for "R2-radio"      ← first packet
-    [Discovery] 📣 Asking "R2-radio" to advertise: #CAP:R:-:R2-radio   ← next packet
+    [Discovery] 📣 Asking "R2-radio" to advertise: #CAP:R:…:R2-radio   ← next packet
     [Discovery] ➕ Adding "R2-radio" from an unstored advert
     [Peers] 🔗 Bound "R2-radio" to its radio key
     ```
+    If A only ever sees `#CAP:R` from B and never `#TEL`, B isn't sending — go back to 19a on B.
     ✅ Advert and request **alternate**, one outgoing packet per received position, and **stop** once B is added.
 21. **B's log** should show the mirror image, plus: `[Discovery] 📡 Advert request …` and `[CapabilityPublisher] 📣 Advert requested by a peer - replying in …ms` when A asks.
-22. **Result, both phones:** ✅ The other appears on the map. ✅ In Contacts they show with the **group icon**. ✅ A **DM** from the map marker works.
+22. **Result, both phones:** ✅ The other appears on the map and in the group panel. ✅ In Contacts they show with the **group icon**. ✅ A **DM** from the map marker works.
+22a. ✅ A's log shows B's capability message arriving at least once: `[MessageSync] 📩 Channel message from 'R2-radio': '#CAP:2:…'`. (In the first run it never did — the same silent-sender problem as 19a.)
 23. **Watch for an advert storm:** if adverts keep going after both are resolved, that's a failure — capture the log.
 
 ## Session 6 — Names reach the team (log A) · 15 min
