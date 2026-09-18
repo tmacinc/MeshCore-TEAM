@@ -2065,12 +2065,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get teamChannel => 'Team-Kanal';
 
   @override
-  String get markAsTeamChannel => 'Als Team-Kanal markieren';
-
-  @override
-  String get unmarkTeamChannel => 'Kein Team-Kanal';
-
-  @override
   String get teamChannelExplanation =>
       'Bleibt mit Verlauf auf diesem Telefon, auch wenn du das Funkgerät wechselst.';
 
@@ -2092,9 +2086,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String addedChannelToRadio(String name) {
     return '$name zum Funkgerät hinzugefügt';
   }
-
-  @override
-  String get teamOnly => 'Nur Team';
 
   @override
   String get failedToAddChannel =>

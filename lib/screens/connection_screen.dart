@@ -16,6 +16,7 @@ import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
 import 'package:meshcore_team/widgets/app_bar_subtitle.dart';
+import 'package:meshcore_team/widgets/add_channel_to_radio.dart';
 import 'package:meshcore_team/widgets/night_clock.dart';
 import 'package:meshcore_team/widgets/themed_dropdown.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
@@ -709,7 +710,12 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
       stream: channelRepository.getAllChannels(),
       builder: (context, snapshot) {
         final allChannels = snapshot.data ?? const <ChannelData>[];
-        final privateChannels = allChannels.where((c) => !c.isPublic).toList();
+        // Radio settings (e.g. autonomous mode) configure the radio itself,
+        // so only channels it actually holds — not team channels kept on the
+        // phone for a radio that doesn't have them.
+        final privateChannels = allChannels
+            .where((c) => !c.isPublic && !channelNeedsRadio(c))
+            .toList();
 
         return ListView(
           children: [

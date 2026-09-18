@@ -3498,18 +3498,6 @@ abstract class AppLocalizations {
   /// **'Team channel'**
   String get teamChannel;
 
-  /// No description provided for @markAsTeamChannel.
-  ///
-  /// In en, this message translates to:
-  /// **'Mark as team channel'**
-  String get markAsTeamChannel;
-
-  /// No description provided for @unmarkTeamChannel.
-  ///
-  /// In en, this message translates to:
-  /// **'Not a team channel'**
-  String get unmarkTeamChannel;
-
   /// No description provided for @teamChannelExplanation.
   ///
   /// In en, this message translates to:
@@ -3545,12 +3533,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Added {name} to your radio'**
   String addedChannelToRadio(String name);
-
-  /// No description provided for @teamOnly.
-  ///
-  /// In en, this message translates to:
-  /// **'Team only'**
-  String get teamOnly;
 
   /// No description provided for @failedToAddChannel.
   ///

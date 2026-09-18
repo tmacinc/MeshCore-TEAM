@@ -152,6 +152,58 @@ void main() {
     });
   });
 
+  group('what the channel list shows', () {
+    // Regression: after a radio switch, team channels were kept in the
+    // database but untied from the old radio, and the list only showed
+    // channels tied to the current radio - so they looked deleted.
+    test('a team channel stays listed after switching radio', () async {
+      await db.into(db.channels).insert(channel(hash: 1, index: 1, isTeam: true));
+      await db.into(db.channels).insert(channel(hash: 2, index: 2));
+
+      await db.channelsDao.deleteChannelsByCompanion(_radioA);
+      // The new radio doesn't have the team channel.
+      await db.channelsDao
+          .replaceAllChannels([channel(hash: 3, index: 1, companion: _radioB)]);
+
+      final listed = await db.channelsDao.getVisibleChannels(_radioB);
+      expect(listed.map((c) => c.hash), containsAll([1, 3]));
+      expect(listed.map((c) => c.hash), isNot(contains(2)));
+    });
+
+    test('a team channel the same radio dropped stays listed', () async {
+      await db.into(db.channels).insert(channel(hash: 1, index: 1, isTeam: true));
+
+      await db.channelsDao.replaceAllChannels([]);
+
+      final listed = await db.channelsDao.getVisibleChannels(_radioA);
+      expect(listed.map((c) => c.hash), [1]);
+    });
+
+    test('with no radio, only team channels are listed', () async {
+      await db.into(db.channels).insert(channel(hash: 1, index: 1, isTeam: true));
+      await db.into(db.channels).insert(channel(hash: 2, index: 2));
+
+      final listed = await db.channelsDao.getVisibleChannels(null);
+      expect(listed.map((c) => c.hash), [1]);
+    });
+
+    test('another radio\'s ordinary channels are not listed', () async {
+      await db.into(db.channels)
+          .insert(channel(hash: 2, index: 2, companion: _radioB));
+
+      expect(await db.channelsDao.getVisibleChannels(_radioA), isEmpty);
+    });
+
+    test('slot allocation still sees only the radio\'s own channels',
+        () async {
+      await db.into(db.channels).insert(channel(hash: 1, index: 1, isTeam: true));
+      await db.channelsDao.deleteChannelsByCompanion(_radioA);
+
+      // An untied team channel has no slot on radio B.
+      expect(await db.channelsDao.getChannelsByCompanion(_radioB), isEmpty);
+    });
+  });
+
   test('team history is pruned by age, other channels are left alone',
       () async {
     await db.into(db.channels).insert(channel(hash: 1, index: 1, isTeam: true));

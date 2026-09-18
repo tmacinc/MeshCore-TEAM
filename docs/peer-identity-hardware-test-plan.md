@@ -168,7 +168,7 @@ Leave a group running for over an hour. Expected: one `[CapabilityPublisher] ✅
 ## 7. Phase 3 — team channels
 
 ### 7.1 Marking
-Long-press a private channel → **Mark as team channel**. Expected: a group icon and *Team channel* appear in its subtitle. The option is absent on the public channel and on hashtag channels.
+Long-press a private channel → turn on the **Team channel** switch. Expected: a group icon and *Team channel* appear in its subtitle, and long-pressing again shows the switch **on**. The switch is absent on the public channel and on hashtag channels.
 
 ### 7.2 The tracking channel marks itself
 Choose a channel for tracking in Settings. Expected: it becomes a team channel without being asked.
@@ -177,7 +177,7 @@ Choose a channel for tracking in Settings. Expected: it becomes a team channel w
 1. On a phone with a team channel, some chat history in it, and members on the map, pair a **different radio**.
 2. Let the sync finish.
 
-**Expected:** the team channel is still listed, greyed out, marked *Not on this radio*, and its history opens. Other channels are replaced by the new radio's. Team contacts are copied to the new radio (`[TeamRadio] ➕ Adding N team contacts`), followed by one advert. Everyone's last known positions are still on the map.
+**Expected:** the team channel is still **listed** on the Channels tab (regression: it used to vanish from the list here while still being stored), greyed out, marked *Not on this radio*, and its history opens. Other channels are replaced by the new radio's. Team contacts are copied to the new radio (`[TeamRadio] ➕ Adding N team contacts`), followed by one advert. Everyone's last known positions are still on the map.
 
 ### 7.4 Adding it back
 Tap the message box in that channel (or pick it for tracking). Expected: *Add to radio?* explaining the radio must hold it. Accept, and the channel loses the greyed-out state, gets a real slot number, and messages send normally.

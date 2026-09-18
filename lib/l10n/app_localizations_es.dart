@@ -2095,12 +2095,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get teamChannel => 'Canal de equipo';
 
   @override
-  String get markAsTeamChannel => 'Marcar como canal de equipo';
-
-  @override
-  String get unmarkTeamChannel => 'No es un canal de equipo';
-
-  @override
   String get teamChannelExplanation =>
       'Se guarda en este teléfono con su historial, aunque cambies de radio.';
 
@@ -2122,9 +2116,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String addedChannelToRadio(String name) {
     return '$name añadido a tu radio';
   }
-
-  @override
-  String get teamOnly => 'Solo equipo';
 
   @override
   String get failedToAddChannel => 'No se pudo añadir el canal a tu radio';

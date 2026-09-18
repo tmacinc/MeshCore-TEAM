@@ -583,17 +583,18 @@ class ChannelListTile extends StatelessWidget {
               ),
               if (!isPublic && channel.canBeTrackingChannel) ...[
                 const Divider(),
-                ListTile(
-                  leading: Icon(
+                // A switch, not an action: "Not a team channel" as a menu
+                // item read as the channel's current state.
+                SwitchListTile(
+                  secondary: Icon(
                     channel.isTeam ? Icons.group : Icons.group_outlined,
                   ),
-                  title: Text(channel.isTeam
-                      ? l10n.unmarkTeamChannel
-                      : l10n.markAsTeamChannel),
+                  title: Text(l10n.teamChannel),
                   subtitle: Text(l10n.teamChannelExplanation),
-                  onTap: () {
+                  value: channel.isTeam,
+                  onChanged: (isTeam) {
                     Navigator.of(ctx).pop();
-                    repo.setTeamChannel(channel, !channel.isTeam);
+                    repo.setTeamChannel(channel, isTeam);
                   },
                 ),
                 if (channelNeedsRadio(channel))

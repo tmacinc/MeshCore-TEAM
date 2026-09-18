@@ -1006,30 +1006,19 @@ class ChannelRepository {
   /// Get all channels for the current companion device
   /// Auto-switches when currentCompanionPublicKey changes
   /// Matches Android ChannelRepository.getAllChannels()
+  /// Channels to offer the user: the connected radio's, plus team channels,
+  /// which belong to the phone and are shown with or without a radio.
   Stream<List<ChannelData>> getAllChannels() {
-    return _settingsService.currentCompanionPublicKeyStream
-        .switchMap((companionKey) {
-      if (companionKey != null && companionKey.isNotEmpty) {
-        return _channelsDao.watchChannelsByCompanion(companionKey);
-      } else {
-        // No companion selected - return empty list
-        return Stream.value([]);
-      }
-    });
+    return _settingsService.currentCompanionPublicKeyStream.switchMap(
+        (companionKey) => _channelsDao.watchVisibleChannels(companionKey));
   }
 
   /// Watch channels with unread counts for current companion
   /// Auto-switches when currentCompanionPublicKey changes
   Stream<List<ChannelWithUnread>> watchChannelsWithUnread() {
-    return _settingsService.currentCompanionPublicKeyStream
-        .switchMap((companionKey) {
-      if (companionKey != null && companionKey.isNotEmpty) {
-        return _channelsDao.watchChannelsWithUnreadByCompanion(companionKey);
-      } else {
-        // No companion selected - return empty list
-        return Stream.value([]);
-      }
-    });
+    return _settingsService.currentCompanionPublicKeyStream.switchMap(
+        (companionKey) =>
+            _channelsDao.watchChannelsWithUnreadByCompanion(companionKey));
   }
 
   /// Set favorite status for a channel

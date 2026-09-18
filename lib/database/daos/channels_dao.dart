@@ -42,6 +42,43 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
         .get();
   }
 
+  /// Channels to show while [companionKey] is the connected radio: its own
+  /// channels, plus every team channel whichever radio it came from.
+  ///
+  /// Team channels belong to the phone. After a radio switch they are untied
+  /// from the old radio (companionDeviceKey null) and may not be on the new
+  /// one yet, so filtering by radio alone would hide them — which looked
+  /// exactly like the sync had deleted them.
+  ///
+  /// With no radio selected, [companionKey] is null and only team channels
+  /// are shown. [getChannelsByCompanion] stays radio-only: slot allocation
+  /// must only see the radio's own slots.
+  Future<List<ChannelData>> getVisibleChannels(String? companionKey) {
+    return (select(channels)
+          ..where((t) => _visibleTo(t, companionKey))
+          ..orderBy([
+            (t) => OrderingTerm(
+                expression: t.channelIndex, mode: OrderingMode.asc),
+          ]))
+        .get();
+  }
+
+  Stream<List<ChannelData>> watchVisibleChannels(String? companionKey) {
+    return (select(channels)
+          ..where((t) => _visibleTo(t, companionKey))
+          ..orderBy([
+            (t) => OrderingTerm(
+                expression: t.channelIndex, mode: OrderingMode.asc),
+          ]))
+        .watch();
+  }
+
+  Expression<bool> _visibleTo($ChannelsTable t, String? companionKey) {
+    final isTeam = t.isTeam.equals(true);
+    if (companionKey == null || companionKey.isEmpty) return isTeam;
+    return t.companionDeviceKey.equals(companionKey) | isTeam;
+  }
+
   /// Get a single channel by hash
   Future<ChannelData?> getChannelByHash(int hash) {
     return (select(channels)..where((t) => t.hash.equals(hash)))
@@ -327,13 +364,13 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
 
   /// Watch channels with unread counts for a specific companion device
   Stream<List<ChannelWithUnread>> watchChannelsWithUnreadByCompanion(
-      String companionKey) async* {
+      String? companionKey) async* {
     // Yield current state immediately — no debounce for first emit
     yield await _buildChannelsWithUnread(
-        await getChannelsByCompanion(companionKey));
+        await getVisibleChannels(companionKey));
 
     final controller = StreamController<void>();
-    final channelsSub = watchChannelsByCompanion(companionKey).listen((_) {
+    final channelsSub = watchVisibleChannels(companionKey).listen((_) {
       if (!controller.isClosed) controller.add(null);
     });
     final messagesSub = db.messagesDao.watchMessageCount().listen((_) {
@@ -344,7 +381,7 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
       await for (final _ in controller.stream
           .debounceTime(const Duration(milliseconds: 500))) {
         yield await _buildChannelsWithUnread(
-            await getChannelsByCompanion(companionKey));
+            await getVisibleChannels(companionKey));
       }
     } finally {
       await channelsSub.cancel();

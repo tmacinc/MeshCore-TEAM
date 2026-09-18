@@ -2064,12 +2064,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get teamChannel => 'Team channel';
 
   @override
-  String get markAsTeamChannel => 'Mark as team channel';
-
-  @override
-  String get unmarkTeamChannel => 'Not a team channel';
-
-  @override
   String get teamChannelExplanation =>
       'Kept on this phone with its history, even if you change radio.';
 
@@ -2091,9 +2085,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String addedChannelToRadio(String name) {
     return 'Added $name to your radio';
   }
-
-  @override
-  String get teamOnly => 'Team only';
 
   @override
   String get failedToAddChannel => 'Could not add the channel to your radio';
