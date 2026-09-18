@@ -137,40 +137,49 @@ This is the most important session. It exercises the new discovery end to end, i
     and **before** that, no `Slot N is taken on the radio` warning unless R1 really had a channel there. ✅ The channel is no longer greyed out and shows a slot number.
 42. Send a message in `Offline1`. ✅ It sends (B won't receive it — B doesn't have that channel; that's fine).
 
-## Session 9 — Heard nearby (log A) · only if another MeshCore node is around
+## Session 9 — Heard nearby (log B) · 15 min
 
-With only two radios, both team members are added automatically, so the list only fills if a **third** node advertises nearby (a repeater, a friend's radio, or a node on a public mesh).
+The list only shows devices that are **strangers** to the phone. Two things make that hard with two phones:
+- **Contacts live on the radio**, not in the app. Reinstalling the app doesn't clear them; the next sync reads them straight back.
+- **Anyone heard sending positions on a shared private channel is a team member**, and team members are added automatically.
 
-43. Wait near such a node, or have it send an advert. ✅ A's **Contacts** tab shows **Heard nearby (1)** at the top. A's log: `[Discovery] 📇 Listing unstored advert from "…"`.
-44. ✅ **Dismiss** hides it. ✅ **Add** puts it in Contacts and removes the row.
-45. ✅ A **repeater** advertising should be added to Contacts **automatically**, not listed (repeater auto-add is kept on). [6.4]
-46. ✅ Neither `Ben`/`R2-radio` ever appears in this list.
+So A has to be made a genuine stranger to B first. (Or skip the setup and use a third MeshCore node nearby, if you have one.)
+
+43. **A:** turn tracking **off**, so it sends no positions.
+44. **B:** delete `R1-radio` from Contacts — this removes it from R2 too.
+45. **B:** uninstall and reinstall the app (it forgets A as a team member), then connect to R2. B's log shows `[TeamRadio] 🚫 Radio auto-add for people off …`, or nothing if R2 is already set that way.
+46. **B:** ✅ `R1-radio` is **not** in Contacts. If it is, step 44 didn't reach the radio — delete it again.
+47. **A:** send an advert.
+48. **B:** ✅ **Heard nearby (1)** appears at the top of Contacts with `R1-radio`. B's log: `[Discovery] 📇 Listing unstored advert from "R1-radio"`.
+49. ✅ **Dismiss** hides it until A advertises again. ✅ **Add** puts it in Contacts and removes the row.
+50. If a **repeater** is around: ✅ it's added to Contacts **automatically**, never listed (repeater auto-add is kept on). [6.4]
+51. **Afterwards:** turn A's tracking back on.
 
 ## Session 10 — Hide all but the team (either phone) · 2 min
 
-47. Settings → General → turn on *Hide all but team channels and contacts*. ✅ Channels shows only team channels; Contacts shows only B (and anyone else seen on `TeamTest`). ✅ Neither tab has a filter button of its own. Turn it off again.
+52. Settings → General → turn on *Hide all but team channels and contacts*. ✅ Channels shows only team channels; Contacts shows only B (and anyone else seen on `TeamTest`). ✅ Neither tab has a filter button of its own. Turn it off again.
 
 ## Session 11 — Swapping radios (log A) · 20 min · do this last
 
 The hardest case for identity: each phone ends up on the other's radio.
 
-48. **Phone B:** disconnect from R2 and close the app (so it stops transmitting).
-49. **Phone A:** disconnect from R1, connect to **R2**. The radio-name prompt appears (a new radio) — keep `R2-renamed`.
-50. A's log: ✅ `[ChannelSync]` runs; `TeamTest` is on R2 already (B joined it with R2), so ✅ it shows normally with its **history intact**. ✅ `Offline1` shows *Not on this radio* (it's on R1, not R2). ✅ Everyone's last known positions are still on the map.
-51. A's log: ✅ **no** `[TeamRadio] ➕ Adding … team contacts` entry for B's old radio — that radio is now A's own. (This was a bug, fixed in `e585d49`.)
-52. **Phone B:** open the app, connect to **R1**. Turn tracking on (select `TeamTest` — R1 has it, since A created it there).
-53. Now each phone is on the other's old radio. **Expected**, and worth understanding:
+53. **Phone B:** disconnect from R2 and close the app (so it stops transmitting).
+54. **Phone A:** disconnect from R1, connect to **R2**. The radio-name prompt appears (a new radio) — keep `R2-renamed`.
+55. A's log: ✅ `[ChannelSync]` runs; `TeamTest` is on R2 already (B joined it with R2), so ✅ it shows normally with its **history intact**. ✅ `Offline1` shows *Not on this radio* (it's on R1, not R2). ✅ Everyone's last known positions are still on the map.
+56. A's log: ✅ **no** `[TeamRadio] ➕ Adding … team contacts` entry for B's old radio — that radio is now A's own. (This was a bug, fixed in `e585d49`.)
+57. **Phone B:** open the app, connect to **R1**. Turn tracking on (select `TeamTest` — R1 has it, since A created it there).
+58. Now each phone is on the other's old radio. **Expected**, and worth understanding:
     - On the mesh, identity follows the **radio**. So A sees B's positions arriving from R1 as a **new person**, until B's capability message arrives and names it `Ben`.
     - A still has the **old** `Ben` (tied to R2 — now A's own radio), with a last position from before the swap. For up to 12 hours both may show, as two separate `Ben` markers, until the old one ages off the map (or hide it with **Remove from group**).
     - Discovery (session 5 lines) runs again between the phones, since neither radio has the other as a contact.
     - ✅ Pass if: discovery completes, the live marker is named `Ben` within a few minutes, and the only duplicate is the stale pre-swap one.
-54. **Swap back:** B disconnects, A goes back to R1, B back to R2.
+59. **Swap back:** B disconnects, A goes back to R1, B back to R2.
 
 ## Session 12 — Endurance (log A) · 1 hour+, leave running
 
-55. Leave both phones tracking on `TeamTest`, screens off, for over an hour.
-56. A's log afterwards: ✅ one `[CapabilityPublisher] ✅ Published #CAP (periodic)` per hour (±5 min), not bursts. ✅ No repeating `[Discovery]` lines once both are resolved. ✅ Both still on each other's maps.
-57. Count people: ✅ each phone shows exactly **one** teammate on the map (except the stale entry from session 11, if within 12 hours). More means identity is being split — capture the log.
+60. Leave both phones tracking on `TeamTest`, screens off, for over an hour.
+61. A's log afterwards: ✅ one `[CapabilityPublisher] ✅ Published #CAP (periodic)` per hour (±5 min), not bursts. ✅ No repeating `[Discovery]` lines once both are resolved. ✅ Both still on each other's maps.
+62. Count people: ✅ each phone shows exactly **one** teammate on the map (except the stale entry from session 11, if within 12 hours). More means identity is being split — capture the log.
 
 ---
 
