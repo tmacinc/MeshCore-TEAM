@@ -33,7 +33,7 @@ Design detail: [alias-peer-identity-plan.md](alias-peer-identity-plan.md). User-
 ### Before you start
 - **Back up the phone used for the upgrade test.** The database migrates 9 → 14 in one direction. Once upgraded, an **older build cannot open it** and you would have to clear app data to go back.
 - Note each radio's current contact settings, so you can compare afterwards (§6.4).
-- Open **Settings → Debug log** (BETA builds) on each phone. The tags that matter:
+- Open the debug log on each phone: the document icon at the top right of the **Connection** tab (BETA builds). The tags that matter:
 
 | Tag | What it tells you |
 |---|---|

@@ -188,8 +188,14 @@ class TeamRadioService {
   // --- Team contacts ---
 
   Future<void> _pushTeamContacts(String companionKey) async {
+    // Never the radio itself: after a radio swap, a teammate's old radio can
+    // be the one this phone is now connected to.
+    final selfKey = _bleService.selfInfo?.publicKey;
     final teamPeers = _peers.all
-        .where((p) => p.isTeamMember && p.radioPublicKey != null)
+        .where((p) =>
+            p.isTeamMember &&
+            p.radioPublicKey != null &&
+            !(selfKey != null && listEquals(p.radioPublicKey, selfKey)))
         .toList();
     if (teamPeers.isEmpty) return;
 
