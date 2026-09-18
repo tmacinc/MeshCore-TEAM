@@ -791,6 +791,10 @@ class ChannelListTile extends StatelessWidget {
             style: TextStyle(
               fontWeight:
                   showBadge ? FontWeight.bold : FontWeight.normal,
+              // Dimmed while the radio doesn't hold it: readable, not usable.
+              color: channelNeedsRadio(channel)
+                  ? Theme.of(context).colorScheme.outline
+                  : null,
             ),
           ),
           subtitle: Column(
