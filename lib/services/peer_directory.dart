@@ -85,7 +85,6 @@ class PeerDirectory extends ChangeNotifier {
     for (final p in await _dao.getAllPeers()) {
       _byId[p.id] = p;
     }
-    _ambiguousCache = null;
     _loaded = true;
     _companionSub =
         _settings.currentCompanionPublicKeyStream.listen(_switchCompanion);
@@ -138,36 +137,17 @@ class PeerDirectory extends ChangeNotifier {
 
   /// Name to show for [peer]: alias, then radio name, then a short key.
   ///
-  /// Aliases are chosen by their owner and nothing stops two people picking
-  /// the same one, so a name shared with another peer gets a short key
-  /// appended rather than two identical rows.
+  /// Display only. Two people may pick the same alias and are both shown
+  /// under it: everything that identifies them (map markers, message
+  /// senders, contacts) keys on the peer or its radio key, never the name,
+  /// so they stay separate. Telling them apart is up to the group.
   String displayName(PeerData peer) {
-    final name = _plainName(peer);
-    if (_ambiguousNames.contains(name)) return '$name (${shortId(peer)})';
-    return name;
-  }
-
-  /// The name without any disambiguation suffix.
-  String _plainName(PeerData peer) {
     final alias = peer.alias?.trim();
     if (alias != null && alias.isNotEmpty) return alias;
     final name = peer.radioName?.trim();
     if (name != null && name.isNotEmpty) return name;
     return shortId(peer);
   }
-
-  /// Display names used by more than one peer.
-  Set<String> get _ambiguousNames {
-    if (_ambiguousCache != null) return _ambiguousCache!;
-    final seen = <String>{};
-    final duplicates = <String>{};
-    for (final peer in _byId.values) {
-      if (!seen.add(_plainName(peer))) duplicates.add(_plainName(peer));
-    }
-    return _ambiguousCache = duplicates;
-  }
-
-  Set<String>? _ambiguousCache;
 
   /// Name to use in anything transmitted (mentions, replies). Never the alias.
   String? meshName(PeerData peer) => peer.radioName;
@@ -312,7 +292,6 @@ class PeerDirectory extends ChangeNotifier {
       {required PeerData keep, required PeerData drop}) async {
     await _dao.mergePeers(keepId: keep.id, dropId: drop.id);
     _byId.remove(drop.id);
-    _ambiguousCache = null;
     final merged = (await _dao.getPeer(keep.id))!;
     _byId[keep.id] = merged;
     notifyListeners();
@@ -455,7 +434,6 @@ class PeerDirectory extends ChangeNotifier {
     final id = await _dao.insertPeer(peer);
     final row = (await _dao.getPeer(id))!;
     _byId[id] = row;
-    _ambiguousCache = null;
     notifyListeners();
     return row;
   }
@@ -467,8 +445,7 @@ class PeerDirectory extends ChangeNotifier {
     _byId[id] = row;
     // Most updates only move lastSeen; listeners care about identity.
     if (before == null || _identityChanged(before, row)) {
-      _ambiguousCache = null;
-      notifyListeners();
+        notifyListeners();
     }
     return row;
   }

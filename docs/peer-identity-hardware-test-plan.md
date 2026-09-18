@@ -225,7 +225,7 @@ With a plain MeshCore app in the same channel, confirm it only ever sees radio n
 Change the team name in Settings and confirm B follows within a few minutes. Clear it (empty field) and confirm B falls back to your radio name.
 
 ### 8.7 Two people, one name
-Give A and B the same team name. Expected: on C, both are shown with a short ID appended so they can be told apart. Change one, and the suffix goes away.
+Give A and B the same name. Expected: on C, both are shown under that same name, as **two** separate markers and contacts with their own positions — the name is display only.
 
 ### 8.8 Anonymize the radio
 Rename A's radio to something anonymous while a team name is set. Expected: A's team still sees the team name; anyone outside sees only the anonymous name. A's messages, history and map position stay attached to the same person.

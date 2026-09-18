@@ -242,7 +242,7 @@ Where each one is used:
 
 - **Your name** is what your team sees on the map, in the contact list, in chat and in notifications.
 - Your **radio name** is what people outside your team see, and it is what replies and @mentions use, so a team name is never sent into a public channel.
-- If two people pick the same name, the app shows a short ID after each so you can tell them apart.
+- Two people can pick the same name. The app still treats them as two separate people (it identifies everyone by their radio, not their name), and both are shown under that name — sorting out any confusion is up to the group.
 
 ### 3) Contacts and direct messages
 

@@ -585,7 +585,17 @@ class ContactListTile extends StatelessWidget {
               ),
               onTap: () async {
                 Navigator.of(ctx).pop();
+                // The person is kept (their last known position matters),
+                // but deleting them means "not in my group": hide them from
+                // the map, as "Remove from group" does. Like that, it lasts
+                // until they are heard again.
+                final peer =
+                    context.read<PeerDirectory>().byRadioKey(contact.publicKey);
+                final db = context.read<AppDatabase>();
                 await repo.deleteContact(contact);
+                if (peer != null) {
+                  await db.peersDao.setHidden(peer.id, hidden: true);
+                }
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(l10n.contactDeletedName(name))),

@@ -112,7 +112,7 @@ This is the most important session. It exercises the new discovery end to end, i
 26. **Chat:** B sends a message in `TeamTest`. On A, ✅ the sender shows as `Ben`. ✅ A's notification (app in background) says `Ben`.
 27. **The privacy check:** on A, long-press B's message → **Reply**. ✅ The box is pre-filled with `@[R2-radio]` — the **radio** name, **not** `Ben`. [8.4]
 28. On B, clear the name (Settings → General → empty → Save). ✅ A falls back to `R2-radio` within a couple of minutes. Set it back to `Ben` afterwards.
-29. **Same name, two people** can't be shown with two phones, since you never see yourself. Session 11 produces a clash naturally (`Ben (XXXX)` twice), so it's checked there.
+29. **Same name, two people** can't be shown with two phones, since you never see yourself. Session 11 produces it naturally (two `Ben`s), so it's checked there.
 
 ## Session 7 — Renaming a radio (log A) · 10 min
 
@@ -161,7 +161,7 @@ The hardest case for identity: each phone ends up on the other's radio.
 52. **Phone B:** open the app, connect to **R1**. Turn tracking on (select `TeamTest` — R1 has it, since A created it there).
 53. Now each phone is on the other's old radio. **Expected**, and worth understanding:
     - On the mesh, identity follows the **radio**. So A sees B's positions arriving from R1 as a **new person**, until B's capability message arrives and names it `Ben`.
-    - A still has the **old** `Ben` (tied to R2 — now A's own radio), with a last position from before the swap. For up to 12 hours both may show, as `Ben (XXXX)` and `Ben (YYYY)`, until the old one ages off the map.
+    - A still has the **old** `Ben` (tied to R2 — now A's own radio), with a last position from before the swap. For up to 12 hours both may show, as two separate `Ben` markers, until the old one ages off the map (or hide it with **Remove from group**).
     - Discovery (session 5 lines) runs again between the phones, since neither radio has the other as a contact.
     - ✅ Pass if: discovery completes, the live marker is named `Ben` within a few minutes, and the only duplicate is the stale pre-swap one.
 54. **Swap back:** B disconnects, A goes back to R1, B back to R2.

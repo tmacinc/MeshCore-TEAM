@@ -129,7 +129,7 @@ enum ResolutionState { resolved, knownNotOnRadio, unresolved, ambiguous }
 **Collisions.**
 - If two peers with different keys share a radio name, the result is `ambiguous`.
 - Attribute the TEL to the peer with the most recent CAP, and start a request (§6.3).
-- Show the alias with a short key suffix to tell them apart.
+- Both are shown under their alias with no suffix (Tom's call): identity is the peer, the alias is display only, and telling people apart is left to the group.
 
 **Merging.** A merge moves `PeerLocations` (keeping the newer row), history, `Messages.senderPeerId` and `Contacts.peerId` onto the surviving peer. It is triggered by:
 - a CAP whose key prefix matches a different peer;

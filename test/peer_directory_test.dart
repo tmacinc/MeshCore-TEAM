@@ -307,8 +307,10 @@ void main() {
       expect(peers.meshName(aliased), 'Scout');
     });
 
-    test('two peers sharing an alias are told apart by a short key', () async {
-      // Nothing stops two people choosing the same team name.
+    test('two peers sharing an alias both show it and stay separate',
+        () async {
+      // Nothing stops two people choosing the same name. It's display only:
+      // they remain two peers with their own radios.
       final first = await resolve('Scout', contacts: [_contact('Scout', 1)]);
       final second = await resolve('Ghost', contacts: [_contact('Ghost', 2)]);
 
@@ -317,28 +319,11 @@ void main() {
       final outcome = await peers.recordCapability(second.peer,
           CapabilityMessage.fromLocalState(alias: 'Bravo 2'));
 
-      final one = peers.displayName(peers.byId(first.peer.id)!);
-      final two = peers.displayName(outcome.peer);
-
-      expect(one, isNot(two));
-      expect(one, startsWith('Bravo 2'));
-      expect(two, startsWith('Bravo 2'));
-    });
-
-    test('the suffix disappears once the clash does', () async {
-      final first = await resolve('Scout', contacts: [_contact('Scout', 1)]);
-      final second = await resolve('Ghost', contacts: [_contact('Ghost', 2)]);
-      await peers.recordCapability(first.peer,
-          CapabilityMessage.fromLocalState(alias: 'Bravo 2'));
-      await peers.recordCapability(second.peer,
-          CapabilityMessage.fromLocalState(alias: 'Bravo 2'));
-
-      // One of them renames.
-      await peers.recordCapability(peers.byId(second.peer.id)!,
-          CapabilityMessage.fromLocalState(alias: 'Bravo 3'));
-
       expect(peers.displayName(peers.byId(first.peer.id)!), 'Bravo 2');
-      expect(peers.displayName(peers.byId(second.peer.id)!), 'Bravo 3');
+      expect(peers.displayName(outcome.peer), 'Bravo 2');
+      expect(first.peer.id, isNot(second.peer.id));
+      expect(peers.byRadioKey(_key(1))!.id, first.peer.id);
+      expect(peers.byRadioKey(_key(2))!.id, second.peer.id);
     });
 
     test('a peer with no name at all falls back to a short id', () async {
