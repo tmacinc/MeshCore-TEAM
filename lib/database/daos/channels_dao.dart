@@ -118,6 +118,22 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
   /// Update channel name
   Future<List<ChannelData>> getAllChannelsOnce() => select(channels).get();
 
+  /// A slot index for a channel the phone keeps but the radio doesn't hold.
+  /// Negative, so it can never collide with a real slot (0 is the public
+  /// channel), and unique among channels already parked.
+  Future<int> nextSentinelIndex() async {
+    final lowest = await (selectOnly(channels)
+          ..addColumns([channels.channelIndex.min()]))
+        .map((row) => row.read(channels.channelIndex.min()))
+        .getSingleOrNull();
+    final floor = (lowest == null || lowest > 0) ? 0 : lowest;
+    return floor - 1;
+  }
+
+  /// Channels the phone keeps whatever the radio says: team channels, and
+  /// channels created offline that no radio holds yet.
+  static bool isPhoneOwned(ChannelData c) => c.isTeam || !c.firmwareConfirmed;
+
   Future<void> updateChannel(ChannelsCompanion changes) async {
     await (update(channels)..where((t) => t.hash.equals(changes.hash.value)))
         .write(changes);
@@ -175,7 +191,7 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
       final teamChannels = await (select(channels)
             ..where((t) =>
                 t.companionDeviceKey.equals(companionKey) &
-                t.isTeam.equals(true)))
+                (t.isTeam.equals(true) | t.firmwareConfirmed.equals(false))))
           .get();
 
       for (final channel in teamChannels) {
@@ -190,7 +206,8 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
       return (delete(channels)
             ..where((t) =>
                 t.companionDeviceKey.equals(companionKey) &
-                t.isTeam.equals(false)))
+                t.isTeam.equals(false) &
+                t.firmwareConfirmed.equals(true)))
           .go();
     });
   }
@@ -228,8 +245,10 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
       };
       final fromFirmware = {for (final c in replacements) c.hash.value};
 
+      // Kept even though the radio doesn't report them: team channels, and
+      // channels created offline that were never pushed to a radio.
       final orphanedTeam = existing
-          .where((c) => c.isTeam && !fromFirmware.contains(c.hash))
+          .where((c) => isPhoneOwned(c) && !fromFirmware.contains(c.hash))
           .toList();
 
       await delete(channels).go();

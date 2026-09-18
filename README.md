@@ -429,7 +429,7 @@ The app manages your radio's contact list instead of letting the radio store eve
 
 #### Team channels
 
-A **team channel** is a private channel that belongs to your phone rather than to one radio. The tracking channel becomes one automatically, and you can mark any private channel as a team channel from its long-press menu. Public and hashtag channels can't be team channels, because anyone can work out their key.
+A **team channel** is a private channel that belongs to your phone rather than to one radio. The tracking channel becomes one automatically, a private channel you create or import with no radio connected is one from the start, and you can make any private channel a team channel with the switch in its long-press menu. Public and hashtag channels can't be team channels, because anyone can work out their key.
 
 - **It survives a radio switch**, along with its chat history.
 - **It survives being missing from the radio.** If the radio doesn't have it, the channel is shown greyed out and marked *Not on this radio*: you can read its history, but the radio does the encryption, so it can't send or receive on it.

@@ -152,6 +152,76 @@ void main() {
     });
   });
 
+  group('channels created with no radio connected', () {
+    // Regression: offline-created channels claimed a real slot, were never
+    // pushed, and the next sync with the radio deleted them.
+    ChannelsCompanion offline({
+      required int hash,
+      required int sentinel,
+      bool isTeam = true,
+      String? companion = _radioA,
+    }) =>
+        ChannelsCompanion.insert(
+          hash: Value(hash),
+          name: 'Offline $hash',
+          sharedKey: Uint8List(16),
+          isPublic: false,
+          channelIndex: sentinel,
+          createdAt: 0,
+          companionDeviceKey: Value(companion),
+          isTeam: Value(isTeam),
+          firmwareConfirmed: const Value(false),
+        );
+
+    test('survive the next sync with the radio', () async {
+      await db.into(db.channels).insert(offline(hash: 7, sentinel: -1));
+
+      await db.channelsDao.replaceAllChannels([channel(hash: 2, index: 1)]);
+
+      final kept = await db.channelsDao.getAllChannelsOnce();
+      expect(kept.map((c) => c.hash), containsAll([2, 7]));
+    });
+
+    test('a pending hashtag channel survives too, though not a team channel',
+        () async {
+      await db.into(db.channels)
+          .insert(offline(hash: 8, sentinel: -1, isTeam: false));
+
+      await db.channelsDao.replaceAllChannels([]);
+
+      final kept = (await db.channelsDao.getAllChannelsOnce()).single;
+      expect(kept.isTeam, isFalse);
+      expect(kept.firmwareConfirmed, isFalse);
+    });
+
+    test('survive switching radio', () async {
+      await db.into(db.channels)
+          .insert(offline(hash: 8, sentinel: -1, isTeam: false));
+
+      await db.channelsDao.deleteChannelsByCompanion(_radioA);
+
+      expect(await db.channelsDao.getAllChannelsOnce(), hasLength(1));
+    });
+
+    test('a team channel made with no radio at all is listed', () async {
+      await db.into(db.channels)
+          .insert(offline(hash: 9, sentinel: -1, companion: null));
+
+      final listed = await db.channelsDao.getVisibleChannels(null);
+      expect(listed.map((c) => c.hash), [9]);
+    });
+
+    test('each gets its own slot below zero, never a real one', () async {
+      await db.into(db.channels).insert(channel(hash: 0, index: 0));
+      final first = await db.channelsDao.nextSentinelIndex();
+      await db.into(db.channels).insert(offline(hash: 7, sentinel: first));
+      final second = await db.channelsDao.nextSentinelIndex();
+
+      expect(first, -1);
+      expect(second, -2);
+    });
+  });
+
   group('what the channel list shows', () {
     // Regression: after a radio switch, team channels were kept in the
     // database but untied from the old radio, and the list only showed

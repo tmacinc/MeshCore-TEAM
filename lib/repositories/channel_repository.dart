@@ -157,50 +157,13 @@ class ChannelRepository {
     final existing = await _channelsDao.getChannelByHash(hash);
     if (existing != null) return existing;
 
-    final existingChannels =
-        await _channelsDao.getChannelsByCompanion(companionKey);
-    final usedIndices = existingChannels.map((c) => c.channelIndex).toSet();
-    final nextIndex = _nextAvailablePrivateIndex(usedIndices);
-    if (nextIndex == null) {
-      throw StateError(
-          'Maximum number of channels ($_maxPrivateChannels) reached');
-    }
-
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final channelCompanion = ChannelsCompanion.insert(
-      hash: drift.Value(hash),
+    return _saveNewChannel(
+      hash: hash,
       name: normalised,
-      sharedKey: psk,
-      isPublic: false,
-      shareLocation: const drift.Value(true),
-      channelIndex: nextIndex,
-      createdAt: now,
-      companionDeviceKey: drift.Value(companionKey),
+      psk: psk,
+      companionKey: companionKey,
+      maxReachedMessage: _l10n.maxChannelsReachedJoin,
     );
-
-    if (_bleManager.isConnected) {
-      final result = await _registerChannelWithFirmware(
-        channelIndex: nextIndex,
-        name: normalised,
-        psk: psk,
-      );
-      if (!result.isSuccess) {
-        if (result.errorCode == 3) {
-          throw StateError(_l10n.maxChannelsReachedJoin);
-        }
-        throw StateError(_l10n.failedToRegisterChannel(
-            result.errorCode?.toString() ?? _l10n.unknown));
-      }
-      await Future.delayed(const Duration(milliseconds: 300));
-    } else {
-      debugPrint(
-          '[Channel] Not connected - hashtag channel created in local DB only, will sync on reconnect');
-    }
-
-    await _channelsDao.upsertChannel(channelCompanion);
-    final created = await _channelsDao.getChannelByHash(hash);
-    if (created == null) throw StateError('Channel creation failed');
-    return created;
   }
 
   /// Create a new private channel with a random PSK.
@@ -211,10 +174,9 @@ class ChannelRepository {
       throw ArgumentError('Channel name cannot be empty');
     }
 
+    // No radio needed: a private channel made without one is a team channel,
+    // kept on the phone until it is added to a radio.
     final companionKey = _settingsService.settings.currentCompanionPublicKey;
-    if (companionKey == null || companionKey.isEmpty) {
-      throw StateError('No companion selected');
-    }
 
     final rnd = Random.secure();
     final psk =
@@ -226,52 +188,13 @@ class ChannelRepository {
       return existing;
     }
 
-    final existingChannels =
-        await _channelsDao.getChannelsByCompanion(companionKey);
-    final usedIndices = existingChannels.map((c) => c.channelIndex).toSet();
-    final nextIndex = _nextAvailablePrivateIndex(usedIndices);
-    if (nextIndex == null) {
-      throw StateError(
-          'Maximum number of channels ($_maxPrivateChannels) reached');
-    }
-
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final channelCompanion = ChannelsCompanion.insert(
-      hash: drift.Value(hash),
+    return _saveNewChannel(
+      hash: hash,
       name: trimmedName,
-      sharedKey: psk,
-      isPublic: false,
-      shareLocation: const drift.Value(true),
-      channelIndex: nextIndex,
-      createdAt: now,
-      companionDeviceKey: drift.Value(companionKey),
+      psk: psk,
+      companionKey: companionKey,
+      maxReachedMessage: _l10n.maxChannelsReachedCreate,
     );
-
-    if (_bleManager.isConnected) {
-      final result = await _registerChannelWithFirmware(
-        channelIndex: nextIndex,
-        name: trimmedName,
-        psk: psk,
-      );
-      if (!result.isSuccess) {
-        if (result.errorCode == 3) {
-          throw StateError(_l10n.maxChannelsReachedCreate);
-        }
-        throw StateError(_l10n.failedToRegisterChannel(
-            result.errorCode?.toString() ?? _l10n.unknown));
-      }
-      await Future.delayed(const Duration(milliseconds: 300));
-    } else {
-      debugPrint(
-          '[Channel] Not connected - channel created in local DB only, will sync on reconnect');
-    }
-
-    await _channelsDao.upsertChannel(channelCompanion);
-    final created = await _channelsDao.getChannelByHash(hash);
-    if (created == null) {
-      throw StateError('Channel creation failed');
-    }
-    return created;
   }
 
   /// Import a channel from meshcore:// URL or raw key.
@@ -279,9 +202,6 @@ class ChannelRepository {
   Future<ChannelData?> importChannel(String nameOrUrl, String keyData) async {
     try {
       final companionKey = _settingsService.settings.currentCompanionPublicKey;
-      if (companionKey == null || companionKey.isEmpty) {
-        throw StateError('No companion selected');
-      }
 
       String channelName;
       Uint8List psk;
@@ -307,41 +227,13 @@ class ChannelRepository {
       final existing = await _channelsDao.getChannelByHash(hash);
       if (existing != null) return existing;
 
-      final existingChannels =
-          await _channelsDao.getChannelsByCompanion(companionKey);
-      final usedIndices = existingChannels.map((c) => c.channelIndex).toSet();
-      final nextIndex = _nextAvailablePrivateIndex(usedIndices);
-      if (nextIndex == null) return null;
-
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final channelCompanion = ChannelsCompanion.insert(
-        hash: drift.Value(hash),
+      return await _saveNewChannel(
+        hash: hash,
         name: channelName,
-        sharedKey: psk,
-        isPublic: false,
-        shareLocation: const drift.Value(true),
-        channelIndex: nextIndex,
-        createdAt: now,
-        companionDeviceKey: drift.Value(companionKey),
+        psk: psk,
+        companionKey: companionKey,
+        maxReachedMessage: _l10n.maxChannelsReachedJoin,
       );
-
-      if (_bleManager.isConnected) {
-        final result = await _registerChannelWithFirmware(
-          channelIndex: nextIndex,
-          name: channelName,
-          psk: psk,
-        );
-        if (!result.isSuccess) {
-          return null;
-        }
-        await Future.delayed(const Duration(milliseconds: 300));
-      } else {
-        debugPrint(
-            '[Channel] Not connected - channel imported to local DB only, will sync on reconnect');
-      }
-
-      await _channelsDao.upsertChannel(channelCompanion);
-      return _channelsDao.getChannelByHash(hash);
     } catch (_) {
       return null;
     }
@@ -382,7 +274,8 @@ class ChannelRepository {
 
     final onRadio = channel.firmwareConfirmed && channel.channelIndex > 0;
     if (!_bleManager.isConnected) {
-      if (!channel.isTeam) {
+      // Only a channel the radio holds needs the radio to delete it.
+      if (!ChannelsDao.isPhoneOwned(channel)) {
         throw StateError('Connect to the companion device to delete channels');
       }
     } else if (onRadio) {
@@ -423,6 +316,99 @@ class ChannelRepository {
 
     debugPrint(
         '[Channel] ✅ Deleted private channel "${channel.name}" (index ${channel.channelIndex})');
+  }
+
+  /// Saves a newly created, joined or imported channel.
+  ///
+  /// Connected, it takes a free slot on the radio, which is the source of
+  /// truth for its own slots.
+  ///
+  /// Not connected, there is no slot to take, so the phone keeps it: parked
+  /// on a sentinel slot and marked not on the radio, ready to be offered to
+  /// the radio when it is used. A private channel that exists only on the
+  /// phone is exactly what a team channel is, so it becomes one. A hashtag
+  /// channel can't — anyone can derive its key — so it is only kept pending.
+  ///
+  /// Before this, an offline channel claimed a real slot number it didn't
+  /// have and was never pushed, so the next sync with the radio deleted it.
+  Future<ChannelData> _saveNewChannel({
+    required int hash,
+    required String name,
+    required Uint8List psk,
+    required String? companionKey,
+    required String maxReachedMessage,
+  }) async {
+    final hasRadio = companionKey != null && companionKey.isNotEmpty;
+    final isHashtag = _isHashtagKey(name, psk);
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    if (_bleManager.isConnected && hasRadio) {
+      final existingChannels =
+          await _channelsDao.getChannelsByCompanion(companionKey);
+      final usedIndices = existingChannels
+          .where((c) => c.channelIndex > 0)
+          .map((c) => c.channelIndex)
+          .toSet();
+      final nextIndex = _nextAvailablePrivateIndex(usedIndices);
+      if (nextIndex == null) throw StateError(maxReachedMessage);
+
+      final result = await _registerChannelWithFirmware(
+        channelIndex: nextIndex,
+        name: name,
+        psk: psk,
+      );
+      if (!result.isSuccess) {
+        if (result.errorCode == 3) throw StateError(maxReachedMessage);
+        throw StateError(_l10n.failedToRegisterChannel(
+            result.errorCode?.toString() ?? _l10n.unknown));
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      await _channelsDao.upsertChannel(ChannelsCompanion.insert(
+        hash: drift.Value(hash),
+        name: name,
+        sharedKey: psk,
+        isPublic: false,
+        shareLocation: const drift.Value(true),
+        channelIndex: nextIndex,
+        createdAt: now,
+        companionDeviceKey: drift.Value(companionKey),
+      ));
+    } else {
+      // Without a radio, only a team channel can be shown (see
+      // ChannelsDao.getVisibleChannels), and a hashtag channel can't be one.
+      if (isHashtag && !hasRadio) throw StateError('No companion selected');
+
+      debugPrint(
+          '[Channel] Not connected - "$name" kept on the phone${isHashtag ? '' : ' as a team channel'}, not on the radio yet');
+      await _channelsDao.upsertChannel(ChannelsCompanion.insert(
+        hash: drift.Value(hash),
+        name: name,
+        sharedKey: psk,
+        isPublic: false,
+        shareLocation: const drift.Value(true),
+        channelIndex: await _channelsDao.nextSentinelIndex(),
+        createdAt: now,
+        companionDeviceKey: drift.Value(hasRadio ? companionKey : null),
+        isTeam: drift.Value(!isHashtag),
+        firmwareConfirmed: const drift.Value(false),
+      ));
+    }
+
+    final created = await _channelsDao.getChannelByHash(hash);
+    if (created == null) throw StateError('Channel creation failed');
+    return created;
+  }
+
+  static bool _isHashtagKey(String name, Uint8List psk) {
+    final trimmed = name.trim();
+    final candidate = trimmed.startsWith('#') ? trimmed : '#$trimmed';
+    final derived = hashtagChannelPsk(candidate);
+    if (derived.length != psk.length) return false;
+    for (var i = 0; i < psk.length; i++) {
+      if (derived[i] != psk[i]) return false;
+    }
+    return true;
   }
 
   /// Marks a channel as owned by the phone: kept across radio switches,
