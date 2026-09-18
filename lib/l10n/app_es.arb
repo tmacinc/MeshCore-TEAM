@@ -581,5 +581,6 @@
   "radioNameExplanation": "Este nombre es visible para todos en la malla, incluso fuera de tu equipo. Considera un nombre anónimo.",
   "teamNameSettingsTitle": "Nombre (oculto fuera de tu equipo)",
   "general": "General",
-  "hideNonTeam": "Mostrar solo canales y contactos del equipo"
+  "hideNonTeam": "Mostrar solo canales y contactos del equipo",
+  "deleteChannelNeedsRadio": "Este canal está guardado en tu radio. Conéctate a la radio para eliminarlo."
 }

@@ -275,8 +275,10 @@ class ChannelRepository {
     final onRadio = channel.firmwareConfirmed && channel.channelIndex > 0;
     if (!_bleManager.isConnected) {
       // Only a channel the radio holds needs the radio to delete it.
+      // The radio owns this one: deleting it here alone would just bring it
+      // back on the next sync.
       if (!ChannelsDao.isPhoneOwned(channel)) {
-        throw StateError('Connect to the companion device to delete channels');
+        throw StateError(_l10n.deleteChannelNeedsRadio);
       }
     } else if (onRadio) {
       debugPrint(
@@ -409,6 +411,14 @@ class ChannelRepository {
       if (derived[i] != psk[i]) return false;
     }
     return true;
+  }
+
+  /// True when a channel shown for the current radio is marked as not on it.
+  Future<bool> hasChannelsAwaitingRadio() async {
+    final companionKey = _settingsService.settings.currentCompanionPublicKey;
+    final visible = await _channelsDao.getVisibleChannels(companionKey);
+    return visible
+        .any((c) => !c.firmwareConfirmed || c.channelIndex < 0);
   }
 
   /// Marks a channel as owned by the phone: kept across radio switches,
@@ -638,6 +648,9 @@ class ChannelRepository {
     try {
       final fetchedChannels = <ChannelsCompanion>[];
       bool reachedEndOfTable = false;
+      // Slots the radio didn't answer for. Their contents are unknown, so
+      // whatever the phone had there is kept rather than treated as gone.
+      final unreadSlots = <int>{};
 
       // Subscribe to incoming frames to route responses
       _frameSubscription = _bleManager.receivedFrames.listen((frame) {
@@ -750,6 +763,7 @@ class ChannelRepository {
         } else {
           debugPrint(
               '[ChannelSync] ⚠️ Could not fetch channel index $index after $_channelFetchRetryAttempts attempts, continuing...');
+          unreadSlots.add(index);
           syncTrace('$_syncTraceTag probe_failed index=$index');
         }
 
@@ -771,7 +785,8 @@ class ChannelRepository {
           '[COMPANION-SYNC] [ChannelSync] Tagging channels with companion: ${_settingsService.settings.currentCompanionPublicKey?.substring(0, 16)}...');
 
       // FIRMWARE IS SOURCE OF TRUTH - Replace all local channels atomically
-      await _channelsDao.replaceAllChannels(fetchedChannels);
+      await _channelsDao.replaceAllChannels(fetchedChannels,
+          unreadSlots: unreadSlots);
       debugPrint(
           '[ChannelSync] 💾 Replaced all channels (${fetchedChannels.length} saved)');
 

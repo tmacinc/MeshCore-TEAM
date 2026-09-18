@@ -2145,4 +2145,8 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get hideNonTeam => 'Alleen teamkanalen en -contacten tonen';
+
+  @override
+  String get deleteChannelNeedsRadio =>
+      'Dit kanaal staat op je radio. Maak verbinding met de radio om het te verwijderen.';
 }

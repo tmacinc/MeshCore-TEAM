@@ -581,5 +581,6 @@
   "radioNameExplanation": "Este nome é visível para todos na malha, incluindo fora da tua equipa. Considera um nome anónimo.",
   "teamNameSettingsTitle": "Nome (oculto fora da tua equipa)",
   "general": "Geral",
-  "hideNonTeam": "Mostrar apenas canais e contactos da equipa"
+  "hideNonTeam": "Mostrar apenas canais e contactos da equipa",
+  "deleteChannelNeedsRadio": "Este canal está guardado no teu rádio. Liga-te ao rádio para o apagar."
 }

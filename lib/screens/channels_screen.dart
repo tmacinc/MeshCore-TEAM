@@ -12,6 +12,8 @@ import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/screens/qr_scan_screen.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/services/settings_service.dart';
+import 'package:meshcore_team/ble/ble_connection_manager.dart';
+import 'package:meshcore_team/database/daos/channels_dao.dart';
 import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/theme/night_theme.dart';
 import 'package:meshcore_team/widgets/add_channel_to_radio.dart';
@@ -264,7 +266,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString())),
+                    SnackBar(content: Text(_errorText(e))),
                   );
                 }
                 if (dialogContext.mounted) {
@@ -340,7 +342,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString())),
+                    SnackBar(content: Text(_errorText(e))),
                   );
                 }
                 if (dialogContext.mounted) {
@@ -502,7 +504,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                     } catch (e) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(e.toString())),
+                          SnackBar(content: Text(_errorText(e))),
                         );
                       }
                     }
@@ -536,6 +538,10 @@ class ChannelListTile extends StatelessWidget {
     final repo = context.read<ChannelRepository>();
     final mode = ChannelNotificationMode.fromString(channel.notificationMode);
     final isPublic = channel.isPublic;
+    // A channel the radio owns can only be deleted with the radio connected;
+    // say so up front rather than failing after the confirmation.
+    final canDelete = context.read<BleConnectionManager>().isConnected ||
+        ChannelsDao.isPhoneOwned(channel);
 
     // The sheet has grown (notifications, team switch, add to radio,
     // delete) past the default bottom-sheet height on small screens, so it
@@ -615,11 +621,15 @@ class ChannelListTile extends StatelessWidget {
               if (!isPublic) ...[
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  enabled: canDelete,
+                  leading: Icon(Icons.delete_outline,
+                      color: canDelete ? Colors.red : null),
                   title: Text(
                     l10n.deleteChannel,
-                    style: const TextStyle(color: Colors.red),
+                    style: canDelete ? const TextStyle(color: Colors.red) : null,
                   ),
+                  subtitle:
+                      canDelete ? null : Text(l10n.deleteChannelNeedsRadio),
                   onTap: () {
                     Navigator.of(ctx).pop();
                     _showDeleteDialog(context, repo);
@@ -660,7 +670,7 @@ class ChannelListTile extends StatelessWidget {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString())),
+                    SnackBar(content: Text(_errorText(e))),
                   );
                 }
                 if (dialogContext.mounted) {
@@ -921,3 +931,8 @@ class _NotificationModeOption extends StatelessWidget {
     );
   }
 }
+
+/// The user-facing text of an error. Repository errors are StateErrors whose
+/// message is already written for the user; toString() would prefix it with
+/// "Bad state: ".
+String _errorText(Object e) => e is StateError ? e.message : e.toString();

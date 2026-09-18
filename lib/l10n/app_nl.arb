@@ -581,5 +581,6 @@
   "radioNameExplanation": "Deze naam is zichtbaar voor iedereen op het mesh, ook buiten je team. Overweeg een anonieme naam.",
   "teamNameSettingsTitle": "Naam (verborgen buiten je team)",
   "general": "Algemeen",
-  "hideNonTeam": "Alleen teamkanalen en -contacten tonen"
+  "hideNonTeam": "Alleen teamkanalen en -contacten tonen",
+  "deleteChannelNeedsRadio": "Dit kanaal staat op je radio. Maak verbinding met de radio om het te verwijderen."
 }

@@ -581,5 +581,6 @@
   "radioNameExplanation": "Questo nome è visibile a tutti sulla mesh, anche fuori dal tuo team. Valuta un nome anonimo.",
   "teamNameSettingsTitle": "Nome (nascosto fuori dal tuo team)",
   "general": "Generale",
-  "hideNonTeam": "Mostra solo canali e contatti del team"
+  "hideNonTeam": "Mostra solo canali e contatti del team",
+  "deleteChannelNeedsRadio": "Questo canale è salvato sulla radio. Collegati alla radio per eliminarlo."
 }

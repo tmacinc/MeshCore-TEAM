@@ -2126,4 +2126,8 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get hideNonTeam => 'Nur Team-Kanäle und -Kontakte anzeigen';
+
+  @override
+  String get deleteChannelNeedsRadio =>
+      'Dieser Kanal ist auf deinem Funkgerät gespeichert. Verbinde dich mit dem Funkgerät, um ihn zu löschen.';
 }

@@ -2155,4 +2155,8 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get hideNonTeam => 'Mostrar solo canales y contactos del equipo';
+
+  @override
+  String get deleteChannelNeedsRadio =>
+      'Este canal está guardado en tu radio. Conéctate a la radio para eliminarlo.';
 }

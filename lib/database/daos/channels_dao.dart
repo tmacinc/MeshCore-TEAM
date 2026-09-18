@@ -232,7 +232,15 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Those keep a negative sentinel slot index, matching the Team Link
   /// branch, so they can never collide with a real slot.
-  Future<void> replaceAllChannels(List<ChannelsCompanion> replacements) {
+  ///
+  /// [unreadSlots] are slots the radio didn't answer for during the fetch.
+  /// A timeout says nothing about what is in the slot, so channels the phone
+  /// had there are kept exactly as they were — neither deleted nor marked as
+  /// not on the radio.
+  Future<void> replaceAllChannels(
+    List<ChannelsCompanion> replacements, {
+    Set<int> unreadSlots = const {},
+  }) {
     return db.transaction(() async {
       final existing = await select(channels).get();
       final preserved = {
@@ -247,8 +255,18 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
 
       // Kept even though the radio doesn't report them: team channels, and
       // channels created offline that were never pushed to a radio.
+      final unanswered = existing
+          .where((c) =>
+              unreadSlots.contains(c.channelIndex) &&
+              !fromFirmware.contains(c.hash))
+          .toList();
+      final unansweredHashes = {for (final c in unanswered) c.hash};
+
       final orphanedTeam = existing
-          .where((c) => isPhoneOwned(c) && !fromFirmware.contains(c.hash))
+          .where((c) =>
+              isPhoneOwned(c) &&
+              !fromFirmware.contains(c.hash) &&
+              !unansweredHashes.contains(c.hash))
           .toList();
 
       await delete(channels).go();
@@ -263,6 +281,10 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
               )
             : channel;
         await into(channels).insertOnConflictUpdate(merged);
+      }
+
+      for (final channel in unanswered) {
+        await into(channels).insertOnConflictUpdate(channel.toCompanion(false));
       }
 
       var sentinelIndex = -1;

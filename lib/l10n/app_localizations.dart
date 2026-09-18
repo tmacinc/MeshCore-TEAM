@@ -3599,6 +3599,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hide all but team channels and contacts'**
   String get hideNonTeam;
+
+  /// No description provided for @deleteChannelNeedsRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'This channel is stored on your radio. Connect to the radio to delete it.'**
+  String get deleteChannelNeedsRadio;
 }
 
 class _AppLocalizationsDelegate

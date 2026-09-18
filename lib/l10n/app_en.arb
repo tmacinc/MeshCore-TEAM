@@ -1419,5 +1419,6 @@
   "radioNameExplanation": "This name is visible to everyone on the mesh, including people outside your team. Consider an anonymous name.",
   "teamNameSettingsTitle": "Name (hidden outside your team)",
   "general": "General",
-  "hideNonTeam": "Hide all but team channels and contacts"
+  "hideNonTeam": "Hide all but team channels and contacts",
+  "deleteChannelNeedsRadio": "This channel is stored on your radio. Connect to the radio to delete it."
 }

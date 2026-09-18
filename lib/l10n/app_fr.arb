@@ -581,5 +581,6 @@
   "radioNameExplanation": "Ce nom est visible par tout le réseau, y compris hors de votre équipe. Envisagez un nom anonyme.",
   "teamNameSettingsTitle": "Nom (masqué hors de votre équipe)",
   "general": "Général",
-  "hideNonTeam": "N'afficher que les canaux et contacts de l'équipe"
+  "hideNonTeam": "N'afficher que les canaux et contacts de l'équipe",
+  "deleteChannelNeedsRadio": "Ce canal est enregistré sur votre radio. Connectez-vous à la radio pour le supprimer."
 }

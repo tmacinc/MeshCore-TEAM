@@ -102,6 +102,23 @@ void main() {
       expect(await db.channelsDao.getAllChannelsOnce(), isEmpty);
     });
 
+    test('a slot the radio did not answer for keeps what the phone had',
+        () async {
+      // A timeout says nothing about the slot's contents: don't demote a team
+      // channel to "not on this radio", and don't delete an ordinary one.
+      await db.into(db.channels).insert(channel(hash: 1, index: 1, isTeam: true));
+      await db.into(db.channels).insert(channel(hash: 2, index: 2));
+
+      await db.channelsDao
+          .replaceAllChannels([], unreadSlots: {1, 2});
+
+      final all = await db.channelsDao.getAllChannelsOnce();
+      final team = all.firstWhere((c) => c.hash == 1);
+      expect(team.channelIndex, 1);
+      expect(team.firmwareConfirmed, isTrue);
+      expect(all.map((c) => c.hash), contains(2));
+    });
+
     test('a team channel the radio still has keeps its slot', () async {
       await db.into(db.channels).insert(channel(hash: 1, index: 1, isTeam: true));
 
