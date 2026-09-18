@@ -31,6 +31,7 @@ Future<bool> promptAddChannelToRadio(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
+      scrollable: true,
       title: Text(l10n.addChannelToRadio),
       content: Column(
         mainAxisSize: MainAxisSize.min,

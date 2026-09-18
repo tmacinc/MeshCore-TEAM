@@ -351,6 +351,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (dialogContext) {
         final l10n = AppLocalizations.of(dialogContext)!;
         return AlertDialog(
+          scrollable: true,
           title: Text(l10n.teamName),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -579,6 +580,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final shouldEnable = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text(AppLocalizations.of(context)!.backgroundLocation),
         content: Text(
           AppLocalizations.of(context)!.backgroundLocationExplanation,
@@ -617,6 +619,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
+          scrollable: true,
           title: Text(AppLocalizations.of(context)!.permissionRequired),
           content: const Text(
             'Background location was denied. Please enable "Always" '

@@ -575,8 +575,10 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
   void _showMessageActions(MessageData message) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
@@ -594,6 +596,7 @@ class _DirectMessageScreenState extends State<DirectMessageScreen> {
               },
             ),
           ],
+        ),
         ),
       ),
     );

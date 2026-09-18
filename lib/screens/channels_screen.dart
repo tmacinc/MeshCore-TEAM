@@ -199,10 +199,12 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       BuildContext context, ChannelRepository channelRepository) async {
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) {
         final sheetL10n = AppLocalizations.of(ctx)!;
         return SafeArea(
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
@@ -231,6 +233,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                 },
               ),
             ],
+          ),
           ),
         );
       },
@@ -278,6 +281,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             }
 
             return AlertDialog(
+              scrollable: true,
               title: Text(AppLocalizations.of(dialogContext)!.createPrivateChannel),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -354,6 +358,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             }
 
             return AlertDialog(
+              scrollable: true,
               title: Text(AppLocalizations.of(dialogContext)!.joinHashtagChannel),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -680,6 +685,7 @@ class ChannelListTile extends StatelessWidget {
             }
 
             return AlertDialog(
+              scrollable: true,
               title: Text(AppLocalizations.of(dialogContext)!.deleteChannel),
               content: Text(
                 'Delete "${channel.name}" from the companion and this phone?\n\nThis cannot be undone.',

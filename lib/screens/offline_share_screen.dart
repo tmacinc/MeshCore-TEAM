@@ -318,6 +318,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
       children: [
         Expanded(
           child: Center(
+            child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -360,6 +361,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                   ],
                 ],
               ),
+            ),
             ),
           ),
         ),
@@ -789,6 +791,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
       builder: (ctx) {
         final l = AppLocalizations.of(context)!;
         return AlertDialog(
+          scrollable: true,
           title: Text(l.stopSharing),
           content: Text('${l.thisWillStopTheConfigServer}${l.teamMembersCanNoLongerDownload}'),
           actions: [

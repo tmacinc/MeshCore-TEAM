@@ -597,8 +597,10 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
       MessageData message, String meshName, bool isFromMe) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
@@ -625,6 +627,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                 },
               ),
           ],
+        ),
         ),
       ),
     );

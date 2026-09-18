@@ -280,6 +280,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                 !wipeChannels && !wipeWaypoints && !wipeMaps;
 
             return AlertDialog(
+              scrollable: true,
               title: Row(
                 children: [
                   const Icon(Icons.warning_amber_rounded,
@@ -357,6 +358,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                             builder: (ctx) {
                               final innerL10n = AppLocalizations.of(ctx)!;
                               return AlertDialog(
+                                scrollable: true,
                                 title: Text(innerL10n.areYouSure),
                                 content: Text(
                                   '${innerL10n.wipePermanentDeleteWarning} '
@@ -571,6 +573,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
 
     if (isPermissionError) {
       return Center(
+        child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
           child: Column(
@@ -603,6 +606,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
               ),
             ],
           ),
+        ),
         ),
       );
     }
@@ -828,6 +832,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: Text(l10n.deleteAllContacts),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -869,6 +874,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: Text(l10n.deleteAllChannels),
         content: Text(l10n.deleteAllChannelsConfirm),
         actions: [
@@ -949,6 +955,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
           builder: (context, setState) {
             final l10n = AppLocalizations.of(context)!;
             return AlertDialog(
+              scrollable: true,
               title: Text(l10n.deviceName),
               content: Column(
                 mainAxisSize: MainAxisSize.min,

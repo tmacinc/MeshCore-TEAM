@@ -543,8 +543,10 @@ class ContactListTile extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
@@ -592,6 +594,7 @@ class ContactListTile extends StatelessWidget {
               },
             ),
           ],
+        ),
         ),
       ),
     );

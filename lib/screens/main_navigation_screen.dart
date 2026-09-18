@@ -217,6 +217,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           child: StatefulBuilder(
             builder: (context, setState) {
               return AlertDialog(
+                scrollable: true,
                 title: Text(l10n.setIdentity),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,

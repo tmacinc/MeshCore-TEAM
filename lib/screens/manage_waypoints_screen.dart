@@ -48,6 +48,7 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text(title),
         content: Text(message),
         actions: [
@@ -492,8 +493,10 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
       final l10n = AppLocalizations.of(context)!;
       final choice = await showModalBottomSheet<String>(
         context: context,
+        isScrollControlled: true,
         builder: (ctx) => SafeArea(
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
@@ -518,6 +521,7 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
               ),
               const SizedBox(height: 8),
             ],
+          ),
           ),
         ),
       );
@@ -573,10 +577,12 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (context) {
         final type = WaypointType.fromString(waypoint.waypointType);
 
         return SafeArea(
+          child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -662,6 +668,7 @@ class _ManageWaypointsScreenState extends State<ManageWaypointsScreen> {
                 ),
               ],
             ),
+          ),
           ),
         );
       },

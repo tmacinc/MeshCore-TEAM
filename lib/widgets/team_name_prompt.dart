@@ -29,6 +29,7 @@ Future<void> showTeamNamePromptIfNeeded(BuildContext context) async {
     builder: (dialogContext) {
       final l10n = AppLocalizations.of(dialogContext)!;
       return AlertDialog(
+        scrollable: true,
         title: Text(l10n.teamNamePrompt),
         content: Column(
           mainAxisSize: MainAxisSize.min,

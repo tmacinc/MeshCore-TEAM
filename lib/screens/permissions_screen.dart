@@ -187,6 +187,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             context: context,
             barrierDismissible: false,
             builder: (context) => AlertDialog(
+              scrollable: true,
               title: Text(AppLocalizations.of(context)!.batteryOptimization),
               content: Text(
                 AppLocalizations.of(context)!.batteryOptimizationExplanation,

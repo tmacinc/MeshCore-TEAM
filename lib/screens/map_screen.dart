@@ -488,6 +488,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
         }
 
         return AlertDialog(
+          scrollable: true,
           title: Text(name),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -578,10 +579,12 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
 
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (sheetContext) {
         final l10n = AppLocalizations.of(sheetContext)!;
         return SafeArea(
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
@@ -646,6 +649,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
               const SizedBox(height: 8),
             ],
           ),
+          ),
         );
       },
     );
@@ -657,6 +661,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
         return AlertDialog(
+          scrollable: true,
           title: Text(title),
           content: Text(message),
           actions: [
@@ -696,10 +701,12 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   void _showAddWaypointOrRouteMenu() {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
         return SafeArea(
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
@@ -719,6 +726,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                 },
               ),
             ],
+          ),
           ),
         );
       },
