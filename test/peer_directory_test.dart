@@ -164,6 +164,31 @@ void main() {
       expect(result.contact, isNotNull);
     });
 
+    test('a placeholder made during a rename is folded into the radio',
+        () async {
+      // B is known as "Scout". B renames the radio to "Ghost"; positions
+      // arrive under "Ghost" before the advert, so a placeholder appears.
+      final known = await resolve('Scout', contacts: [_contact('Scout', 1)]);
+      final placeholder = await resolve('Ghost');
+      expect(peers.all.length, 2);
+
+      // The advert arrives: the radio's contact list now says "Ghost".
+      await db.contactsDao.upsertContact(ContactsCompanion(
+        publicKey: Value(_key(1)),
+        hash: const Value(1),
+        name: const Value('Ghost'),
+        lastSeen: const Value(0),
+        companionDeviceKey: const Value('radio'),
+      ));
+      await peers.syncWithRadioContactsForTest(
+          await db.contactsDao.getContactsByCompanion('radio'));
+
+      expect(peers.all.length, 1);
+      expect(peers.all.single.id, known.peer.id);
+      expect(peers.all.single.radioName, 'Ghost');
+      expect(peers.byId(placeholder.peer.id), isNull);
+    });
+
     test('a renamed radio keeps the same peer', () async {
       final before = await resolve('Scout', contacts: [_contact('Scout', 1)]);
       final after = await resolve('Ghost', contacts: [_contact('Ghost', 1)]);

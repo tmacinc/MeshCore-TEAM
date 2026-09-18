@@ -332,6 +332,12 @@ class PeerDirectory extends ChangeNotifier {
         .listen((contacts) => unawaited(_onRadioContacts(contacts)));
   }
 
+  /// Runs the radio-contact sync directly; the app drives it from the
+  /// contact list stream instead.
+  @visibleForTesting
+  Future<void> syncWithRadioContactsForTest(List<ContactData> contacts) =>
+      _onRadioContacts(contacts);
+
   /// Keeps peers in step with the radio's contact list: follows renames of
   /// known keys, and binds a placeholder once an advert for its name arrives.
   Future<void> _onRadioContacts(List<ContactData> contacts) {
@@ -342,10 +348,21 @@ class PeerDirectory extends ChangeNotifier {
 
         final known = byRadioKey(contact.publicKey);
         if (known != null) {
+          var current = known;
           if (known.radioName != name) {
             debugPrint(
                 '[Peers] ✏️ Radio renamed: "${known.radioName}" → "$name"');
-            await _update(known.id, PeersCompanion(radioName: Value(name)));
+            current = await _update(
+                known.id, PeersCompanion(radioName: Value(name)));
+          }
+          // Positions heard under the new name before this advert arrived
+          // created a placeholder for it. It is this same radio: fold it in,
+          // or it lingers on the map as a second, stale person.
+          final placeholder = _placeholderFor(name);
+          if (placeholder != null && placeholder.id != current.id) {
+            debugPrint(
+                '[Peers] 🔀 Merging placeholder "$name" into its renamed radio');
+            await _merge(keep: current, drop: placeholder);
           }
           continue;
         }

@@ -109,7 +109,7 @@ This is the most important session. It exercises the new discovery end to end, i
 30. **Phone B:** rename R2 from `R2-radio` to `R2-renamed` (Connection → device name). The radio reboots and reconnects.
 31. A's log, after B's next advert: ✅ `[Peers] ✏️ Radio renamed: "R2-radio" → "R2-renamed"`.
 32. On A: ✅ B is still **one** person, still shown as `Ben`, same map history. ✅ Contacts shows `R2-renamed` under `Ben`.
-33. If A's log instead shows `[TELREC] 📍 Sender 'R2-renamed' not on radio` for a while, that's the rename window before B's advert arrives — ✅ it should resolve by itself via the advert request within a few packets.
+33. Before B's advert arrives, A's log shows `[TELREC] 📍 Sender 'R2-renamed' not on radio` for a few packets — that's the rename window, and discovery kicks in. When the advert lands: ✅ `[Peers] ✏️ Radio renamed …` followed by `[Peers] 🔀 Merging placeholder "R2-renamed" into its renamed radio`. ✅ Afterwards there is **one** B on A's map, not a second stale marker.
 
 ## Session 8 — Team channels without a radio (log A) · 15 min
 
