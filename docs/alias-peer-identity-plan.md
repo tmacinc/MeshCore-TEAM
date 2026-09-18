@@ -24,6 +24,7 @@ Target branch: `dev`. Team Link (`D0sockets`) adopts this afterwards; its change
 | **Radio name** | The node name set on the radio. It is sent in every advert and added by the firmware to every channel message. Anyone on the mesh can see it. |
 | **Alias** | The in-app team name. It is sent only in CAP on the tracking channel. |
 | **Peer** | A local record for one person (`Peers` row, `peerId`). `peerId` never leaves the phone. |
+| **App ID** | 16 hex characters identifying one app install: the first 8 bytes of SHA-256 of the install's Ed25519 key (`AppIdentityService.uploaderId`, the same ID Team Link uses). Sent in CAP. |
 | **Team channel** | A private channel with a secret key (never public or hashtag) that the phone has marked as team. See §7. |
 | **Team member** | A peer seen sending TEL, topology or CAP on a team channel. |
 | **Resolved** | The peer has a key, and that key is a contact on the current radio. |
@@ -41,7 +42,7 @@ Target branch: `dev`. Team Link (`D0sockets`) adopts this afterwards; its change
 | `peerId` | int, auto-increment PK | Local only |
 | `radioPublicKey` | blob(32), nullable, unique | Full key, from adverts or contact sync. Needed to add the contact to a new radio. |
 | `radioKeyPrefix` | text(12), nullable | From CAP v2 before the full key is known. Always equals the start of `radioPublicKey` once that is set. |
-| `appIdentityId` | text(16), nullable, unique | Link uploaderId (used on `D0sockets` only) |
+| `appIdentityId` | text(16), nullable, unique | App ID, from CAP v2 or Link. A peer is an app install; its radio key can change |
 | `radioName` | text, nullable | Last seen radio name. Used for exact matching of channel senders and for mentions. |
 | `alias` | text, nullable | From CAP v2 |
 | `aliasUpdatedAt` | int, nullable | |
@@ -105,7 +106,7 @@ class PeerDirectory extends ChangeNotifier {
   // inbound
   PeerResolution resolveChannelSender(String radioName, {int? teamChannelHash});
   Peer? byRadioKey(Uint8List keyOrPrefix);
-  Peer? byAppId(String appId);                       // Link
+  Peer? byAppId(String appId);                       // CAP, Link
   Future<Peer> upsertFromCap(String radioName, CapabilityMessage cap, int channelHash);
   Future<void> bindRadioKey(Uint8List fullKey, String radioName);  // advert / contact sync
   Future<Peer> merge(int keepId, int dropId);
@@ -133,8 +134,16 @@ enum ResolutionState { resolved, knownNotOnRadio, unresolved, ambiguous }
 
 **Merging.** A merge moves `PeerLocations` (keeping the newer row), history, `Messages.senderPeerId` and `Contacts.peerId` onto the surviving peer. It is triggered by:
 - a CAP whose key prefix matches a different peer;
-- an advert whose key matches a placeholder with the same name;
-- on Link: an app ID and a radio key seen together (Part B).
+- a CAP whose app ID belongs to a different peer (the same phone on another radio);
+- an advert whose key matches a placeholder with the same name.
+
+Two peers with different app IDs are never merged.
+
+**Radio swaps.** A peer is the phone; the radio is something it carries.
+- A CAP from a known app ID on another radio moves that peer to the new radio: its old key is dropped, the new key prefix recorded, and an advert requested. Alias, history and last position stay. A placeholder made under the new radio name is folded in.
+- A CAP from a new app ID on a radio another app ID held means the radio changed hands: the key moves to the new person, and the previous user stays as a person without a radio.
+- Until the new radio's advert arrives, a contact still on the radio under the same name (their old radio) doesn't count as them; only the key prefix they sent does.
+- A peer whose key is the radio this phone connects to loses the key (it is ours now) and keeps everything else.
 
 **Call sites to change.** The TEL, topology, CAP and waypoint handlers and the DM receive path in `message_repository.dart`; `forwarding_v1_strategy` (key its state by `peerId`); `forwarding_policy_service`; `capability_publisher`; and the display sites in §8.
 
@@ -143,10 +152,12 @@ enum ResolutionState { resolved, knownNotOnRadio, unresolved, ambiguous }
 ### 5.1 CAP v2 advertisement
 
 ```
-#CAP:2:<flags_hex2>:<radioKeyPrefix_hex12>:<alias...>
+#CAP:2:<flags_hex2>:<radioKeyPrefix_hex12>:<appId_hex16>:<alias...>
 ```
 
-- **Fields.** `alias` is the last field and may contain `:`; parse it as the remainder. An empty alias means "no alias set".
+- **Fields.** `alias` is the last field and may contain `:`; parse it as the remainder. An empty alias means "no alias set". `radioKeyPrefix` and `appId` are `-` when unavailable.
+- **App ID.** Identifies the phone, so the team keeps recognising someone who changes radio or alias. It is the Link uploaderId, so mesh and Link agree on who is who. It is random, carries nothing personal, and only travels on the encrypted tracking channel. Like the alias it is unauthenticated: anyone holding the channel key could claim someone else's (the same trust as everything else on that channel).
+- **Early v2.** Test builds before the app ID sent `…:<radioKeyPrefix>:<alias>`. Still read: the field after the key prefix is taken as an app ID only if it is `-` or 16 hex characters and more fields follow.
 - **Flags.** The v1 flag bits are unchanged.
 - **Byte budget** (MeshCore text limit about 160 bytes, including the `"RadioName: "` prefix):
 
@@ -154,8 +165,9 @@ enum ResolutionState { resolved, knownNotOnRadio, unresolved, ambiguous }
   |---|---|
   | `#CAP:2:1f:` | 10 |
   | Key prefix + `:` | 13 |
+  | App ID + `:` | 17 |
   | Alias (≤ 24 UTF-8 bytes) | ≤ 24 |
-  | **Payload total** | **≤ 47** |
+  | **Payload total** | **≤ 64** |
   | Radio name prefix, added by the firmware | ≤ 33 |
 
 - **Encoding.** Sent as UTF-8; the `writeString` path handles it.
@@ -443,7 +455,7 @@ Link ships as a separate app in a private test group. Changes flow **dev → D0s
 **B5. CAP over Link**
 - Radio-less phones send CAP v2 over Link, with the key prefix field set to `-`.
 - Gateways inject it onto the mesh inside `#LINK:`, like other tracking-channel traffic.
-- When a CAP arrives in a **flagged** envelope from a phone that has a radio, link `appIdentityId` ↔ `radioKeyPrefix` and merge the peers. This is how one person seen through both Link and mesh becomes one peer, **without putting the app ID in CAP**.
+- CAP carries the app ID (§5.1), so a person seen through both Link and mesh already becomes one peer through `byAppId`; no separate linking step is needed.
 
 **B6. Channels**
 - `isLocalOnly` / `firmwareConfirmed` / the sentinel index pool now come from `dev` (§3.2, §7.3). Remove Link's separate reconciliation code where it duplicates them.

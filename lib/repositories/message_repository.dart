@@ -2156,7 +2156,13 @@ class MessageRepository {
       () async {
         // Resolution can land during the delay (their advert, or a contact
         // sync); don't transmit for a sender we can already see.
-        if (await _isContactOnRadio(senderName)) {
+        // Someone who moved radios keeps their name, so the old radio's
+        // contact would match by name alone: only the radio they named counts.
+        final current = _peers.byId(peer.id);
+        final movedTo = current != null && current.radioPublicKey == null
+            ? current.radioKeyPrefix
+            : null;
+        if (await _isContactOnRadio(senderName, keyPrefix: movedTo)) {
           debugPrint(
               '[Discovery] ✅ "$senderName" resolved before sending; skipped');
           _discovery.remove(senderName);
@@ -2183,11 +2189,15 @@ class MessageRepository {
     );
   }
 
-  Future<bool> _isContactOnRadio(String radioName) async {
+  Future<bool> _isContactOnRadio(String radioName, {String? keyPrefix}) async {
     final companionKey = _settingsService.settings.currentCompanionPublicKey;
     if (companionKey == null || companionKey.isEmpty) return false;
     final contacts = await _contactsDao.getContactsByCompanion(companionKey);
-    return contacts.any((c) => c.name == radioName);
+    return contacts.any((c) =>
+        c.name == radioName &&
+        (keyPrefix == null ||
+            _bytesToHex(Uint8List.fromList(c.publicKey.take(6).toList())) ==
+                keyPrefix));
   }
 
   /// Drops discovery state for senders that have gone quiet.

@@ -14,6 +14,7 @@
 ## Contacts and discovery
 - Your radio no longer stores every device it hears. Team members are added automatically, and everyone else appears under **Heard nearby** on the Contacts tab, where you can add or dismiss them.
 - Team contacts are copied onto a newly paired radio, so changing radio doesn't cost you the group.
+- Changing radio, or swapping radios with a teammate, no longer makes you appear twice: your team recognises your phone, not just your radio.
 - Discovery now also asks a specific member to identify themselves, which fixes finding people who already have you, one-way links, and members who changed radio.
 - Fixed: contact discovery silently failed on radios set not to add contacts automatically.
 

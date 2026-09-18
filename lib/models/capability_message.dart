@@ -7,17 +7,25 @@ import 'dart:convert';
 ///
 /// Wire formats:
 ///   v1: `#CAP:1:<flags_hex>`
-///   v2: `#CAP:2:<flags_hex>:<radio_key_prefix>:<alias>`
+///   v2: `#CAP:2:<flags_hex>:<radio_key_prefix>:<app_id>:<alias>`
 ///
 ///   - flags_hex: lower-case 2-char hex byte
 ///   - radio_key_prefix: first 6 bytes of the sender's radio public key as 12
 ///     lower-case hex chars, or `-` when the sender has no radio (Team Link)
+///   - app_id: the sender's app identity (see [AppIdentityService.uploaderId])
+///     as 16 lower-case hex chars, or `-` when it isn't available. It is the
+///     same ID Team Link uses, so one phone is one person on both.
 ///   - alias: the sender's team alias, UTF-8, may be empty, and is the last
 ///     field so it may contain `:`
 ///
-/// The alias is why v2 exists: it binds a team name to a radio key for
-/// everyone holding the channel key, without putting the name on every
-/// telemetry packet.
+/// v2 binds a team name and a phone to a radio key for everyone holding the
+/// channel key, without putting either on every telemetry packet. The app ID
+/// is what lets a phone keep its identity across a radio swap: the radio key
+/// says which radio sent this, the app ID says who is using it.
+///
+/// Early v2 test builds sent no app ID (`…:<radio_key_prefix>:<alias>`).
+/// That form is still read; it is told apart by the field after the key
+/// prefix not being an app ID.
 ///
 /// Flag byte:
 ///   bit 0 (0x01): custom firmware
@@ -45,6 +53,12 @@ class CapabilityMessage {
   /// Placeholder key prefix for a sender with no radio (Team Link only).
   static const String noRadioKeyPrefix = '-';
 
+  /// Placeholder for a sender whose app identity isn't available.
+  static const String noAppId = '-';
+
+  static final RegExp _keyPrefixPattern = RegExp(r'^[0-9a-f]{12}$');
+  static final RegExp _appIdPattern = RegExp(r'^[0-9a-f]{16}$');
+
   // Flag masks
   static const int flagCustomFirmware = 0x01;
   static const int flagForwardingCapable = 0x02;
@@ -58,6 +72,10 @@ class CapabilityMessage {
   /// 12 lower-case hex chars, or null when the sender has no radio or sent v1.
   final String? radioKeyPrefix;
 
+  /// 16 lower-case hex chars identifying the sender's app install, or null
+  /// when not sent.
+  final String? appId;
+
   /// Null for v1 (which carries no alias); empty means "no alias set".
   final String? alias;
 
@@ -65,6 +83,7 @@ class CapabilityMessage {
     required this.version,
     required this.flags,
     this.radioKeyPrefix,
+    this.appId,
     this.alias,
   });
 
@@ -99,19 +118,27 @@ class CapabilityMessage {
     }
 
     final prefixField = parts[2].toLowerCase();
-    final keyPrefix = RegExp(r'^[0-9a-f]{12}$').hasMatch(prefixField)
-        ? prefixField
-        : null;
+    final keyPrefix =
+        _keyPrefixPattern.hasMatch(prefixField) ? prefixField : null;
 
-    // The alias is last and may contain ':'. Anything after it belongs to a
-    // newer version we don't know about, so it stays part of the alias only
-    // if it was never separated — future fields go before the alias.
-    final alias = parts.sublist(3).join(':');
+    // The alias is last and may contain ':', so new fields go before it.
+    // An early v2 sender put the alias straight after the key prefix.
+    String? appId;
+    var aliasStart = 3;
+    if (parts.length >= 5) {
+      final appIdField = parts[3].toLowerCase();
+      if (appIdField == noAppId || _appIdPattern.hasMatch(appIdField)) {
+        appId = appIdField == noAppId ? null : appIdField;
+        aliasStart = 4;
+      }
+    }
+    final alias = parts.sublist(aliasStart).join(':');
 
     return CapabilityMessage(
       version: version,
       flags: flags & 0xFF,
       radioKeyPrefix: keyPrefix,
+      appId: appId,
       alias: _sanitizeAlias(alias),
     );
   }
@@ -121,7 +148,7 @@ class CapabilityMessage {
     final hex = (flags & 0xFF).toRadixString(16).padLeft(2, '0');
     if (version < 2) return '$prefix$version:$hex';
     final keyPrefix = radioKeyPrefix ?? noRadioKeyPrefix;
-    return '$prefix$version:$hex:$keyPrefix:${alias ?? ''}';
+    return '$prefix$version:$hex:$keyPrefix:${appId ?? noAppId}:${alias ?? ''}';
   }
 
   /// Build from current connected-firmware capability state.
@@ -134,6 +161,7 @@ class CapabilityMessage {
     bool autonomousEnabled = false,
     bool smartForwardingActive = false,
     String? radioKeyPrefix,
+    String? appId,
     String? alias,
   }) {
     int flags = flagCustomFirmware; // always set — this app requires custom fw
@@ -145,6 +173,9 @@ class CapabilityMessage {
       version: currentVersion,
       flags: flags,
       radioKeyPrefix: radioKeyPrefix?.toLowerCase(),
+      appId: appId != null && _appIdPattern.hasMatch(appId.toLowerCase())
+          ? appId.toLowerCase()
+          : null,
       alias: _sanitizeAlias(alias ?? ''),
     );
   }
@@ -173,7 +204,7 @@ class CapabilityMessage {
       'CapabilityMessage(v$version flags=0x${flags.toRadixString(16).padLeft(2, "0")}'
       ' customFw=$isCustomFirmware fwd=$supportsForwarding auto=$supportsAutonomous'
       ' autoEnabled=$autonomousEnabled smartFwd=$smartForwardingActive'
-      ' keyPrefix=$radioKeyPrefix alias="$alias")';
+      ' keyPrefix=$radioKeyPrefix appId=$appId alias="$alias")';
 }
 
 /// Advert request (`#CAP:R:<key_prefix|->:<radio_name>`).
@@ -214,7 +245,7 @@ class CapabilityRequest {
 
     return CapabilityRequest(
       targetRadioName: name,
-      targetKeyPrefix: RegExp(r'^[0-9a-f]{12}$').hasMatch(prefixField)
+      targetKeyPrefix: CapabilityMessage._keyPrefixPattern.hasMatch(prefixField)
           ? prefixField
           : null,
     );

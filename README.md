@@ -448,6 +448,7 @@ Your team is remembered by the app, not by the radio, so pairing a new radio doe
 - Team members' contacts are copied onto the new radio automatically, as long as it has room (the app leaves part of the table free for other contacts).
 - The app then sends one advert, because the team has never seen this radio's key and their contact for you still points at the old one.
 - Team channels, team chat history and everyone's last known position stay on the phone. The channels are offered to the new radio the first time you use them.
+- Your teammates keep recognising you. The capability message carries a random ID for your app install, so moving to another radio, even one a teammate used before, keeps you as one person on their map with your name and history. Clearing the app's data creates a new ID, as does reinstalling on Android (iOS keeps it in the Keychain).
 
 ### 10) App settings (appearance, theme, and device options)
 

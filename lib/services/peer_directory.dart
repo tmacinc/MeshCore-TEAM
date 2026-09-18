@@ -179,8 +179,15 @@ class PeerDirectory extends ChangeNotifier {
     return _serialized(() async {
       final nowMs = DateTime.now().millisecondsSinceEpoch;
 
-      final onRadio =
-          radioContacts.where((c) => (c.name ?? '') == radioName).toList();
+      // Someone who told us they moved radios but keeps the name: their old
+      // radio's contact is still here under that name. Only the radio they
+      // named counts as them.
+      final movedTo = _keylessFor(radioName)?.radioKeyPrefix;
+      final onRadio = radioContacts
+          .where((c) =>
+              (c.name ?? '') == radioName &&
+              (movedTo == null || _hex(c.publicKey.take(6)) == movedTo))
+          .toList();
       if (onRadio.isNotEmpty) {
         final contact = _pickContact(onRadio);
         final peer = await _peerForContact(contact, radioName, nowMs);
@@ -211,7 +218,7 @@ class PeerDirectory extends ChangeNotifier {
         );
       }
 
-      var placeholder = _placeholderFor(radioName);
+      var placeholder = _keylessFor(radioName);
       placeholder ??= await _insert(PeersCompanion.insert(
         radioName: Value(radioName),
         firstSeen: nowMs,
@@ -246,22 +253,35 @@ class PeerDirectory extends ChangeNotifier {
   Future<CapabilityOutcome> recordCapability(
       PeerData peer, CapabilityMessage cap) {
     return _serialized(() async {
-      var target = peer;
+      var target = _byId[peer.id] ?? peer;
       var keyMismatch = false;
       final capPrefix = cap.radioKeyPrefix;
+
+      if (cap.appId != null) {
+        final claim = await _claimForApp(target, cap.appId!, capPrefix);
+        target = claim.peer;
+        // They moved to a radio we hold no key for: ask it to advertise.
+        keyMismatch = claim.droppedKey;
+      }
 
       if (capPrefix != null) {
         final byPrefix = byRadioKeyPrefix(capPrefix);
         if (byPrefix != null && byPrefix.id != target.id) {
-          // Same person, two records: keep the one that has the radio key.
-          final keep =
-              byPrefix.radioPublicKey != null ? byPrefix : target;
-          final drop = keep.id == byPrefix.id ? target : byPrefix;
-          debugPrint(
-              '[Peers] 🔀 Merging peer ${drop.id} into ${keep.id} (CAP key prefix)');
-          target = await _merge(keep: keep, drop: drop);
+          if (_differentApps(byPrefix, target)) {
+            // The radio changed hands; its previous user is still a person.
+            target = await _takeRadio(from: byPrefix, to: target);
+          } else {
+            // Same person, two records: keep the one that has the radio key.
+            final keep =
+                byPrefix.radioPublicKey != null ? byPrefix : target;
+            final drop = keep.id == byPrefix.id ? target : byPrefix;
+            debugPrint(
+                '[Peers] 🔀 Merging peer ${drop.id} into ${keep.id} (CAP key prefix)');
+            target = await _merge(keep: keep, drop: drop);
+          }
         } else if (target.radioPublicKey != null) {
-          keyMismatch = _hex(target.radioPublicKey!.take(6)) != capPrefix;
+          keyMismatch = keyMismatch ||
+              _hex(target.radioPublicKey!.take(6)) != capPrefix;
         } else if (target.radioKeyPrefix != capPrefix) {
           target = await _update(
               target.id, PeersCompanion(radioKeyPrefix: Value(capPrefix)));
@@ -288,12 +308,138 @@ class PeerDirectory extends ChangeNotifier {
     });
   }
 
+  /// Makes the peer for [appId] the sender of a message that arrived as
+  /// [sender], who was resolved from the radio name alone.
+  ///
+  /// A peer is a person, which on the mesh means an app install; the radio is
+  /// something they carry. So when an install we know turns up on another
+  /// radio, their peer moves to it and keeps its alias, history and last
+  /// position, rather than a second person appearing under the new radio.
+  Future<({PeerData peer, bool droppedKey})> _claimForApp(
+      PeerData sender, String appId, String? capPrefix) async {
+    final claimed = await _claim(sender, appId);
+    // The message names the radio it came from. A key we hold for any other
+    // radio is out of date: forget it, and the next advert binds the new one.
+    if (capPrefix == null) return (peer: claimed, droppedKey: false);
+    final key = claimed.radioPublicKey;
+    final current = key != null ? _hex(key.take(6)) : claimed.radioKeyPrefix;
+    if (current == capPrefix) return (peer: claimed, droppedKey: false);
+    final moved = await _update(
+        claimed.id,
+        PeersCompanion(
+          radioPublicKey: const Value(null),
+          radioKeyPrefix: Value(capPrefix),
+        ));
+    return (peer: moved, droppedKey: key != null);
+  }
+
+  Future<PeerData> _claim(PeerData sender, String appId) async {
+    final owner = byAppId(appId);
+
+    if (owner == null) {
+      if (sender.appIdentityId == null) {
+        return _update(
+            sender.id, PeersCompanion(appIdentityId: Value(appId)));
+      }
+      // Someone else's radio, now used by an install we haven't met: a new
+      // person. The radio's previous user keeps their history without it.
+      debugPrint(
+          '[Peers] 📻 "${sender.radioName}" is now used by someone new');
+      final newcomer = await _insert(PeersCompanion.insert(
+        appIdentityId: Value(appId),
+        radioName: Value(sender.radioName),
+        isTeamMember: Value(sender.isTeamMember),
+        lastTeamChannelHash: Value(sender.lastTeamChannelHash),
+        firstSeen: sender.lastSeen,
+        lastSeen: sender.lastSeen,
+      ));
+      return _takeRadio(from: sender, to: newcomer);
+    }
+
+    if (owner.id == sender.id) return owner;
+
+    debugPrint(
+        '[Peers] 📻 ${displayName(owner)} is now on "${sender.radioName}"');
+    if (sender.appIdentityId == null) {
+      // A placeholder or key-only record for their new radio: it is them.
+      return _merge(keep: owner, drop: sender);
+    }
+    return _takeRadio(from: sender, to: owner);
+  }
+
+  /// Moves [from]'s radio (key, prefix and name) to [to]. [from] stays as a
+  /// person with no radio, keeping their history and last position.
+  Future<PeerData> _takeRadio(
+      {required PeerData from, required PeerData to}) async {
+    // Cleared first: a radio key belongs to one peer at a time.
+    await _update(
+        from.id,
+        const PeersCompanion(
+          radioPublicKey: Value(null),
+          radioKeyPrefix: Value(null),
+        ));
+    return _update(
+        to.id,
+        PeersCompanion(
+          radioPublicKey: Value(from.radioPublicKey),
+          radioKeyPrefix: Value(from.radioKeyPrefix),
+          radioName: Value(_newerName(from, to)),
+          isTeamMember: Value(from.isTeamMember || to.isTeamMember),
+          lastTeamChannelHash:
+              Value(from.lastTeamChannelHash ?? to.lastTeamChannelHash),
+          lastSeen: Value(
+              from.lastSeen > to.lastSeen ? from.lastSeen : to.lastSeen),
+        ));
+  }
+
+  /// The radio name of whichever of [a] and [b] was heard most recently.
+  static String? _newerName(PeerData a, PeerData b) {
+    final newer = a.lastSeen >= b.lastSeen ? a : b;
+    return newer.radioName ?? (identical(newer, a) ? b : a).radioName;
+  }
+
+  static bool _differentApps(PeerData a, PeerData b) =>
+      a.appIdentityId != null &&
+      b.appIdentityId != null &&
+      a.appIdentityId != b.appIdentityId;
+
+  /// Folds [drop] into [keep]: history, messages and last position move
+  /// over. [drop]'s radio replaces [keep]'s when it has one, since the merge
+  /// happens because this person was just heard on it; anything else [keep]
+  /// is missing is filled in from [drop].
   Future<PeerData> _merge(
       {required PeerData keep, required PeerData drop}) async {
     await _dao.mergePeers(keepId: keep.id, dropId: drop.id);
     _byId.remove(drop.id);
-    final merged = (await _dao.getPeer(keep.id))!;
-    _byId[keep.id] = merged;
+
+    final dropHasRadio =
+        drop.radioPublicKey != null || drop.radioKeyPrefix != null;
+    // Only the key prefix is known for drop's radio; keep's full key is
+    // still right if it is that same radio.
+    final keepKeyStillRight = drop.radioPublicKey == null &&
+        keep.radioPublicKey != null &&
+        _hex(keep.radioPublicKey!.take(6)) == drop.radioKeyPrefix;
+    final takeRadio = dropHasRadio && !keepKeyStillRight;
+    final merged = await _update(
+      keep.id,
+      PeersCompanion(
+        radioPublicKey:
+            takeRadio ? Value(drop.radioPublicKey) : const Value.absent(),
+        radioKeyPrefix:
+            takeRadio ? Value(drop.radioKeyPrefix) : const Value.absent(),
+        radioName: Value(_newerName(drop, keep)),
+        appIdentityId: keep.appIdentityId == null
+            ? Value(drop.appIdentityId)
+            : const Value.absent(),
+        alias: keep.alias == null ? Value(drop.alias) : const Value.absent(),
+        isTeamMember: drop.isTeamMember && !keep.isTeamMember
+            ? const Value(true)
+            : const Value.absent(),
+        lastSeen: drop.lastSeen > keep.lastSeen
+            ? Value(drop.lastSeen)
+            : const Value.absent(),
+      ),
+    );
     notifyListeners();
     return merged;
   }
@@ -306,9 +452,30 @@ class PeerDirectory extends ChangeNotifier {
     _contactsSub?.cancel();
     _contactsSub = null;
     if (companionKey == null || companionKey.isEmpty) return;
+    unawaited(_releaseOwnRadio(companionKey));
     _contactsSub = _contactsDao
         .watchContactsByCompanion(companionKey)
         .listen((contacts) => unawaited(_onRadioContacts(contacts)));
+  }
+
+  /// A teammate's old radio can be the one this phone just connected to.
+  /// It is ours now: they keep their history and last position, without it.
+  Future<void> _releaseOwnRadio(String companionKey) {
+    return _serialized(() async {
+      final wanted = companionKey.toLowerCase();
+      for (final p in _byId.values.toList()) {
+        final key = p.radioPublicKey;
+        if (key == null || _hex(key) != wanted) continue;
+        debugPrint(
+            '[Peers] 📻 ${displayName(p)} was using this radio; kept without it');
+        await _update(
+            p.id,
+            const PeersCompanion(
+              radioPublicKey: Value(null),
+              radioKeyPrefix: Value(null),
+            ));
+      }
+    });
   }
 
   /// Runs the radio-contact sync directly; the app drives it from the
@@ -337,8 +504,10 @@ class PeerDirectory extends ChangeNotifier {
           // Positions heard under the new name before this advert arrived
           // created a placeholder for it. It is this same radio: fold it in,
           // or it lingers on the map as a second, stale person.
-          final placeholder = _placeholderFor(name);
-          if (placeholder != null && placeholder.id != current.id) {
+          final placeholder = _keylessFor(name, key: contact.publicKey);
+          if (placeholder != null &&
+              placeholder.id != current.id &&
+              !_differentApps(placeholder, current)) {
             debugPrint(
                 '[Peers] 🔀 Merging placeholder "$name" into its renamed radio');
             await _merge(keep: current, drop: placeholder);
@@ -346,7 +515,7 @@ class PeerDirectory extends ChangeNotifier {
           continue;
         }
 
-        final placeholder = _placeholderFor(name);
+        final placeholder = _keylessFor(name, key: contact.publicKey);
         if (placeholder != null) {
           debugPrint('[Peers] 🔗 Bound "$name" to its radio key');
           await _update(placeholder.id, _keyFields(contact.publicKey));
@@ -379,7 +548,7 @@ class PeerDirectory extends ChangeNotifier {
     final known = byRadioKey(contact.publicKey);
     if (known != null) return known;
 
-    final placeholder = _placeholderFor(radioName);
+    final placeholder = _keylessFor(radioName, key: contact.publicKey);
     if (placeholder != null) {
       return _update(placeholder.id, _keyFields(contact.publicKey));
     }
@@ -393,16 +562,26 @@ class PeerDirectory extends ChangeNotifier {
     ));
   }
 
-  /// A peer known only by [radioName]: no radio key and no app identity.
-  PeerData? _placeholderFor(String radioName) {
+  /// The peer waiting for a radio key under [radioName]: a placeholder known
+  /// only by that name, or someone who told us (via `#CAP:`) they moved to a
+  /// radio of that name before its advert reached us.
+  ///
+  /// Given [key], a peer that already knows its radio's key prefix only
+  /// matches that radio. A Link-only peer (app identity, no radio) never
+  /// matches: a shared name is no reason to give them one.
+  PeerData? _keylessFor(String radioName, {List<int>? key}) {
+    PeerData? best;
     for (final p in _byId.values) {
-      if (p.radioName == radioName &&
-          p.radioPublicKey == null &&
-          p.appIdentityId == null) {
-        return p;
+      if (p.radioName != radioName || p.radioPublicKey != null) continue;
+      if (p.appIdentityId != null && p.radioKeyPrefix == null) continue;
+      if (key != null &&
+          p.radioKeyPrefix != null &&
+          p.radioKeyPrefix != _hex(key.take(6))) {
+        continue;
       }
+      if (best == null || p.lastSeen > best.lastSeen) best = p;
     }
-    return null;
+    return best;
   }
 
   PeersCompanion _keyFields(Uint8List key) => PeersCompanion(

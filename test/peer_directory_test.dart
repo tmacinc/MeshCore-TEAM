@@ -29,6 +29,9 @@ Uint8List _key(int seed) =>
 String _hexPrefix(Uint8List key) =>
     key.take(6).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
+String _hexKey(Uint8List key) =>
+    key.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
 ContactData _contact(String name, int seed) => ContactData(
       publicKey: _key(seed),
       hash: seed,
@@ -287,6 +290,151 @@ void main() {
       // They switched radios: the caller asks them to advertise.
       expect(outcome.keyMismatch, isTrue);
       expect(outcome.peer.radioPublicKey, _key(1));
+    });
+  });
+
+  group('app identity', () {
+    const ben = '1a2b3c4d5e6f7788';
+    const other = '99aabbccddeeff00';
+
+    Future<PeerData> benOnRadio1() async {
+      final r = await resolve('Scout', contacts: [_contact('Scout', 1)]);
+      final outcome = await peers.recordCapability(
+        r.peer,
+        CapabilityMessage.fromLocalState(
+          radioKeyPrefix: _hexPrefix(_key(1)),
+          appId: ben,
+          alias: 'Ben',
+        ),
+      );
+      return outcome.peer;
+    }
+
+    test('the first message with an app id claims the sender', () async {
+      final peer = await benOnRadio1();
+
+      expect(peer.appIdentityId, ben);
+      expect(peers.byAppId(ben)!.id, peer.id);
+    });
+
+    test('the same phone on another radio stays the same person', () async {
+      final before = await benOnRadio1();
+
+      // Ben now uses a radio we have never heard, named "Ghost".
+      final heard = await resolve('Ghost');
+      expect(peers.all.length, 2);
+      final outcome = await peers.recordCapability(
+        heard.peer,
+        CapabilityMessage.fromLocalState(
+          radioKeyPrefix: _hexPrefix(_key(3)),
+          appId: ben,
+          alias: 'Ben',
+        ),
+      );
+
+      expect(peers.all.length, 1);
+      expect(outcome.peer.id, before.id);
+      expect(outcome.peer.radioName, 'Ghost');
+      // The old key is dropped; the new one isn't known until its advert.
+      expect(outcome.peer.radioPublicKey, isNull);
+      expect(outcome.peer.radioKeyPrefix, _hexPrefix(_key(3)));
+
+      // Their next position finds them, not a new placeholder.
+      final next = await resolve('Ghost');
+      expect(next.peer.id, before.id);
+      expect(peers.all.length, 1);
+
+      // The advert arrives and binds the new radio's key to them.
+      await peers.syncWithRadioContactsForTest([_contact('Ghost', 3)]);
+      expect(peers.byId(before.id)!.radioPublicKey, _key(3));
+    });
+
+    test('a new radio and a new alias on the same phone is still one person',
+        () async {
+      final before = await benOnRadio1();
+
+      final heard = await resolve('Ghost', contacts: [_contact('Ghost', 3)]);
+      final outcome = await peers.recordCapability(
+        heard.peer,
+        CapabilityMessage.fromLocalState(
+          radioKeyPrefix: _hexPrefix(_key(3)),
+          appId: ben,
+          alias: 'Benjamin',
+        ),
+      );
+
+      expect(peers.all.length, 1);
+      expect(outcome.peer.id, before.id);
+      expect(outcome.peer.alias, 'Benjamin');
+      expect(outcome.peer.radioPublicKey, _key(3));
+      expect(outcome.keyMismatch, isFalse);
+    });
+
+    test('a radio passed to someone else moves to the new person', () async {
+      final ben1 = await benOnRadio1();
+
+      // Someone else now sends from Ben's old radio.
+      final heard = await resolve('Scout', contacts: [_contact('Scout', 1)]);
+      final outcome = await peers.recordCapability(
+        heard.peer,
+        CapabilityMessage.fromLocalState(
+          radioKeyPrefix: _hexPrefix(_key(1)),
+          appId: other,
+          alias: 'Cara',
+        ),
+      );
+
+      expect(peers.all.length, 2);
+      expect(outcome.peer.id, isNot(ben1.id));
+      expect(outcome.peer.appIdentityId, other);
+      expect(outcome.peer.radioPublicKey, _key(1));
+      expect(outcome.peer.alias, 'Cara');
+      // Ben keeps his name, without the radio.
+      final benNow = peers.byId(ben1.id)!;
+      expect(benNow.alias, 'Ben');
+      expect(benNow.radioPublicKey, isNull);
+    });
+
+    test('two phones are never merged by a shared radio name', () async {
+      final ben1 = await benOnRadio1();
+      await peers.recordCapability(
+        (await resolve('Scout', contacts: [_contact('Scout', 1)])).peer,
+        CapabilityMessage.fromLocalState(
+          radioKeyPrefix: _hexPrefix(_key(1)),
+          appId: other,
+        ),
+      );
+
+      expect(peers.byAppId(ben)!.id, ben1.id);
+      expect(peers.byAppId(other)!.id, isNot(ben1.id));
+    });
+
+    test('a teammate on the radio this phone connects to loses only the radio',
+        () async {
+      final ben1 = await benOnRadio1();
+
+      final settings = SettingsService(await SharedPreferences.getInstance());
+      final directory = PeerDirectory(
+        peersDao: db.peersDao,
+        contactsDao: db.contactsDao,
+        settings: settings,
+      );
+      await directory.start();
+      await settings.setCurrentCompanionPublicKey(_hexKey(_key(1)));
+      await pumpEventQueue();
+      // Serialized behind the release.
+      await directory.resolveChannelSender(
+        radioName: 'nobody',
+        radioContacts: const [],
+        channelHash: _trackingChannelHash,
+        isTeamChannel: false,
+      );
+
+      final benNow = directory.byId(ben1.id)!;
+      expect(benNow.radioPublicKey, isNull);
+      expect(benNow.alias, 'Ben');
+      expect(benNow.appIdentityId, ben);
+      directory.dispose();
     });
   });
 

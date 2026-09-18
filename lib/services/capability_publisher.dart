@@ -13,6 +13,7 @@ import 'package:meshcore_team/models/capability_message.dart';
 import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/models/team_map_visibility.dart';
 import 'package:meshcore_team/repositories/message_repository.dart';
+import 'package:meshcore_team/services/app_identity_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 
@@ -52,6 +53,7 @@ class CapabilityPublisher {
   final ContactsDao _contactsDao;
   final ChannelsDao _channelsDao;
   final MessageRepository _messageRepository;
+  final AppIdentityService _appIdentity;
 
   final Random _random = Random();
 
@@ -80,12 +82,14 @@ class CapabilityPublisher {
     required ContactsDao contactsDao,
     required ChannelsDao channelsDao,
     required MessageRepository messageRepository,
+    required AppIdentityService appIdentity,
   })  : _settings = settings,
         _connectionViewModel = connectionViewModel,
         _bleService = bleService,
         _contactsDao = contactsDao,
         _channelsDao = channelsDao,
-        _messageRepository = messageRepository;
+        _messageRepository = messageRepository,
+        _appIdentity = appIdentity;
 
   void start() {
     if (_started) return;
@@ -148,8 +152,21 @@ class CapabilityPublisher {
           appSettings.campModeEnabled &&
           (caps?.supportsForwarding ?? false),
       radioKeyPrefix: _selfKeyPrefix(),
+      appId: _appId(),
       alias: appSettings.teamAlias,
     );
+  }
+
+  /// This install's identity, the same one Team Link uses. Null if secure
+  /// storage failed at startup; the message then goes out without it.
+  String? _appId() {
+    try {
+      return _appIdentity.uploaderId
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join();
+    } on StateError {
+      return null;
+    }
   }
 
   /// Everything a published #CAP: depends on, including being able to send.

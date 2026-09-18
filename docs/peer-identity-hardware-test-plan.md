@@ -147,7 +147,7 @@ With 6.1 running, bring in a third phone and radio. Expected: everyone sees the 
 1. Member B pairs a different radio and keeps the same radio name.
 2. Member B turns tracking on.
 
-**Expected:** phone A notices the key changed — `[Discovery] 🔑 "B" is using a different radio than we have` — asks B to advertise, and ends up with B's new key. A can then DM B successfully (proving the new key is in use, not the old one). B's peer, alias and history stay as one person, not two.
+**Expected:** B's capability message carries the same app ID from a new radio. Phone A logs `[Discovery] 🔑 "B" is using a different radio than we have`, asks B to advertise, and ends up with B's new key. A can then DM B successfully (proving the new key is in use, not the old one). B's peer, alias and history stay as one person, not two, even though A's radio still holds B's old contact under the same name.
 
 ### 6.7 Someone renames their radio
 Member B renames their radio (which reboots it). Expected: A picks up the new name after B's next advert; `[Peers] ✏️ Radio renamed` appears, and B stays one peer with their history intact.

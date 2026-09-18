@@ -166,20 +166,20 @@ The hardest case for identity: each phone ends up on the other's radio.
 53. **Phone B:** disconnect from R2 and close the app (so it stops transmitting).
 54. **Phone A:** disconnect from R1, connect to **R2**. The radio-name prompt appears (a new radio) — keep `R2-renamed`.
 55. A's log: ✅ `[ChannelSync]` runs; `TeamTest` is on R2 already (B joined it with R2), so ✅ it shows normally with its **history intact**. ✅ `Offline1` shows *Not on this radio* (it's on R1, not R2). ✅ Everyone's last known positions are still on the map.
-56. A's log: ✅ **no** `[TeamRadio] ➕ Adding … team contacts` entry for B's old radio — that radio is now A's own. (This was a bug, fixed in `e585d49`.)
+56. A's log: ✅ `[Peers] 📻 Ben was using this radio; kept without it`, and **no** `[TeamRadio] ➕ Adding … team contacts` entry for B's old radio — that radio is now A's own. ✅ `Ben` is still on A's map at his last position.
 57. **Phone B:** open the app, connect to **R1**. Turn tracking on (select `TeamTest` — R1 has it, since A created it there).
-58. Now each phone is on the other's old radio. **Expected**, and worth understanding:
-    - On the mesh, identity follows the **radio**. So A sees B's positions arriving from R1 as a **new person**, until B's capability message arrives and names it `Ben`.
-    - A still has the **old** `Ben` (tied to R2 — now A's own radio), with a last position from before the swap. For up to 12 hours both may show, as two separate `Ben` markers, until the old one ages off the map (or hide it with **Remove from group**).
-    - Discovery (session 5 lines) runs again between the phones, since neither radio has the other as a contact.
-    - ✅ Pass if: discovery completes, the live marker is named `Ben` within a few minutes, and the only duplicate is the stale pre-swap one.
+58. Now each phone is on the other's old radio. **Expected**:
+    - B's first positions from R1 may briefly show under R1's radio name, until B's capability message arrives (within about 20 s of connecting). It carries B's app ID, so A logs `[Peers] 📻 Ben is now on "…"` and that marker **becomes Ben**: one `Ben`, keeping his history.
+    - The same happens on B for Anna.
+    - Discovery may run again (session 5 lines) if a radio doesn't yet hold the other's contact.
+    - ✅ Pass if: each phone ends with exactly **one** teammate on the map and in Contacts, under their chosen name, with positions updating. A second `Ben` or `Anna` that stays is a fail — capture the log (filter on `Peers`).
 59. **Swap back:** B disconnects, A goes back to R1, B back to R2.
 
 ## Session 12 — Endurance (log A) · 1 hour+, leave running
 
 60. Leave both phones tracking on `TeamTest`, screens off, for over an hour.
 61. A's log afterwards: ✅ one `[CapabilityPublisher] ✅ Published #CAP (periodic)` per hour (±5 min), not bursts. ✅ No repeating `[Discovery]` lines once both are resolved. ✅ Both still on each other's maps.
-62. Count people: ✅ each phone shows exactly **one** teammate on the map (except the stale entry from session 11, if within 12 hours). More means identity is being split — capture the log.
+62. Count people: ✅ each phone shows exactly **one** teammate on the map. More means identity is being split — capture the log.
 
 ---
 

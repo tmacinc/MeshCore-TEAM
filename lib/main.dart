@@ -23,6 +23,7 @@ import 'database/database.dart';
 import 'models/app_language.dart';
 import 'models/app_settings.dart';
 import 'services/settings_service.dart';
+import 'services/app_identity_service.dart';
 import 'theme/night_theme.dart';
 import 'services/map_tile_cache_service.dart';
 import 'services/kmz_import_service.dart';
@@ -297,6 +298,15 @@ Future<void> _runAppStartup() async {
       forwardingPolicy: forwardingPolicyService,
     )..start();
 
+    // This install's identity: sent in #CAP: so the team knows this phone
+    // across radio swaps, and the same ID Team Link uses.
+    final appIdentityService = AppIdentityService();
+    try {
+      await appIdentityService.ensureInitialized();
+    } catch (e) {
+      debugPrint('⚠️ App identity unavailable: $e');
+    }
+
     final capabilityPublisher = CapabilityPublisher(
       settings: settingsService,
       connectionViewModel: connectionViewModel,
@@ -304,6 +314,7 @@ Future<void> _runAppStartup() async {
       contactsDao: database.contactsDao,
       channelsDao: database.channelsDao,
       messageRepository: messageRepository,
+      appIdentity: appIdentityService,
     )..start();
 
     // Carries team contacts onto a newly paired radio and keeps the radio's
