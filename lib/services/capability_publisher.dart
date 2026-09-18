@@ -23,8 +23,9 @@ import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 ///   contact list, detected by watching the DB (same mechanism as
 ///   [ForwardingPolicyService]). All devices see the same advert events so
 ///   all independently schedule and publish.
-/// - **Change**: +1 min debounce after a firmware reconnect, an alias or
-///   radio-name change, or a settings change affecting the capability flags.
+/// - **Change**: +20 s debounce after anything the message carries changes:
+///   the alias, the radio name, the flags, the tracking channel, or the
+///   connection itself. Unrelated notifications don't restart the wait.
 /// - **Periodic**: hourly with jitter, so state can't go stale (consumers
 ///   treat capability older than 12h as stock firmware) and members who
 ///   joined between events still learn our alias.
@@ -33,7 +34,7 @@ import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 /// Also answers `#CAP:R:` advert requests aimed at this radio.
 class CapabilityPublisher {
   static const Duration _discoveryDelay = Duration(minutes: 2);
-  static const Duration _changeDelay = Duration(minutes: 1);
+  static const Duration _changeDelay = Duration(seconds: 20);
   static const Duration _periodicInterval = Duration(minutes: 60);
   static const Duration _periodicJitter = Duration(minutes: 5);
 
@@ -122,9 +123,42 @@ class CapabilityPublisher {
 
   // --- Listeners ---
 
+  /// What goes into a #CAP:, as last scheduled for. Both listeners fire for
+  /// much more than CAP cares about (battery reports, sync progress, any
+  /// setting); restarting the debounce on each of those starved it, so a
+  /// name change could wait indefinitely. Only a change to this schedules.
+  String? _scheduledInputs;
+
   void _onSettingsOrCapabilityChanged() {
     _watchTrackingChannel();
+    final inputs = _capabilityInputs();
+    if (inputs == _scheduledInputs) return;
+    _scheduledInputs = inputs;
     _scheduleChangePublish();
+  }
+
+  CapabilityMessage _buildMessage() {
+    final caps = _connectionViewModel.deviceCapabilities;
+    final appSettings = _settings.settings;
+    return CapabilityMessage.fromLocalState(
+      supportsForwarding: caps?.supportsForwarding ?? false,
+      supportsAutonomous: caps?.supportsAutonomous ?? false,
+      autonomousEnabled: _connectionViewModel.currentAutonomousEnabled ?? false,
+      smartForwardingActive: appSettings.smartForwardingEnabled &&
+          appSettings.campModeEnabled &&
+          (caps?.supportsForwarding ?? false),
+      radioKeyPrefix: _selfKeyPrefix(),
+      alias: appSettings.teamAlias,
+    );
+  }
+
+  /// Everything a published #CAP: depends on, including being able to send.
+  String _capabilityInputs() {
+    final msg = _buildMessage();
+    return '${_connectionViewModel.isConnected}|${msg.flags}|'
+        '${msg.radioKeyPrefix}|${msg.alias}|'
+        '${_connectionViewModel.deviceName}|'
+        '${_settings.settings.telemetryChannelHash}';
   }
 
   StreamSubscription<ChannelData?>? _trackingChannelSub;
@@ -294,19 +328,7 @@ class CapabilityPublisher {
       return;
     }
 
-    final caps = _connectionViewModel.deviceCapabilities;
-    final appSettings = _settings.settings;
-
-    final msg = CapabilityMessage.fromLocalState(
-      supportsForwarding: caps?.supportsForwarding ?? false,
-      supportsAutonomous: caps?.supportsAutonomous ?? false,
-      autonomousEnabled: _connectionViewModel.currentAutonomousEnabled ?? false,
-      smartForwardingActive: appSettings.smartForwardingEnabled &&
-          appSettings.campModeEnabled &&
-          (caps?.supportsForwarding ?? false),
-      radioKeyPrefix: _selfKeyPrefix(),
-      alias: appSettings.teamAlias,
-    );
+    final msg = _buildMessage();
 
     // Suppress no-op publishes. The alias, radio name and channel are part of
     // the signature: a rename or an alias change has to reach the team even

@@ -108,10 +108,10 @@ This is the most important session. It exercises the new discovery end to end, i
 ## Session 6 — Names reach the team (log A) · 15 min
 
 24. Within ~2 minutes of session 5, **on Phone B**, A should appear as **`Anna`**: on the map marker, the group panel, and in Contacts (with `R1-radio` in small text underneath). A's log shows `[CapabilityPublisher] ✅ Published #CAP (…): #CAP:2:…:Anna`.
-25. **Phone B:** Settings → General → set name `Ben`. ✅ Within ~1–2 minutes **Phone A** shows `Ben` (map, contacts, group panel). A's log: `[Capability] ✅ Stored capability for "R2-radio": …alias="Ben"`.
+25. **Phone B:** Settings → General → set name `Ben`. ✅ Within about 30 seconds **Phone A** shows `Ben` (map, contacts, group panel). A's log: `[Capability] ✅ Stored capability for "R2-radio": …alias="Ben"`.
 26. **Chat:** B sends a message in `TeamTest`. On A, ✅ the sender shows as `Ben`. ✅ A's notification (app in background) says `Ben`.
 27. **The privacy check:** on A, long-press B's message → **Reply**. ✅ The box is pre-filled with `@[R2-radio]` — the **radio** name, **not** `Ben`. [8.4]
-28. On B, clear the name (Settings → General → empty → Save). ✅ A falls back to `R2-radio` within a couple of minutes. Set it back to `Ben` afterwards.
+28. On B, clear the name (Settings → General → empty → Save). ✅ A falls back to `R2-radio` within about 30 seconds. B's log: `[CapabilityPublisher] ✅ Published #CAP (change)` about 20 s after the change. Set it back to `Ben` afterwards.
 29. **Same name, two people** can't be shown with two phones, since you never see yourself. Session 11 produces it naturally (two `Ben`s), so it's checked there.
 
 ## Session 7 — Renaming a radio (log A) · 10 min
