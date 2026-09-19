@@ -221,9 +221,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'This name is how you will be identified on the mesh network.',
-                    ),
+                    Text(l10n.identityNameExplanation),
                     const SizedBox(height: 12),
                     TextField(
                       controller: controller,
@@ -245,7 +243,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                             final trimmed = proposed.trim();
                             if (trimmed.isEmpty) {
                               setState(() {
-                                errorText = 'Name cannot be empty';
+                                errorText = l10n.nameCannotBeEmpty;
                               });
                               return;
                             }
@@ -263,8 +261,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                               Navigator.of(context).pop();
                             } else {
                               setState(() {
-                                errorText =
-                                    'Failed to apply name. Please try again.';
+                                errorText = l10n.failedToApplyName;
                                 isSaving = false;
                               });
                             }

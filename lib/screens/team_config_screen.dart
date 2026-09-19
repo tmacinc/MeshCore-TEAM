@@ -364,16 +364,14 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
           if (!isConnected) ...[
             Card(
               color: Colors.orange.shade50,
-              child: const Padding(
-                padding: EdgeInsets.all(16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    Icon(Icons.warning_amber, color: Colors.orange),
-                    SizedBox(width: 12),
+                    const Icon(Icons.warning_amber, color: Colors.orange),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                          'Connect to a companion device before importing. '
-                          'Channels must be registered with firmware.'),
+                      child: Text(l10n.connectBeforeImportingConfig),
                     ),
                   ],
                 ),
@@ -381,10 +379,7 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
             ),
             const SizedBox(height: 16),
           ],
-          const Text(
-            'Import a team config from a local file or by scanning a '
-            'QR code from a nearby device sharing over Wi-Fi.',
-          ),
+          Text(l10n.importTeamConfigExplanation),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: isConnected ? _importConfig : null,
@@ -483,11 +478,8 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             duration: const Duration(seconds: 6),
-            content: Text(
-              'Left out of the config because they are too large to share: '
-              '${omittedOverlayMaps.join(", ")}. '
-              'Transfer the file directly instead.',
-            ),
+            content: Text(AppLocalizations.of(context)!
+                .omittedTooLargeToShare(omittedOverlayMaps.join(', '))),
           ),
         );
       }
@@ -628,7 +620,9 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(importResult.toString())),
+        SnackBar(
+            content: Text(importResult
+                .describe(AppLocalizations.of(context)!))),
       );
     } catch (e) {
       if (!mounted) return;
@@ -752,7 +746,9 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(importResult.toString())),
+          SnackBar(
+            content: Text(importResult
+                .describe(AppLocalizations.of(context)!))),
         );
       } finally {
         httpClient.close();

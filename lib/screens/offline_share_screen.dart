@@ -113,6 +113,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
   // ── Step 1: Hotspot Instructions ──────────────────────────────────────
 
   Widget _buildInstructions({Key? key}) {
+    final l10n = AppLocalizations.of(context)!;
     final isAndroid = Platform.isAndroid;
     final isIOS = Platform.isIOS;
 
@@ -132,7 +133,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Share Config Without Internet',
+                AppLocalizations.of(context)!.shareConfigWithoutInternet,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -140,8 +141,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Create a mobile hotspot on your device so team members '
-                'can connect and download the config directly.',
+                AppLocalizations.of(context)!.shareConfigHotspotExplanation,
                 style: Theme.of(context).textTheme.bodyLarge,
                 textAlign: TextAlign.center,
               ),
@@ -161,10 +161,11 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                           const SizedBox(width: 8),
                           Text(
                             isIOS
-                                ? 'iPhone / iPad'
+                                ? AppLocalizations.of(context)!.iphoneOrIpad
                                 : isAndroid
-                                    ? 'Android'
-                                    : 'Mobile Hotspot',
+                                    ? AppLocalizations.of(context)!.android
+                                    : AppLocalizations.of(context)!
+                                        .mobileHotspot,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -174,24 +175,28 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                       ),
                       const SizedBox(height: 12),
                       if (isIOS) ...[
-                        _instructionStep('1', 'Open Settings'),
-                        _instructionStep('2', 'Tap Personal Hotspot'),
-                        _instructionStep('3', 'Turn on "Allow Others to Join"'),
-                        _instructionStep('4',
-                            'Share the hotspot name and password with your team'),
-                      ] else if (isAndroid) ...[
-                        _instructionStep('1', 'Open Settings'),
+                        _instructionStep('1', l10n.hotspotStepOpenSettings),
                         _instructionStep(
-                            '2', 'Tap Network & Internet (or Connections)'),
-                        _instructionStep('3', 'Tap Hotspot & Tethering'),
-                        _instructionStep('4', 'Turn on Wi-Fi Hotspot'),
-                        _instructionStep('5',
-                            'Share the hotspot name and password with your team'),
+                            '2', l10n.hotspotStepTapPersonalHotspot),
+                        _instructionStep(
+                            '3', l10n.hotspotStepAllowOthersToJoin),
+                        _instructionStep(
+                            '4', l10n.hotspotStepShareNameAndPassword),
+                      ] else if (isAndroid) ...[
+                        _instructionStep('1', l10n.hotspotStepOpenSettings),
+                        _instructionStep(
+                            '2', l10n.hotspotStepTapNetworkInternet),
+                        _instructionStep(
+                            '3', l10n.hotspotStepTapHotspotTethering),
+                        _instructionStep(
+                            '4', l10n.hotspotStepTurnOnWifiHotspot),
+                        _instructionStep(
+                            '5', l10n.hotspotStepShareNameAndPassword),
                       ] else ...[
-                        _instructionStep('1',
-                            'Enable your mobile hotspot from system settings'),
-                        _instructionStep('2',
-                            'Share the hotspot name and password with your team'),
+                        _instructionStep(
+                            '1', l10n.hotspotStepEnableFromSystemSettings),
+                        _instructionStep(
+                            '2', l10n.hotspotStepShareNameAndPassword),
                       ],
                     ],
                   ),
@@ -211,8 +216,8 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Team members should connect to your hotspot Wi-Fi '
-                          'before scanning the QR code.',
+                          AppLocalizations.of(context)!
+                              .connectToHotspotBeforeScanning,
                           style: TextStyle(
                             fontSize: 13,
                             color: Theme.of(context)
@@ -326,7 +331,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'Select Config to Share',
+                    AppLocalizations.of(context)!.selectConfigToShare,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -334,7 +339,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Choose a .teamcfg.zip file to share with your team.',
+                    AppLocalizations.of(context)!.chooseTeamcfgFile,
                     style: Theme.of(context).textTheme.bodyLarge,
                     textAlign: TextAlign.center,
                   ),
@@ -387,7 +392,8 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
 
       final picked = result.files.single;
       if (picked.path == null) {
-        setState(() => _errorMessage = 'Could not read selected file.');
+        setState(() => _errorMessage =
+            AppLocalizations.of(context)!.couldNotReadSelectedFile);
         return;
       }
 
@@ -402,7 +408,8 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
         preview = await _configService.readPreview(tempFile);
       } catch (e) {
         if (!mounted) return;
-        setState(() => _errorMessage = 'Invalid config file: $e');
+        setState(() => _errorMessage = AppLocalizations.of(context)!
+            .invalidConfigFile(e.toString()));
         return;
       }
 
@@ -416,7 +423,8 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
       });
     } catch (e) {
       if (mounted) {
-        setState(() => _errorMessage = 'Error selecting file: $e');
+        setState(() => _errorMessage = AppLocalizations.of(context)!
+            .errorSelectingFile(e.toString()));
       }
     }
   }
@@ -437,7 +445,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
             children: [
               Text(
-                'Config Details',
+                AppLocalizations.of(context)!.configDetails,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -477,7 +485,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                       if (preview.radioSettings != null) ...[
                         _detailRow(
                           Icons.settings_input_antenna,
-                          'Radio Settings',
+                          AppLocalizations.of(context)!.radioSettingsLabel,
                           '${preview.radioSettings!.frequencyMHz.toStringAsFixed(3)} MHz · '
                               'BW ${preview.radioSettings!.bandwidthKHz.toStringAsFixed(1)} kHz · '
                               'SF${preview.radioSettings!.spreadingFactor} · '
@@ -488,7 +496,8 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                       if (preview.channels.isNotEmpty) ...[
                         _detailRow(
                           Icons.forum,
-                          'Channels (${preview.channels.length})',
+                          AppLocalizations.of(context)!
+                              .channelsWithCount(preview.channels.length),
                           preview.channels.map((c) => c.name).join(', '),
                         ),
                         const SizedBox(height: 8),
@@ -496,7 +505,9 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                       if (preview.waypoints.isNotEmpty) ...[
                         _detailRow(
                           Icons.place,
-                          'Waypoints & Routes (${preview.waypoints.length})',
+                          AppLocalizations.of(context)!
+                              .waypointsAndRoutesWithCount(
+                                  preview.waypoints.length),
                           preview.waypoints.map((w) => w.name).join(', '),
                         ),
                         const SizedBox(height: 8),
@@ -504,7 +515,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                       if (preview.tileCount > 0)
                         _detailRow(
                           Icons.map,
-                          'Map Tiles',
+                          AppLocalizations.of(context)!.mapTiles,
                           '${preview.tileCount} tiles (~$tileSizeMB MB)',
                         ),
                     ],
@@ -600,8 +611,8 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
       final ip = await TeamConfigServer.getLocalIpAddress();
       if (ip == null) {
         setState(() {
-          _errorMessage = 'Could not determine local IP address. '
-              'Make sure your hotspot is enabled.';
+          _errorMessage =
+              AppLocalizations.of(context)!.couldNotDetermineLocalIp;
         });
         return;
       }
@@ -624,7 +635,8 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
       });
     } catch (e) {
       if (mounted) {
-        setState(() => _errorMessage = 'Failed to start server: $e');
+        setState(() => _errorMessage = AppLocalizations.of(context)!
+            .failedToStartServer(e.toString()));
       }
     }
   }
@@ -645,7 +657,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Sharing Config',
+                AppLocalizations.of(context)!.sharingConfig,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -690,15 +702,23 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     children: [
-                      const Text(
-                        'Team members should:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      Text(
+                        AppLocalizations.of(context)!.teamMembersShould,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      _instructionStep('1', 'Connect to your hotspot Wi-Fi'),
-                      _instructionStep('2',
-                          'Open MeshCore TEAM → Import Team Config → From QR Code'),
-                      _instructionStep('3', 'Scan this QR code to download'),
+                      _instructionStep(
+                          '1',
+                          AppLocalizations.of(context)!
+                              .shareStepConnectToHotspot),
+                      _instructionStep(
+                          '2',
+                          AppLocalizations.of(context)!
+                              .shareStepOpenImportFromQr),
+                      _instructionStep(
+                          '3',
+                          AppLocalizations.of(context)!
+                              .shareStepScanQrToDownload),
                     ],
                   ),
                 ),
@@ -713,7 +733,7 @@ class _OfflineShareScreenState extends State<OfflineShareScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Manual download URL:',
+                        AppLocalizations.of(context)!.manualDownloadUrl,
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,

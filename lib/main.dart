@@ -17,6 +17,7 @@ import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'database/database.dart';
 import 'models/app_language.dart';
@@ -65,6 +66,10 @@ const String _forceLocale = String.fromEnvironment('FORCE_LOCALE');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Weekday and month names in chat timestamps come from intl's DateFormat,
+  // which throws for any locale whose symbol data has not been loaded.
+  await initializeDateFormatting();
 
   if (kDebugMode || isBetaBuild) {
     installDebugLogInterceptor();

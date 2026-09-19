@@ -413,9 +413,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Anyone with this link can join this private channel. Treat it like a password.',
-                ),
+                Text(l.channelLinkPasswordWarning),
                 const SizedBox(height: 12),
                 SelectableText(link),
               ],
@@ -448,6 +446,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
   }
 
   Widget _buildUnreadDivider(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
@@ -461,7 +460,7 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Unread Messages',
+              l10n.unreadMessages,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.error,
                 fontWeight: FontWeight.bold,
@@ -542,7 +541,9 @@ class _ChannelChatScreenState extends State<ChannelChatScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        formatMessageTime(timestamp),
+                        formatMessageTime(timestamp,
+                            locale: Localizations.localeOf(context)
+                                .toLanguageTag()),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: (isFromMe
                                   ? theme.colorScheme.onPrimaryContainer

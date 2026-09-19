@@ -9,6 +9,8 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:meshcore_team/ble/ble_connection_manager.dart';
+import 'package:meshcore_team/l10n/app_localizations.dart';
+import 'package:meshcore_team/models/app_language.dart';
 import 'package:meshcore_team/ble/reconnection_manager.dart';
 import 'package:meshcore_team/ble/reconnection_state.dart';
 import 'package:meshcore_team/services/settings_service.dart';
@@ -66,6 +68,13 @@ class MeshConnectionService extends ChangeNotifier {
     _initialize();
   }
 
+  /// Strings for the user's language, resolved without a [BuildContext].
+  ///
+  /// The foreground-service notification is built far from the widget tree,
+  /// so it looks the locale up the same way [MessageNotificationService] does.
+  AppLocalizations get _l10n =>
+      lookupAppLocalizations(AppLanguage.localeFor(_settings.settings.localeCode));
+
   /// Initialize the service
   Future<void> _initialize() async {
     debugPrint('[MeshService] Initializing...');
@@ -89,8 +98,8 @@ class MeshConnectionService extends ChangeNotifier {
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'mesh_connection_channel',
-        channelName: 'Mesh Network Connection',
-        channelDescription: 'Maintains mesh network connection in background',
+        channelName: _l10n.meshConnectionChannelName,
+        channelDescription: _l10n.meshConnectionChannelDescription,
         channelImportance: NotificationChannelImportance.LOW,
         priority: NotificationPriority.LOW,
         iconData: const NotificationIconData(
@@ -136,8 +145,8 @@ class MeshConnectionService extends ChangeNotifier {
 
       // Start foreground task
       final started = await FlutterForegroundTask.startService(
-        notificationTitle: 'Mesh network active',
-        notificationText: 'Connecting to companion device...',
+        notificationTitle: _l10n.meshNetworkActive,
+        notificationText: _l10n.connectingToCompanionDevice,
         callback: foregroundTaskEntryPoint,
       );
 
@@ -371,41 +380,43 @@ class MeshConnectionService extends ChangeNotifier {
     // Android handles its own notification via native MeshBleService
     if (Platform.isAndroid) return;
 
-    String title = 'Mesh network';
+    final l10n = _l10n;
+    String title = l10n.meshNetwork;
     String text = '';
 
     if (reconnectionState != ReconnectionState.idle) {
       // Reconnection in progress - show device name
-      final deviceName = _settings.settings.lastConnectedDevice ?? 'device';
-      title = 'Mesh network reconnecting';
-      text = 'Reconnecting to $deviceName...';
+      final deviceName =
+          _settings.settings.lastConnectedDevice ?? l10n.meshDevice;
+      title = l10n.meshNetworkReconnecting;
+      text = l10n.reconnectingToDevice(deviceName);
     } else {
       // Normal connection state
       switch (connectionState) {
         case BleConnectionState.connected:
-          final deviceName = _bleManager.deviceName ?? 'companion device';
-          title = 'Mesh network active';
-          text = 'Connected to $deviceName';
+          final deviceName = _bleManager.deviceName ?? l10n.meshDevice;
+          title = l10n.meshNetworkActive;
+          text = l10n.connectedToDevice(deviceName);
           break;
         case BleConnectionState.connecting:
-          title = 'Mesh network connecting';
-          text = 'Establishing connection...';
+          title = l10n.meshNetworkConnecting;
+          text = l10n.establishingConnection;
           break;
         case BleConnectionState.disconnected:
-          title = 'Mesh network disconnected';
-          text = 'Device disconnected';
+          title = l10n.meshNetworkDisconnected;
+          text = l10n.deviceDisconnected;
           break;
         case BleConnectionState.scanning:
-          title = 'Mesh network scanning';
-          text = 'Searching for devices...';
+          title = l10n.meshNetworkScanning;
+          text = l10n.searchingForDevices;
           break;
         case BleConnectionState.error:
-          title = 'Mesh network error';
-          text = _bleManager.errorMessage ?? 'Connection error';
+          title = l10n.meshNetworkError;
+          text = _bleManager.errorMessage ?? l10n.connectionError;
           break;
         default:
-          title = 'Mesh network';
-          text = 'Inactive';
+          title = l10n.meshNetwork;
+          text = l10n.inactive;
       }
     }
 

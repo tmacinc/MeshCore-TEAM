@@ -157,12 +157,12 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                   Icon(Icons.chat_bubble_outline, size: 64, color: emptyColor),
                   const SizedBox(height: 16),
                   Text(
-                    'No channels',
+                    l10n.noChannels,
                     style: TextStyle(fontSize: 18, color: emptyColor),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Connect to a device and sync to see channels',
+                    l10n.connectToDeviceToSeeChannels,
                     style: TextStyle(color: emptyColor),
                     textAlign: TextAlign.center,
                   ),
@@ -356,8 +356,8 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                     decoration: InputDecoration(
                       labelText: AppLocalizations.of(dialogContext)!.channelName,
                       hintText: AppLocalizations.of(dialogContext)!.publicChannelName,
-                      helperText:
-                          'Anyone who types the same name joins the same channel',
+                      helperText: AppLocalizations.of(dialogContext)!
+                          .sameNameSameChannelHint,
                     ),
                     onSubmitted: (_) => join(),
                   ),
@@ -729,7 +729,7 @@ class ChannelListTile extends StatelessWidget {
             ],
           ),
           title: Text(
-            channel.name.isNotEmpty ? channel.name : 'Unnamed Channel',
+            channel.name.isNotEmpty ? channel.name : l10n.unnamedChannel,
             style: TextStyle(
               fontWeight:
                   showBadge ? FontWeight.bold : FontWeight.normal,

@@ -425,13 +425,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         s.telemetryChannelName != null
-                            ? 'Will share on: ${s.telemetryChannelName}'
-                            : 'No channel selected',
+                            ? l10n.willShareOnChannel(s.telemetryChannelName!)
+                            : l10n.noChannelSelected,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Connect to a device to select a channel.',
+                        l10n.connectToDeviceToSelectChannel,
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
@@ -458,12 +458,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(AppLocalizations.of(context)!.backgroundLocation),
-        content: const Text(
-          'MeshCore TEAM needs background location access to continue '
-          'sharing your position with the mesh network when the app is '
-          'minimized.\n\n'
-          'This allows location tracking and BLE communication to '
-          'continue working in the background.',
+        content: Text(
+          AppLocalizations.of(context)!.backgroundLocationExplanation,
         ),
         actions: [
           TextButton(

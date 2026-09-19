@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:meshcore_team/database/database.dart';
+import 'package:meshcore_team/l10n/app_localizations.dart';
+import 'package:meshcore_team/models/app_language.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/utils/notification_payload.dart';
 
@@ -38,16 +40,26 @@ class MessageNotificationService {
   })  : _notifications = notifications,
         _settings = settings;
 
+  /// Strings for the language the user picked, resolved without a
+  /// [BuildContext] — notifications are built well outside the widget tree.
+  ///
+  /// Read per use rather than cached: the user can change language while the
+  /// service instance lives on.
+  AppLocalizations get _l10n =>
+      lookupAppLocalizations(AppLanguage.localeFor(_settings.settings.localeCode));
+
   /// Initialize notification channels
   Future<void> initialize() async {
     debugPrint('📬 Initializing message notification service...');
 
     if (Platform.isAndroid) {
+      final l10n = _l10n;
+
       // Channel for group/channel messages
       final channelMessages = AndroidNotificationChannel(
         channelIdMessages,
-        'Channel Messages',
-        description: 'Notifications for channel messages on the mesh network',
+        l10n.notificationChannelMessagesName,
+        description: l10n.notificationChannelMessagesDescription,
         importance: Importance.high,
         playSound: true,
         enableVibration: true,
@@ -57,8 +69,8 @@ class MessageNotificationService {
       // Channel for direct/private messages
       final channelDirectMessages = AndroidNotificationChannel(
         channelIdDirectMessages,
-        'Direct Messages',
-        description: 'Notifications for direct messages on the mesh network',
+        l10n.notificationChannelDirectName,
+        description: l10n.notificationChannelDirectDescription,
         importance: Importance.high,
         playSound: true,
         enableVibration: true,
@@ -68,8 +80,8 @@ class MessageNotificationService {
       // Channel for waypoints
       final channelWaypoints = AndroidNotificationChannel(
         channelIdWaypoints,
-        'Waypoint Notifications',
-        description: 'Notifications for received waypoints on the mesh network',
+        l10n.notificationChannelWaypointsName,
+        description: l10n.notificationChannelWaypointsDescription,
         importance: Importance.high,
         playSound: true,
         enableVibration: true,
@@ -209,9 +221,11 @@ class MessageNotificationService {
         : NotificationPayload.channelMessage(message.channelHash);
 
     // Notification title and body
+    final l10n = _l10n;
+    final senderName = message.senderName ?? l10n.unknown;
     final title = isDirect
-        ? '${message.senderName ?? 'Unknown'} (Direct Message)'
-        : '$channelName: ${message.senderName ?? 'Unknown'}';
+        ? l10n.directMessageNotificationTitle(senderName)
+        : '$channelName: $senderName';
     final body = message.content;
 
     debugPrint(
@@ -220,7 +234,9 @@ class MessageNotificationService {
     // Android notification details
     final androidDetails = AndroidNotificationDetails(
       channelId,
-      isDirect ? 'Direct Messages' : 'Channel Messages',
+      isDirect
+          ? l10n.notificationChannelDirectName
+          : l10n.notificationChannelMessagesName,
       importance: Importance.high,
       priority: Priority.high,
       playSound: _settings.settings.notificationSoundEnabled,
@@ -252,9 +268,10 @@ class MessageNotificationService {
 
   Future<void> _showSyncSummaryNotification(int count) async {
     const notificationId = 1999;
-    const androidDetails = AndroidNotificationDetails(
+    final l10n = _l10n;
+    final androidDetails = AndroidNotificationDetails(
       channelIdMessages,
-      'Channel Messages',
+      l10n.notificationChannelMessagesName,
       importance: Importance.high,
       priority: Priority.high,
       playSound: true,
@@ -267,9 +284,9 @@ class MessageNotificationService {
     );
     await _notifications.show(
       notificationId,
-      'New messages',
-      'You have $count new messages',
-      const NotificationDetails(android: androidDetails, iOS: iosDetails),
+      l10n.newMessagesTitle,
+      l10n.newMessagesBody(count),
+      NotificationDetails(android: androidDetails, iOS: iosDetails),
     );
   }
 
@@ -286,21 +303,22 @@ class MessageNotificationService {
 
     final notificationId = _notificationIdCounter++;
 
-    final title = 'New Waypoint: $waypointName';
-    final body = '$waypointType from $creatorName';
+    final l10n = _l10n;
+    final title = l10n.newWaypointTitle(waypointName);
+    final body = l10n.waypointFromCreator(waypointType, creatorName);
 
     debugPrint(
         '📬 Showing waypoint notification: $title (ID: $notificationId)');
 
     // Android notification details
-    const androidDetails = AndroidNotificationDetails(
+    final androidDetails = AndroidNotificationDetails(
       channelIdWaypoints,
-      'Waypoint Notifications',
+      l10n.notificationChannelWaypointsName,
       importance: Importance.high,
       priority: Priority.high,
       playSound: true,
       enableVibration: true,
-      ticker: 'New Waypoint',
+      ticker: l10n.newWaypoint,
     );
 
     // iOS notification details
@@ -310,7 +328,7 @@ class MessageNotificationService {
       presentSound: true,
     );
 
-    const platformDetails = NotificationDetails(
+    final platformDetails = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );

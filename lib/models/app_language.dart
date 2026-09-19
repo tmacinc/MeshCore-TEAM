@@ -4,6 +4,8 @@
 // This file is part of TEAM-Flutter.
 // Non-commercial use only. See LICENSE file for details.
 
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter/widgets.dart';
 
 /// One language the app ships translations for.
@@ -94,5 +96,37 @@ class AppLanguage {
       }
     }
     return const Locale(fallbackCode);
+  }
+
+  /// The locale that code outside the widget tree should localize into.
+  ///
+  /// Widgets read their locale from `AppLocalizations.of(context)`. Services
+  /// that build user-visible text with no context — notifications above all —
+  /// have to arrive at the same answer on their own: the explicit choice when
+  /// the user made one, otherwise the device locale run through [resolve], so
+  /// an untranslated device language lands on English rather than German.
+  ///
+  /// The language setting the app is currently running under.
+  ///
+  /// [SettingsService] keeps this in step with the stored preference. It exists
+  /// for code that must localize without a [BuildContext] and without a
+  /// reference to the settings — import services, tile caches, background
+  /// tasks. Anything holding a `SettingsService` should read that instead;
+  /// anything inside the widget tree should use `AppLocalizations.of(context)`.
+  static String activeLocaleCode = systemDefault;
+
+  /// Pair with `lookupAppLocalizations` to get the strings themselves.
+  ///
+  /// [localeCode] defaults to [activeLocaleCode] when omitted.
+  static Locale localeFor([String? localeCode]) {
+    localeCode ??= activeLocaleCode;
+    if (localeCode != systemDefault) {
+      final match = byCode(localeCode);
+      if (match != null) return match.locale;
+    }
+    return resolve(
+      PlatformDispatcher.instance.locale,
+      all.map((language) => language.locale),
+    );
   }
 }

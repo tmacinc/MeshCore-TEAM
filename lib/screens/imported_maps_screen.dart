@@ -123,16 +123,16 @@ class _ImportedMapsScreenState extends State<ImportedMapsScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.layers),
-              title: const Text('Garmin KMZ'),
-              subtitle: const Text(
-                  'Raster map tiles from a Garmin Custom Map archive'),
+              title: Text(AppLocalizations.of(context)!.garminKmz),
+              subtitle:
+                  Text(AppLocalizations.of(context)!.garminKmzDescription),
               onTap: () => Navigator.of(context).pop(OverlayLayerType.kmz),
             ),
             ListTile(
               leading: const Icon(Icons.grid_on),
               title: const Text('MBTiles'),
-              subtitle: const Text(
-                  'Offline tile pyramid from QGIS, GDAL, or Mobile Atlas Creator'),
+              subtitle:
+                  Text(AppLocalizations.of(context)!.mbtilesDescription),
               onTap: () => Navigator.of(context).pop(OverlayLayerType.mbtiles),
             ),
           ],
@@ -235,7 +235,9 @@ class _ImportedMapsScreenState extends State<ImportedMapsScreen> {
     if (!path.toLowerCase().endsWith('.mbtiles')) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a .mbtiles file.')),
+        SnackBar(
+            content:
+                Text(AppLocalizations.of(context)!.pleaseSelectMbtilesFile)),
       );
       return;
     }
@@ -318,9 +320,10 @@ class _ImportedMapsScreenState extends State<ImportedMapsScreen> {
   }
 
   Future<void> _deleteMap(ImportedOverlayMapData m) async {
+    final l10n = AppLocalizations.of(context)!;
     final ok = await _confirm(
-      'Delete map?',
-      'This will remove "${m.name}" and its image files from the device.',
+      l10n.deleteMapQuestion,
+      l10n.deleteMapNamed(m.name),
     );
     if (!ok || !mounted) return;
 
@@ -384,16 +387,15 @@ class _ImportedMapsScreenState extends State<ImportedMapsScreen> {
                     const Icon(Icons.map_outlined,
                         size: 64, color: Colors.grey),
                     const SizedBox(height: 16),
-                    const Text(
-                      'No imported maps',
-                      style: TextStyle(fontSize: 18),
+                    Text(
+                      AppLocalizations.of(context)!.noImportedMaps,
+                      style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Import a Garmin-style KMZ file or an MBTiles archive '
-                      'to display a custom offline map on top of the base map.',
+                    Text(
+                      AppLocalizations.of(context)!.noImportedMapsHint,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
+                      style: const TextStyle(color: Colors.grey),
                     ),
                     const SizedBox(height: 24),
                     FilledButton.icon(
@@ -453,7 +455,9 @@ class _ImportedMapsScreenState extends State<ImportedMapsScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Tooltip(
-                          message: m.isVisible ? 'Hide on map' : 'Show on map',
+                          message: m.isVisible
+                              ? AppLocalizations.of(context)!.hideOnMap
+                              : AppLocalizations.of(context)!.showOnMap,
                           child: IconButton(
                             onPressed:
                                 _isBusy ? null : () => _toggleVisibility(m),

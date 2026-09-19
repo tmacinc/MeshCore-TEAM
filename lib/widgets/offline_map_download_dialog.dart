@@ -109,7 +109,7 @@ class _OfflineMapDownloadDialogState extends State<OfflineMapDownloadDialog> {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       setState(() {
-        _error = 'Please enter a name';
+        _error = AppLocalizations.of(context)!.pleaseEnterAName;
       });
       return;
     }
@@ -174,10 +174,13 @@ class _OfflineMapDownloadDialogState extends State<OfflineMapDownloadDialog> {
     } catch (e) {
       if (!mounted) return;
       final cancelled = _cancelRequested;
+      final l10n = AppLocalizations.of(context)!;
       setState(() {
         _isDownloading = false;
         _progress = null;
-        _error = cancelled ? 'Download cancelled' : 'Download failed: $e';
+        _error = cancelled
+            ? l10n.downloadCancelled
+            : l10n.downloadFailed(e.toString());
       });
 
       if (cancelled) {
@@ -265,8 +268,9 @@ class _OfflineMapDownloadDialogState extends State<OfflineMapDownloadDialog> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     progress == null
-                        ? 'Starting…'
-                        : 'Progress: ${progress.completed}/${progress.total} (failed: ${progress.failed})',
+                        ? l10n.starting
+                        : l10n.downloadProgress(progress.completed,
+                            progress.total, progress.failed),
                   ),
                 ),
               ],

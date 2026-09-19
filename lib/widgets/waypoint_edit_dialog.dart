@@ -102,7 +102,7 @@ class _WaypointEditDialogState extends State<WaypointEditDialog> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Route Color',
+                    l10n.routeColor,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),

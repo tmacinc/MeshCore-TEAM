@@ -2261,6 +2261,1194 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Team members will no longer be able to download.'**
   String get teamMembersCanNoLongerDownload;
+
+  /// Divider label shown above the first unread message in a chat
+  ///
+  /// In en, this message translates to:
+  /// **'Unread Messages'**
+  String get unreadMessages;
+
+  /// Shows which channel location telemetry will be shared on
+  ///
+  /// In en, this message translates to:
+  /// **'Will share on: {channel}'**
+  String willShareOnChannel(String channel);
+
+  /// Shown when no telemetry channel has been picked
+  ///
+  /// In en, this message translates to:
+  /// **'No channel selected'**
+  String get noChannelSelected;
+
+  /// Hint shown when disconnected on the location tracking card
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to a device to select a channel.'**
+  String get connectToDeviceToSelectChannel;
+
+  /// Empty state title on the channels list
+  ///
+  /// In en, this message translates to:
+  /// **'No channels'**
+  String get noChannels;
+
+  /// Empty state body on the channels list
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to a device and sync to see channels'**
+  String get connectToDeviceToSeeChannels;
+
+  /// No description provided for @bluetooth.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth'**
+  String get bluetooth;
+
+  /// No description provided for @notifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
+
+  /// No description provided for @background.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get background;
+
+  /// Intro paragraph on the first-run permissions screen
+  ///
+  /// In en, this message translates to:
+  /// **'To connect to your mesh radio and share messages, MeshCore TEAM needs access to:'**
+  String get permissionsIntro;
+
+  /// No description provided for @permissionBluetoothReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to your mesh radio'**
+  String get permissionBluetoothReason;
+
+  /// No description provided for @permissionLocationReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Required for maps: navigate and share your location with your team.'**
+  String get permissionLocationReason;
+
+  /// No description provided for @permissionNotificationsReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Alert you when messages arrive'**
+  String get permissionNotificationsReason;
+
+  /// No description provided for @permissionBackgroundReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your mesh connection and tracking running in the background.'**
+  String get permissionBackgroundReason;
+
+  /// No description provided for @changePermissionsLaterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can change these later in system settings.'**
+  String get changePermissionsLaterHint;
+
+  /// No description provided for @requestingPermissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Requesting permissions...'**
+  String get requestingPermissions;
+
+  /// No description provided for @permissionsRequiredToFunction.
+  ///
+  /// In en, this message translates to:
+  /// **'MeshCore TEAM requires Bluetooth and Location permissions to function. Please grant these permissions to continue.'**
+  String get permissionsRequiredToFunction;
+
+  /// No description provided for @batteryOptimizationExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'To keep your mesh connection active in the background, we recommend disabling battery optimization for this app.\n\nThis will allow the app to maintain a stable Bluetooth connection to your radio even when the screen is off.'**
+  String get batteryOptimizationExplanation;
+
+  /// Error shown when the permission request throws
+  ///
+  /// In en, this message translates to:
+  /// **'Error requesting permissions: {error}'**
+  String errorRequestingPermissions(String error);
+
+  /// Error listing the permissions the user denied
+  ///
+  /// In en, this message translates to:
+  /// **'Required permissions denied:\n{permissions}'**
+  String requiredPermissionsDenied(String permissions);
+
+  /// No description provided for @notificationChannelMessagesName.
+  ///
+  /// In en, this message translates to:
+  /// **'Channel Messages'**
+  String get notificationChannelMessagesName;
+
+  /// No description provided for @notificationChannelMessagesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications for channel messages on the mesh network'**
+  String get notificationChannelMessagesDescription;
+
+  /// No description provided for @notificationChannelDirectName.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct Messages'**
+  String get notificationChannelDirectName;
+
+  /// No description provided for @notificationChannelDirectDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications for direct messages on the mesh network'**
+  String get notificationChannelDirectDescription;
+
+  /// No description provided for @notificationChannelWaypointsName.
+  ///
+  /// In en, this message translates to:
+  /// **'Waypoint Notifications'**
+  String get notificationChannelWaypointsName;
+
+  /// No description provided for @notificationChannelWaypointsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications for received waypoints on the mesh network'**
+  String get notificationChannelWaypointsDescription;
+
+  /// Notification title for an incoming direct message
+  ///
+  /// In en, this message translates to:
+  /// **'{sender} (Direct Message)'**
+  String directMessageNotificationTitle(String sender);
+
+  /// No description provided for @newMessagesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New messages'**
+  String get newMessagesTitle;
+
+  /// Body of the batched sync notification
+  ///
+  /// In en, this message translates to:
+  /// **'You have {count} {count, plural, =1{new message} other{new messages}}'**
+  String newMessagesBody(int count);
+
+  /// Notification title for a received waypoint
+  ///
+  /// In en, this message translates to:
+  /// **'New Waypoint: {name}'**
+  String newWaypointTitle(String name);
+
+  /// No description provided for @newWaypoint.
+  ///
+  /// In en, this message translates to:
+  /// **'New Waypoint'**
+  String get newWaypoint;
+
+  /// Notification body: waypoint type and who sent it
+  ///
+  /// In en, this message translates to:
+  /// **'{type} from {creator}'**
+  String waypointFromCreator(String type, String creator);
+
+  /// No description provided for @channelsWillBeClearedFromFirmware.
+  ///
+  /// In en, this message translates to:
+  /// **'Channels will be cleared from the connected companion firmware.'**
+  String get channelsWillBeClearedFromFirmware;
+
+  /// No description provided for @thisCannotBeUndone.
+  ///
+  /// In en, this message translates to:
+  /// **'This cannot be undone.'**
+  String get thisCannotBeUndone;
+
+  /// No description provided for @bluetoothPermissionNotGranted.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth permission not granted.'**
+  String get bluetoothPermissionNotGranted;
+
+  /// No description provided for @enableNearbyDevicesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable \"Nearby devices\" permission, then return to the app.'**
+  String get enableNearbyDevicesHint;
+
+  /// No description provided for @bluetoothIsDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth is Disabled'**
+  String get bluetoothIsDisabled;
+
+  /// No description provided for @turnOnBluetoothAndRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on Bluetooth and tap Retry.'**
+  String get turnOnBluetoothAndRetry;
+
+  /// No description provided for @tapScanToSearchForRadios.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the scan button to search for MeshCore companion radios'**
+  String get tapScanToSearchForRadios;
+
+  /// No description provided for @meshDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesh device'**
+  String get meshDevice;
+
+  /// No description provided for @companionSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Companion Settings'**
+  String get companionSettings;
+
+  /// No description provided for @notSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get notSet;
+
+  /// No description provided for @campModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Locks radio to camp-compatible presets and enables firmware repeat mode'**
+  String get campModeDescription;
+
+  /// No description provided for @smartForwardingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use app-managed smart forwarding while camp mode is active'**
+  String get smartForwardingDescription;
+
+  /// No description provided for @autonomousModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Configures firmware autonomous tracking. Uses values from Location Tracking settings.'**
+  String get autonomousModeDescription;
+
+  /// No description provided for @noGpsFixWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'No GPS fix yet. Telemetry will not be sent until the companion radio acquires a valid GPS position.'**
+  String get noGpsFixWarning;
+
+  /// Transmit power slider label
+  ///
+  /// In en, this message translates to:
+  /// **'TX Power: {power} dBm (max {maxPower})'**
+  String txPowerWithMax(int power, int maxPower);
+
+  /// No description provided for @invalidFrequency.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid frequency'**
+  String get invalidFrequency;
+
+  /// No description provided for @selectACampPreset.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a camp preset'**
+  String get selectACampPreset;
+
+  /// No description provided for @autonomousRejectedNoGpsUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Firmware rejected autonomous enable (ERR 6). This device does not have a GPS unit.'**
+  String get autonomousRejectedNoGpsUnit;
+
+  /// No description provided for @autonomousVerifyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to verify autonomous settings after write. Check connection and retry.'**
+  String get autonomousVerifyFailed;
+
+  /// No description provided for @autonomousSettingsDidNotStick.
+  ///
+  /// In en, this message translates to:
+  /// **'Autonomous settings did not stick after write. Please retry.'**
+  String get autonomousSettingsDidNotStick;
+
+  /// No description provided for @failedToApplySettingsAutonomousHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to apply settings. If enabling autonomous, ensure companion GPS is enabled and has a valid fix.'**
+  String get failedToApplySettingsAutonomousHint;
+
+  /// No description provided for @failedToApplyRadioSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to apply radio settings.'**
+  String get failedToApplyRadioSettings;
+
+  /// No description provided for @sendAdvert.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Advert'**
+  String get sendAdvert;
+
+  /// Snackbar after a successful BLE connection
+  ///
+  /// In en, this message translates to:
+  /// **'Connected to {device}'**
+  String connectedToDevice(String device);
+
+  /// Snackbar after a failed BLE connection
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to connect to {device}'**
+  String failedToConnectToDevice(String device);
+
+  /// No description provided for @copyContactInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy contact info'**
+  String get copyContactInfo;
+
+  /// No description provided for @contactInfoCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact info copied'**
+  String get contactInfoCopied;
+
+  /// No description provided for @labelHash.
+  ///
+  /// In en, this message translates to:
+  /// **'Hash'**
+  String get labelHash;
+
+  /// No description provided for @labelBattery.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery'**
+  String get labelBattery;
+
+  /// No description provided for @labelType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get labelType;
+
+  /// No description provided for @nodeTypeRepeater.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeater'**
+  String get nodeTypeRepeater;
+
+  /// No description provided for @nodeTypeRoomServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Room Server'**
+  String get nodeTypeRoomServer;
+
+  /// No description provided for @nodeTypeEndNode.
+  ///
+  /// In en, this message translates to:
+  /// **'End Node'**
+  String get nodeTypeEndNode;
+
+  /// No description provided for @justNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get justNow;
+
+  /// Relative time, under an hour
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m ago'**
+  String minutesAgo(int minutes);
+
+  /// Relative time, under a day
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h ago'**
+  String hoursAgo(int hours);
+
+  /// Relative time, a day or more
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d ago'**
+  String daysAgo(int days);
+
+  /// No description provided for @identityNameExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'This name is how you will be identified on the mesh network.'**
+  String get identityNameExplanation;
+
+  /// No description provided for @nameCannotBeEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Name cannot be empty'**
+  String get nameCannotBeEmpty;
+
+  /// No description provided for @failedToApplyName.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to apply name. Please try again.'**
+  String get failedToApplyName;
+
+  /// No description provided for @unknownContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Contact'**
+  String get unknownContact;
+
+  /// No description provided for @repeaterDirectMessagesDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'This contact is a repeater. Direct messages are disabled.'**
+  String get repeaterDirectMessagesDisabled;
+
+  /// No description provided for @channelLinkPasswordWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone with this link can join this private channel. Treat it like a password.'**
+  String get channelLinkPasswordWarning;
+
+  /// No description provided for @sameNameSameChannelHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone who types the same name joins the same channel'**
+  String get sameNameSameChannelHint;
+
+  /// No description provided for @unnamedChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed Channel'**
+  String get unnamedChannel;
+
+  /// Latitude readout on the node detail sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Lat: {value}'**
+  String latWithValue(String value);
+
+  /// Longitude readout on the node detail sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Lon: {value}'**
+  String lonWithValue(String value);
+
+  /// No description provided for @hidePath.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Path'**
+  String get hidePath;
+
+  /// No description provided for @showPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Path'**
+  String get showPath;
+
+  /// No description provided for @editRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Route'**
+  String get editRoute;
+
+  /// No description provided for @saveRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Route'**
+  String get saveRoute;
+
+  /// No description provided for @routeColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Route Color'**
+  String get routeColor;
+
+  /// No description provided for @editRoutePoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Route Points'**
+  String get editRoutePoints;
+
+  /// No description provided for @editRouteInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Route Info'**
+  String get editRouteInfo;
+
+  /// No description provided for @waypointSharedToMesh.
+  ///
+  /// In en, this message translates to:
+  /// **'Waypoint shared to mesh'**
+  String get waypointSharedToMesh;
+
+  /// No description provided for @failedToShareWaypoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to share waypoint'**
+  String get failedToShareWaypoint;
+
+  /// No description provided for @deleteWaypointQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete waypoint?'**
+  String get deleteWaypointQuestion;
+
+  /// Confirmation body naming the waypoint
+  ///
+  /// In en, this message translates to:
+  /// **'This will delete \"{name}\".'**
+  String deleteWaypointNamed(String name);
+
+  /// No description provided for @deleteWaypointsQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete waypoints?'**
+  String get deleteWaypointsQuestion;
+
+  /// Confirmation body for a bulk waypoint delete
+  ///
+  /// In en, this message translates to:
+  /// **'This will delete {count} {count, plural, =1{waypoint} other{waypoints}}.'**
+  String deleteWaypointsCount(int count);
+
+  /// No description provided for @deleteReceivedWaypointsQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete received waypoints?'**
+  String get deleteReceivedWaypointsQuestion;
+
+  /// No description provided for @deleteReceivedWaypointsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This will delete all received waypoints from the device.'**
+  String get deleteReceivedWaypointsBody;
+
+  /// No description provided for @deleteLocalWaypointsQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete local waypoints?'**
+  String get deleteLocalWaypointsQuestion;
+
+  /// No description provided for @deleteLocalWaypointsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This will delete all local waypoints you created on the device.'**
+  String get deleteLocalWaypointsBody;
+
+  /// Snackbar after sharing waypoints, all succeeded
+  ///
+  /// In en, this message translates to:
+  /// **'Shared {count} {count, plural, =1{waypoint} other{waypoints}}'**
+  String sharedWaypointsCount(int count);
+
+  /// Snackbar after sharing waypoints, some failed
+  ///
+  /// In en, this message translates to:
+  /// **'Shared {okCount}, failed {failCount}'**
+  String sharedWaypointsPartial(int okCount, int failCount);
+
+  /// No description provided for @routeModeTapToAddFirstPoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Route mode: tap map to add first point'**
+  String get routeModeTapToAddFirstPoint;
+
+  /// Route drawing hint with the running point count
+  ///
+  /// In en, this message translates to:
+  /// **'Route mode: {count} {count, plural, =1{point} other{points}} (tap a point to move it)'**
+  String routeModePointCount(int count);
+
+  /// Route drawing hint while moving one point
+  ///
+  /// In en, this message translates to:
+  /// **'Tap map to move point {index} (tap point again to cancel)'**
+  String routeModeTapToMovePoint(int index);
+
+  /// No description provided for @tapWaypointsToSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap waypoints to select'**
+  String get tapWaypointsToSelect;
+
+  /// Multi-select header count
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String countSelected(int count);
+
+  /// No description provided for @selectWaypoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Waypoints'**
+  String get selectWaypoints;
+
+  /// No description provided for @importedWaypoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported Waypoint'**
+  String get importedWaypoint;
+
+  /// No description provided for @saveGpxFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Save GPX file'**
+  String get saveGpxFile;
+
+  /// No description provided for @garminKmz.
+  ///
+  /// In en, this message translates to:
+  /// **'Garmin KMZ'**
+  String get garminKmz;
+
+  /// No description provided for @garminKmzDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Raster map tiles from a Garmin Custom Map archive'**
+  String get garminKmzDescription;
+
+  /// No description provided for @mbtilesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline tile pyramid from QGIS, GDAL, or Mobile Atlas Creator'**
+  String get mbtilesDescription;
+
+  /// No description provided for @pleaseSelectMbtilesFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a .mbtiles file.'**
+  String get pleaseSelectMbtilesFile;
+
+  /// No description provided for @deleteMapQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete map?'**
+  String get deleteMapQuestion;
+
+  /// Confirmation body for deleting an imported overlay map
+  ///
+  /// In en, this message translates to:
+  /// **'This will remove \"{name}\" and its image files from the device.'**
+  String deleteMapNamed(String name);
+
+  /// No description provided for @noImportedMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'No imported maps'**
+  String get noImportedMaps;
+
+  /// No description provided for @noImportedMapsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a Garmin-style KMZ file or an MBTiles archive to display a custom offline map on top of the base map.'**
+  String get noImportedMapsHint;
+
+  /// No description provided for @hideOnMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide on map'**
+  String get hideOnMap;
+
+  /// No description provided for @showOnMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Show on map'**
+  String get showOnMap;
+
+  /// No description provided for @deleteOfflineMapQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete offline map?'**
+  String get deleteOfflineMapQuestion;
+
+  /// Confirmation body for deleting a downloaded map area
+  ///
+  /// In en, this message translates to:
+  /// **'This will remove downloaded tiles for \"{name}\".'**
+  String deleteOfflineMapNamed(String name);
+
+  /// No description provided for @clearAllOfflineMapsQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all offline maps?'**
+  String get clearAllOfflineMapsQuestion;
+
+  /// No description provided for @clearAllOfflineMapsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This will remove all downloaded offline map areas and their tiles.'**
+  String get clearAllOfflineMapsBody;
+
+  /// No description provided for @pleaseEnterAName.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a name'**
+  String get pleaseEnterAName;
+
+  /// No description provided for @downloadCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Download cancelled'**
+  String get downloadCancelled;
+
+  /// Offline map download error
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed: {error}'**
+  String downloadFailed(String error);
+
+  /// Offline map download progress readout
+  ///
+  /// In en, this message translates to:
+  /// **'Progress: {completed}/{total} (failed: {failed})'**
+  String downloadProgress(int completed, int total, int failed);
+
+  /// No description provided for @connectBeforeImportingConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to a companion device before importing. Channels must be registered with firmware.'**
+  String get connectBeforeImportingConfig;
+
+  /// No description provided for @importTeamConfigExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a team config from a local file or by scanning a QR code from a nearby device sharing over Wi-Fi.'**
+  String get importTeamConfigExplanation;
+
+  /// Warning listing overlay maps excluded from a shared config
+  ///
+  /// In en, this message translates to:
+  /// **'Left out of the config because they are too large to share: {names}. Transfer the file directly instead.'**
+  String omittedTooLargeToShare(String names);
+
+  /// No description provided for @shareConfigWithoutInternet.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Config Without Internet'**
+  String get shareConfigWithoutInternet;
+
+  /// No description provided for @shareConfigHotspotExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a mobile hotspot on your device so team members can connect and download the config directly.'**
+  String get shareConfigHotspotExplanation;
+
+  /// No description provided for @mobileHotspot.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile Hotspot'**
+  String get mobileHotspot;
+
+  /// No description provided for @iphoneOrIpad.
+  ///
+  /// In en, this message translates to:
+  /// **'iPhone / iPad'**
+  String get iphoneOrIpad;
+
+  /// No description provided for @hotspotStepOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get hotspotStepOpenSettings;
+
+  /// No description provided for @hotspotStepTapPersonalHotspot.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Personal Hotspot'**
+  String get hotspotStepTapPersonalHotspot;
+
+  /// No description provided for @hotspotStepAllowOthersToJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on \"Allow Others to Join\"'**
+  String get hotspotStepAllowOthersToJoin;
+
+  /// No description provided for @hotspotStepShareNameAndPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Share the hotspot name and password with your team'**
+  String get hotspotStepShareNameAndPassword;
+
+  /// No description provided for @hotspotStepTapNetworkInternet.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Network & Internet (or Connections)'**
+  String get hotspotStepTapNetworkInternet;
+
+  /// No description provided for @hotspotStepTapHotspotTethering.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Hotspot & Tethering'**
+  String get hotspotStepTapHotspotTethering;
+
+  /// No description provided for @hotspotStepTurnOnWifiHotspot.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on Wi-Fi Hotspot'**
+  String get hotspotStepTurnOnWifiHotspot;
+
+  /// No description provided for @hotspotStepEnableFromSystemSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable your mobile hotspot from system settings'**
+  String get hotspotStepEnableFromSystemSettings;
+
+  /// No description provided for @connectToHotspotBeforeScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Team members should connect to your hotspot Wi-Fi before scanning the QR code.'**
+  String get connectToHotspotBeforeScanning;
+
+  /// No description provided for @selectConfigToShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Config to Share'**
+  String get selectConfigToShare;
+
+  /// No description provided for @chooseTeamcfgFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a .teamcfg.zip file to share with your team.'**
+  String get chooseTeamcfgFile;
+
+  /// No description provided for @couldNotReadSelectedFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read selected file.'**
+  String get couldNotReadSelectedFile;
+
+  /// Error when a picked config file cannot be parsed
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid config file: {error}'**
+  String invalidConfigFile(String error);
+
+  /// Error when the file picker itself fails
+  ///
+  /// In en, this message translates to:
+  /// **'Error selecting file: {error}'**
+  String errorSelectingFile(String error);
+
+  /// No description provided for @configDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Config Details'**
+  String get configDetails;
+
+  /// No description provided for @radioSettingsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Radio Settings'**
+  String get radioSettingsLabel;
+
+  /// Config preview row label for channels
+  ///
+  /// In en, this message translates to:
+  /// **'Channels ({count})'**
+  String channelsWithCount(int count);
+
+  /// No description provided for @mapTiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Map Tiles'**
+  String get mapTiles;
+
+  /// No description provided for @couldNotDetermineLocalIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not determine local IP address. Make sure your hotspot is enabled.'**
+  String get couldNotDetermineLocalIp;
+
+  /// Error when the local sharing server will not start
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to start server: {error}'**
+  String failedToStartServer(String error);
+
+  /// No description provided for @sharingConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing Config'**
+  String get sharingConfig;
+
+  /// No description provided for @teamMembersShould.
+  ///
+  /// In en, this message translates to:
+  /// **'Team members should:'**
+  String get teamMembersShould;
+
+  /// No description provided for @shareStepConnectToHotspot.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to your hotspot Wi-Fi'**
+  String get shareStepConnectToHotspot;
+
+  /// No description provided for @shareStepOpenImportFromQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Open MeshCore TEAM → Import Team Config → From QR Code'**
+  String get shareStepOpenImportFromQr;
+
+  /// No description provided for @shareStepScanQrToDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan this QR code to download'**
+  String get shareStepScanQrToDownload;
+
+  /// No description provided for @manualDownloadUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual download URL:'**
+  String get manualDownloadUrl;
+
+  /// No description provided for @starting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting…'**
+  String get starting;
+
+  /// Body of the background-location permission dialog
+  ///
+  /// In en, this message translates to:
+  /// **'MeshCore TEAM needs background location access to continue sharing your position with the mesh network when the app is minimized.\n\nThis allows location tracking and BLE communication to continue working in the background.'**
+  String get backgroundLocationExplanation;
+
+  /// No description provided for @meshConnectionChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesh Network Connection'**
+  String get meshConnectionChannelName;
+
+  /// No description provided for @meshConnectionChannelDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintains mesh network connection in background'**
+  String get meshConnectionChannelDescription;
+
+  /// No description provided for @meshNetworkActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesh network active'**
+  String get meshNetworkActive;
+
+  /// No description provided for @meshNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesh network'**
+  String get meshNetwork;
+
+  /// No description provided for @meshNetworkReconnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesh network reconnecting'**
+  String get meshNetworkReconnecting;
+
+  /// No description provided for @meshNetworkConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesh network connecting'**
+  String get meshNetworkConnecting;
+
+  /// No description provided for @meshNetworkDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesh network disconnected'**
+  String get meshNetworkDisconnected;
+
+  /// No description provided for @meshNetworkScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesh network scanning'**
+  String get meshNetworkScanning;
+
+  /// No description provided for @meshNetworkError.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesh network error'**
+  String get meshNetworkError;
+
+  /// No description provided for @connectingToCompanionDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting to companion device...'**
+  String get connectingToCompanionDevice;
+
+  /// Foreground notification body while reconnecting
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting to {device}...'**
+  String reconnectingToDevice(String device);
+
+  /// No description provided for @establishingConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Establishing connection...'**
+  String get establishingConnection;
+
+  /// No description provided for @deviceDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Device disconnected'**
+  String get deviceDisconnected;
+
+  /// No description provided for @searchingForDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for devices...'**
+  String get searchingForDevices;
+
+  /// No description provided for @connectionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection error'**
+  String get connectionError;
+
+  /// No description provided for @maxChannelsReachedJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum number of channels reached. Delete an existing channel before joining a new one.'**
+  String get maxChannelsReachedJoin;
+
+  /// No description provided for @maxChannelsReachedCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum number of channels reached. Delete an existing channel before creating a new one.'**
+  String get maxChannelsReachedCreate;
+
+  /// Firmware rejected a channel registration
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to register channel with firmware (error {code})'**
+  String failedToRegisterChannel(String code);
+
+  /// Firmware rejected a channel delete
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete channel from companion (error {code})'**
+  String failedToDeleteChannelFromCompanion(String code);
+
+  /// No description provided for @kmzNoDocKml.
+  ///
+  /// In en, this message translates to:
+  /// **'No doc.kml found in KMZ file. Is this a valid Garmin Custom Map?'**
+  String get kmzNoDocKml;
+
+  /// No description provided for @kmzNoGroundOverlay.
+  ///
+  /// In en, this message translates to:
+  /// **'No GroundOverlay elements found in doc.kml. This KMZ does not contain raster map overlays.'**
+  String get kmzNoGroundOverlay;
+
+  /// No description provided for @kmzNoUsableTiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not extract any usable image tiles from the KMZ.'**
+  String get kmzNoUsableTiles;
+
+  /// No description provided for @mbtilesVectorNotSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a vector MBTiles file. Only raster MBTiles (PNG, JPG, or WebP tiles) can be displayed.'**
+  String get mbtilesVectorNotSupported;
+
+  /// No description provided for @nothingNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing new'**
+  String get nothingNew;
+
+  /// Summary of what a team config import brought in
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {items}'**
+  String importedItems(String items);
+
+  /// No description provided for @packingTiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Packing tiles'**
+  String get packingTiles;
+
+  /// No description provided for @applyingRadioSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Applying radio settings'**
+  String get applyingRadioSettings;
+
+  /// No description provided for @importingChannels.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing channels'**
+  String get importingChannels;
+
+  /// No description provided for @importingWaypoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing waypoints'**
+  String get importingWaypoints;
+
+  /// No description provided for @importingTiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing tiles'**
+  String get importingTiles;
+
+  /// No description provided for @importingOverlayMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing overlay maps'**
+  String get importingOverlayMaps;
+
+  /// No description provided for @meshUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Mesh User'**
+  String get meshUser;
+
+  /// No description provided for @inactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get inactive;
+
+  /// Channel count fragment in the import summary
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, =1{channel} other{channels}}'**
+  String countChannels(int count);
+
+  /// Waypoint count fragment in the import summary
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, =1{waypoint} other{waypoints}}'**
+  String countWaypoints(int count);
+
+  /// Tile count fragment in the import summary
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, =1{tile} other{tiles}}'**
+  String countTiles(int count);
+
+  /// Overlay map count fragment in the import summary
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {count, plural, =1{overlay map} other{overlay maps}}'**
+  String countOverlayMaps(int count);
+
+  /// No description provided for @radioSettingsItem.
+  ///
+  /// In en, this message translates to:
+  /// **'radio settings'**
+  String get radioSettingsItem;
+
+  /// Import summary that also lists skipped items
+  ///
+  /// In en, this message translates to:
+  /// **'{imported} (skipped {skipped})'**
+  String importedWithSkipped(String imported, String skipped);
 }
 
 class _AppLocalizationsDelegate

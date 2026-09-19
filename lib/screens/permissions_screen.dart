@@ -126,8 +126,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         setState(() {
           _isRequesting = false;
           _permissionsDenied = true;
-          _errorMessage =
-              'Required permissions denied:\n${deniedPermissions.join("\n")}';
+          _errorMessage = AppLocalizations.of(context)!
+              .requiredPermissionsDenied(deniedPermissions.join('\n'));
         });
       }
     } catch (e) {
@@ -135,7 +135,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       setState(() {
         _isRequesting = false;
         _permissionsDenied = true;
-        _errorMessage = 'Error requesting permissions: $e';
+        _errorMessage =
+            AppLocalizations.of(context)!.errorRequestingPermissions('$e');
       });
     }
   }
@@ -187,11 +188,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             barrierDismissible: false,
             builder: (context) => AlertDialog(
               title: Text(AppLocalizations.of(context)!.batteryOptimization),
-              content: const Text(
-                'To keep your mesh connection active in the background, '
-                'we recommend disabling battery optimization for this app.\n\n'
-                'This will allow the app to maintain a stable Bluetooth connection '
-                'to your radio even when the screen is off.',
+              content: Text(
+                AppLocalizations.of(context)!.batteryOptimizationExplanation,
               ),
               actions: [
                 TextButton(
@@ -277,8 +275,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
             // Description
             Text(
-              'To connect to your mesh radio and share messages, '
-              'MeshCore TEAM needs access to:',
+              l10n.permissionsIntro,
               style: Theme.of(context).textTheme.bodyLarge,
               textAlign: TextAlign.center,
             ),
@@ -287,26 +284,26 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             // Permission items
             _buildPermissionItem(
               Icons.bluetooth,
-              'Bluetooth',
-              'Connect to your mesh radio',
+              l10n.bluetooth,
+              l10n.permissionBluetoothReason,
             ),
             const SizedBox(height: 16),
             _buildPermissionItem(
               Icons.location_on,
-              'Location',
-              'Required for maps: navigate and share your location with your team.',
+              l10n.location,
+              l10n.permissionLocationReason,
             ),
             const SizedBox(height: 16),
             _buildPermissionItem(
               Icons.notifications,
-              'Notifications',
-              'Alert you when messages arrive',
+              l10n.notifications,
+              l10n.permissionNotificationsReason,
             ),
             const SizedBox(height: 16),
             _buildPermissionItem(
               Icons.sync,
-              'Background',
-              'Keep your mesh connection and tracking running in the background.',
+              l10n.background,
+              l10n.permissionBackgroundReason,
             ),
 
             const SizedBox(height: 24),
@@ -319,7 +316,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'You can change these later in system settings.',
+                l10n.changePermissionsLaterHint,
                 style: Theme.of(context).textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),
@@ -328,12 +325,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
             // Status/Error
             if (_isRequesting)
-              const Column(
+              Column(
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
                   Text(
-                    'Requesting permissions...',
+                    l10n.requestingPermissions,
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -360,8 +357,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'MeshCore TEAM requires Bluetooth and Location permissions to function. '
-                        'Please grant these permissions to continue.',
+                        l10n.permissionsRequiredToFunction,
                         style: Theme.of(context).textTheme.bodySmall,
                         textAlign: TextAlign.center,
                       ),
