@@ -165,6 +165,7 @@ class _ChatMessageTextState extends State<ChatMessageText> {
             }
 
             return AlertDialog(
+              scrollable: true,
               title: Text(l10n.joinChannelConfirmation(tag)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,

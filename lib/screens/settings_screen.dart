@@ -11,6 +11,10 @@ import 'package:provider/provider.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/models/app_language.dart';
 import 'package:meshcore_team/models/app_settings.dart';
+import 'package:meshcore_team/models/capability_message.dart';
+import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
+import 'package:meshcore_team/widgets/add_channel_to_radio.dart';
+import 'package:meshcore_team/widgets/tracking_channel_chooser.dart';
 import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
@@ -24,6 +28,7 @@ const MethodChannel _appLifecycleChannel =
 /// storage keys: renaming one silently resets that section to expanded. They
 /// are deliberately independent of the localized section titles.
 class SettingsSection {
+  static const String general = 'general';
   static const String appearance = 'appearance';
   static const String location = 'location';
   static const String data = 'data';
@@ -51,6 +56,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: ListView(
         children: [
+          _buildSection(
+            context: context,
+            settings: settings,
+            id: SettingsSection.general,
+            title: l10n.general,
+            children: _generalChildren(context, l10n, settings),
+          ),
+          const Divider(height: 1),
           _buildSection(
             context: context,
             settings: settings,
@@ -283,6 +296,104 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   static const _purgeDayOptions = [7, 14, 30, 60, 90, 180, 365, 0];
 
+  List<Widget> _generalChildren(
+    BuildContext context,
+    AppLocalizations l10n,
+    SettingsService settings,
+  ) {
+    return [
+      _buildTeamNameCard(context, l10n, settings),
+      Card(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: SwitchListTile(
+          secondary: const Icon(Icons.group_outlined),
+          title: Text(l10n.hideNonTeam),
+          value: settings.settings.teamOnlyFilter,
+          onChanged: settings.setTeamOnlyFilter,
+        ),
+      ),
+    ];
+  }
+
+  /// The user's own name, shown to their team. Separate from the radio name
+  /// on the Connection screen, which the whole mesh can see.
+  Widget _buildTeamNameCard(BuildContext context, AppLocalizations l10n,
+      SettingsService settingsService) {
+    final alias = settingsService.settings.teamAlias;
+    final radioName = context.watch<ConnectionViewModel>().deviceName.trim();
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: ListTile(
+        leading: const Icon(Icons.badge_outlined),
+        title: Text(l10n.teamNameSettingsTitle),
+        subtitle: Text(
+          alias != null && alias.isNotEmpty
+              ? alias
+              : l10n.teamNameUsingRadioName(
+                  radioName.isEmpty ? l10n.unknown : radioName),
+        ),
+        trailing: const Icon(Icons.edit_outlined),
+        onTap: () => _showTeamNameDialog(context, settingsService, radioName),
+      ),
+    );
+  }
+
+  Future<void> _showTeamNameDialog(
+    BuildContext context,
+    SettingsService settingsService,
+    String radioName,
+  ) async {
+    final controller =
+        TextEditingController(text: settingsService.settings.teamAlias ?? '');
+
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
+        return AlertDialog(
+          scrollable: true,
+          title: Text(l10n.teamName),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: controller,
+                autofocus: true,
+                maxLength: CapabilityMessage.maxAliasBytes,
+                decoration: InputDecoration(
+                  labelText: l10n.teamName,
+                  hintText: radioName.isEmpty ? null : radioName,
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(l10n.teamNameSaveExplanation),
+              const SizedBox(height: 8),
+              Text(l10n.teamNameSkipExplanation),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(controller.text.trim()),
+              child: Text(l10n.save),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null) return;
+    // Typing the radio name means the same as leaving it blank.
+    await settingsService.setTeamAlias(result == radioName ? null : result);
+  }
+
   Widget _buildAutoPurgeCard(BuildContext context, AppLocalizations l10n,
       SettingsService settingsService) {
     final days = settingsService.settings.contactAutoPurgeDays;
@@ -376,7 +487,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: Text(l10n.locationTracking,
                 style: const TextStyle(fontWeight: FontWeight.w500)),
             value: s.telemetryEnabled,
-            onChanged: (v) => settings.setTelemetryEnabled(v),
+            onChanged: (v) async {
+              await settings.setTelemetryEnabled(v);
+              if (v && context.mounted) await ensureTrackingChannel(context);
+            },
           ),
           // Channel selection
           Padding(
@@ -386,7 +500,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     stream: context.read<ChannelRepository>().getAllChannels(),
                     builder: (context, snapshot) {
                       final privateChannels = (snapshot.data ?? [])
-                          .where((c) => !c.isPublic)
+                          .where((c) => c.canBeTrackingChannel)
                           .toList();
 
                       String? currentHash = s.telemetryChannelHash;
@@ -397,26 +511,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         currentHash = null;
                       }
 
-                      return DropdownButtonFormField<String>(
-                        decoration: InputDecoration(labelText: l10n.channel),
-                        value: currentHash,
-                        items: [
-                          DropdownMenuItem<String>(
-                              value: null, child: Text(l10n.none)),
-                          for (final c in privateChannels)
-                            DropdownMenuItem<String>(
-                              value: c.hash.toRadixString(16).toLowerCase(),
-                              child: Text(c.name),
+                      ChannelData? selected;
+                      for (final c in privateChannels) {
+                        if (c.hash.toRadixString(16).toLowerCase() ==
+                            currentHash) {
+                          selected = c;
+                        }
+                      }
+
+                      // Choosing a channel only saves the setting. Marking it
+                      // as a team channel happens in ChannelRepository, and
+                      // adding it to the radio is the row below: doing either
+                      // from onChanged ran while the dropdown was still
+                      // closing, and tripped a framework assertion.
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          DropdownButtonFormField<String>(
+                            decoration:
+                                InputDecoration(labelText: l10n.channel),
+                            value: currentHash,
+                            items: [
+                              DropdownMenuItem<String>(
+                                  value: null, child: Text(l10n.none)),
+                              for (final c in privateChannels)
+                                DropdownMenuItem<String>(
+                                  value:
+                                      c.hash.toRadixString(16).toLowerCase(),
+                                  child: Text(c.name),
+                                ),
+                            ],
+                            onChanged: (v) async {
+                              await settings.setTelemetryChannelHash(v);
+                              final name = v == null
+                                  ? null
+                                  : _findChannelNameByHashHex(
+                                      privateChannels, v.toLowerCase());
+                              await settings.setTelemetryChannelName(name);
+                            },
+                          ),
+                          // Tracking can't send on a channel the radio
+                          // doesn't hold: say so where the choice is made.
+                          if (selected != null && channelNeedsRadio(selected))
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.warning_amber,
+                                  color: Colors.orange),
+                              title: Text(l10n.notOnRadio),
+                              subtitle: Text(l10n.addChannelToRadioExplanation),
+                              trailing: TextButton(
+                                onPressed: () => promptAddChannelToRadio(
+                                    context, selected!),
+                                child: Text(l10n.add),
+                              ),
                             ),
                         ],
-                        onChanged: (v) async {
-                          await settings.setTelemetryChannelHash(v);
-                          final name = v == null
-                              ? null
-                              : _findChannelNameByHashHex(
-                                  privateChannels, v.toLowerCase());
-                          await settings.setTelemetryChannelName(name);
-                        },
                       );
                     },
                   )
@@ -457,6 +606,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final shouldEnable = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text(AppLocalizations.of(context)!.backgroundLocation),
         content: Text(
           AppLocalizations.of(context)!.backgroundLocationExplanation,
@@ -495,6 +645,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
+          scrollable: true,
           title: Text(AppLocalizations.of(context)!.permissionRequired),
           content: const Text(
             'Background location was denied. Please enable "Always" '

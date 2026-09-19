@@ -2031,4 +2031,108 @@ class AppLocalizationsEn extends AppLocalizations {
   String importedWithSkipped(String imported, String skipped) {
     return '$imported (skipped $skipped)';
   }
+
+  @override
+  String heardNearby(int count) {
+    return 'Heard nearby ($count)';
+  }
+
+  @override
+  String get heardNearbyExplanation =>
+      'Devices your radio heard but did not add. Team members are added for you.';
+
+  @override
+  String get dismiss => 'Dismiss';
+
+  @override
+  String contactAdded(String name) {
+    return 'Added $name';
+  }
+
+  @override
+  String contactAddFailed(String name) {
+    return 'Could not add $name';
+  }
+
+  @override
+  String get roomServer => 'Room server';
+
+  @override
+  String get sensor => 'Sensor';
+
+  @override
+  String get teamChannel => 'Team channel';
+
+  @override
+  String get teamChannelExplanation =>
+      'Kept on this phone with its history, even if you change radio.';
+
+  @override
+  String get notOnRadio => 'Not on this radio';
+
+  @override
+  String get addChannelToRadio => 'Add to radio?';
+
+  @override
+  String get addChannelToRadioExplanation =>
+      'This channel has to be on your radio to send messages or use it for tracking.';
+
+  @override
+  String get addChannelToRadioNoSlots =>
+      'Your radio has no free channel slots. Delete a channel on the radio first.';
+
+  @override
+  String addedChannelToRadio(String name) {
+    return 'Added $name to your radio';
+  }
+
+  @override
+  String get failedToAddChannel => 'Could not add the channel to your radio';
+
+  @override
+  String get teamName => 'Your name';
+
+  @override
+  String get teamNamePrompt => 'Set your name';
+
+  @override
+  String get teamNameSaveExplanation =>
+      'Your team will see this name. Only people on your team channel can see it.';
+
+  @override
+  String get teamNameSkipExplanation =>
+      'If you skip this, your team will see your radio name, which everyone on the mesh can see.';
+
+  @override
+  String get teamNameChangeLater =>
+      'You can set or change your team name later in Settings.';
+
+  @override
+  String teamNameUsingRadioName(String name) {
+    return 'Using radio name ($name)';
+  }
+
+  @override
+  String get radioNameExplanation =>
+      'This name is visible to everyone on the mesh, including people outside your team. Consider an anonymous name.';
+
+  @override
+  String get teamNameSettingsTitle => 'Name (hidden outside your team)';
+
+  @override
+  String get general => 'General';
+
+  @override
+  String get hideNonTeam => 'Hide all but team channels and contacts';
+
+  @override
+  String get deleteChannelNeedsRadio =>
+      'This channel is stored on your radio. Connect to the radio to delete it.';
+
+  @override
+  String get trackingChannelPrompt => 'Share your location on';
+
+  @override
+  String get trackingNeedsPrivateChannel =>
+      'Create a private channel first. Your location is only shared on a private channel.';
 }

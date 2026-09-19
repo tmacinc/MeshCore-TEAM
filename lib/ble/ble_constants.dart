@@ -70,6 +70,7 @@ class BleConstants {
 
   // 57+ range: upstream firmware added new commands; custom commands were moved.
   static const int cmdSendAnonReq = 57;
+  static const int cmdSetOtherParams = 38;
   static const int cmdSetAutoAddConfig = 58;
   static const int cmdGetAutoAddConfig = 59;
   static const int cmdGetAllowedRepeatFreq = 60;

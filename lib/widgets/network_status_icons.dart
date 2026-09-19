@@ -3,6 +3,7 @@
 
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
+import 'package:meshcore_team/widgets/tracking_channel_chooser.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/screens/settings_screen.dart';
 import 'package:meshcore_team/services/forwarding_policy_service.dart';
@@ -18,6 +19,9 @@ class NetworkStatusIcons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // The switch lives inside a popup menu; the channel chooser needs a
+    // context that outlives the menu.
+    final screenContext = context;
     final settingsService = context.watch<SettingsService>();
     final settings = settingsService.settings;
     final isConnected = context.watch<ConnectionViewModel>().isConnected;
@@ -88,9 +92,18 @@ class NetworkStatusIcons extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 16),
                     title: Text(l10n.locationTracking),
                     value: trackingEnabled,
-                    onChanged: (value) {
+                    onChanged: (value) async {
                       setLocalState(() => trackingEnabled = value);
-                      settingsService.setTelemetryEnabled(value);
+                      await settingsService.setTelemetryEnabled(value);
+                      final needsChannel = value &&
+                          !(settingsService
+                                  .settings.telemetryChannelHash?.isNotEmpty ??
+                              false);
+                      if (!needsChannel || !context.mounted) return;
+                      Navigator.of(context).pop(); // close the menu first
+                      if (screenContext.mounted) {
+                        await ensureTrackingChannel(screenContext);
+                      }
                     },
                   ),
                 ),

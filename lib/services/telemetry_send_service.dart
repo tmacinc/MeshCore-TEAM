@@ -9,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:meshcore_team/ble/ble_service.dart';
 import 'package:meshcore_team/database/daos/channels_dao.dart';
+import 'package:meshcore_team/database/database.dart';
+import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/models/telemetry_message.dart';
 import 'package:meshcore_team/models/topology_message.dart';
 import 'package:meshcore_team/models/network_topology.dart';
@@ -92,11 +94,43 @@ class TelemetrySendService extends ChangeNotifier {
     _connectionViewModel.addListener(_onBatteryChanged);
     _forwardingPolicy?.addListener(_onForwardingPolicyChanged);
 
+    _watchTrackingChannel();
     _applyConfigAndMaybeStart();
   }
 
   void _onSettingsChanged() {
+    _watchTrackingChannel();
     _applyConfigAndMaybeStart();
+  }
+
+  StreamSubscription<ChannelData?>? _trackingChannelSub;
+  String? _watchedChannelHash;
+  bool? _trackingChannelOnRadio;
+
+  /// Sending is skipped while the tracking channel isn't on the radio. When
+  /// it is added (or lost), nothing about the settings or connection changes,
+  /// so without this the sender only noticed at some later, unrelated event.
+  void _watchTrackingChannel() {
+    final hashHex = _settings.settings.telemetryChannelHash;
+    if (hashHex == _watchedChannelHash) return;
+    _watchedChannelHash = hashHex;
+    _trackingChannelSub?.cancel();
+    _trackingChannelSub = null;
+    _trackingChannelOnRadio = null;
+
+    final hash = hashHex == null ? null : _tryParseChannelHash(hashHex);
+    if (hash == null) return;
+    _trackingChannelSub = _channelsDao.watchChannel(hash).listen((channel) {
+      final onRadio = channel?.isOnRadio;
+      final changed =
+          _trackingChannelOnRadio != null && onRadio != _trackingChannelOnRadio;
+      _trackingChannelOnRadio = onRadio;
+      if (changed) {
+        debugPrint(
+            '[TelemetrySend] 🔄 Tracking channel is ${onRadio == true ? 'now' : 'no longer'} on the radio');
+        _applyConfigAndMaybeStart();
+      }
+    });
   }
 
   void _onConnectionChanged() {
@@ -276,6 +310,22 @@ class TelemetrySendService extends ChangeNotifier {
     if (channel == null) {
       debugPrint(
           '[TelemetrySend] ❌ Channel not found for hash: $channelHashHex');
+      return;
+    }
+    if (!channel.canBeTrackingChannel) {
+      await _rejectIneligibleChannel(channel);
+      return;
+    }
+    if (!channel.isOnRadio) {
+      // Kept on the phone but not in a radio slot: there is no slot to send
+      // on. Tracking resumes once the channel is added to the radio.
+      debugPrint(
+          '[TelemetrySend] ⏭️ "${channel.name}" is not on this radio; not sending');
+      try {
+        await _nativeTelemetryChannel.invokeMethod('stopNativeTelemetry');
+      } catch (e) {
+        debugPrint('[TelemetrySend] ⚠️ stopNativeTelemetry failed: $e');
+      }
       return;
     }
 
@@ -471,6 +521,17 @@ class TelemetrySendService extends ChangeNotifier {
           '[TelemetrySend] ❌ Channel not found for hash: $channelHashHex');
       return;
     }
+    if (!channel.canBeTrackingChannel) {
+      await _rejectIneligibleChannel(channel);
+      return;
+    }
+    if (!channel.isOnRadio) {
+      // Kept on the phone but not in a radio slot: there is no slot to send
+      // on. Tracking resumes once the channel is added to the radio.
+      debugPrint(
+          '[TelemetrySend] ⏭️ "${channel.name}" is not on this radio; not sending');
+      return;
+    }
 
     final phoneBatteryMv = await _getPhoneBatteryMvCached();
 
@@ -520,6 +581,15 @@ class TelemetrySendService extends ChangeNotifier {
         '[TelemetrySend] ✅ Sent ($reason) on channelIndex=${channel.channelIndex}');
   }
 
+  /// Tracking must never broadcast on a channel anyone can join. Clearing the
+  /// setting stops sending and shows "none" in the picker, so a tracking
+  /// channel saved before this check existed gets reset rather than used.
+  Future<void> _rejectIneligibleChannel(ChannelData channel) async {
+    debugPrint(
+        '[TelemetrySend] 🚫 "${channel.name}" is public or hashtag - clearing tracking channel');
+    await _settings.setTelemetryChannelHash(null);
+  }
+
   int? _tryParseChannelHash(String hashHex) {
     final cleaned = hashHex.trim().toLowerCase().replaceFirst('0x', '');
     if (cleaned.isEmpty) return null;
@@ -550,6 +620,7 @@ class TelemetrySendService extends ChangeNotifier {
   @override
   void dispose() {
     _stopInternal();
+    _trackingChannelSub?.cancel();
 
     if (_started) {
       _settings.removeListener(_onSettingsChanged);

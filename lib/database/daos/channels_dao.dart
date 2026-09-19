@@ -42,6 +42,43 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
         .get();
   }
 
+  /// Channels to show while [companionKey] is the connected radio: its own
+  /// channels, plus every team channel whichever radio it came from.
+  ///
+  /// Team channels belong to the phone. After a radio switch they are untied
+  /// from the old radio (companionDeviceKey null) and may not be on the new
+  /// one yet, so filtering by radio alone would hide them — which looked
+  /// exactly like the sync had deleted them.
+  ///
+  /// With no radio selected, [companionKey] is null and only team channels
+  /// are shown. [getChannelsByCompanion] stays radio-only: slot allocation
+  /// must only see the radio's own slots.
+  Future<List<ChannelData>> getVisibleChannels(String? companionKey) {
+    return (select(channels)
+          ..where((t) => _visibleTo(t, companionKey))
+          ..orderBy([
+            (t) => OrderingTerm(
+                expression: t.channelIndex, mode: OrderingMode.asc),
+          ]))
+        .get();
+  }
+
+  Stream<List<ChannelData>> watchVisibleChannels(String? companionKey) {
+    return (select(channels)
+          ..where((t) => _visibleTo(t, companionKey))
+          ..orderBy([
+            (t) => OrderingTerm(
+                expression: t.channelIndex, mode: OrderingMode.asc),
+          ]))
+        .watch();
+  }
+
+  Expression<bool> _visibleTo($ChannelsTable t, String? companionKey) {
+    final isTeam = t.isTeam.equals(true);
+    if (companionKey == null || companionKey.isEmpty) return isTeam;
+    return t.companionDeviceKey.equals(companionKey) | isTeam;
+  }
+
   /// Get a single channel by hash
   Future<ChannelData?> getChannelByHash(int hash) {
     return (select(channels)..where((t) => t.hash.equals(hash)))
@@ -79,6 +116,29 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Update channel name
+  Future<List<ChannelData>> getAllChannelsOnce() => select(channels).get();
+
+  /// A slot index for a channel the phone keeps but the radio doesn't hold.
+  /// Negative, so it can never collide with a real slot (0 is the public
+  /// channel), and unique among channels already parked.
+  Future<int> nextSentinelIndex() async {
+    final lowest = await (selectOnly(channels)
+          ..addColumns([channels.channelIndex.min()]))
+        .map((row) => row.read(channels.channelIndex.min()))
+        .getSingleOrNull();
+    final floor = (lowest == null || lowest > 0) ? 0 : lowest;
+    return floor - 1;
+  }
+
+  /// Channels the phone keeps whatever the radio says: team channels, and
+  /// channels created offline that no radio holds yet.
+  static bool isPhoneOwned(ChannelData c) => c.isTeam || !c.firmwareConfirmed;
+
+  Future<void> updateChannel(ChannelsCompanion changes) async {
+    await (update(channels)..where((t) => t.hash.equals(changes.hash.value)))
+        .write(changes);
+  }
+
   Future<void> updateChannelName(int hash, String name) {
     return (update(channels)..where((t) => t.hash.equals(hash)))
         .write(ChannelsCompanion(
@@ -122,32 +182,119 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Delete all channels for a companion device
-  Future<int> deleteChannelsByCompanion(String companionKey) {
-    return (delete(channels)
-          ..where((t) => t.companionDeviceKey.equals(companionKey)))
-        .go();
+  /// Deletes a radio's channels when switching away from it. Team channels
+  /// belong to the phone, so they are kept: they are untied from the old
+  /// radio and marked as not on it, ready to be offered to the new one.
+  Future<int> deleteChannelsByCompanion(String companionKey) async {
+    return db.transaction(() async {
+      var sentinelIndex = -1;
+      final teamChannels = await (select(channels)
+            ..where((t) =>
+                t.companionDeviceKey.equals(companionKey) &
+                (t.isTeam.equals(true) | t.firmwareConfirmed.equals(false))))
+          .get();
+
+      for (final channel in teamChannels) {
+        await (update(channels)..where((t) => t.hash.equals(channel.hash)))
+            .write(ChannelsCompanion(
+          companionDeviceKey: const Value(null),
+          firmwareConfirmed: const Value(false),
+          channelIndex: Value(sentinelIndex--),
+        ));
+      }
+
+      return (delete(channels)
+            ..where((t) =>
+                t.companionDeviceKey.equals(companionKey) &
+                t.isTeam.equals(false) &
+                t.firmwareConfirmed.equals(true)))
+          .go();
+    });
   }
 
   /// Delete all channels then insert replacements in a single transaction.
   /// Preserves user-set fields (notificationMode, isFavorite) across syncs.
-  Future<void> replaceAllChannels(List<ChannelsCompanion> replacements) {
+  Future<void> setTeamFlag(int hash, bool isTeam) {
+    return (update(channels)..where((t) => t.hash.equals(hash)))
+        .write(ChannelsCompanion(isTeam: Value(isTeam)));
+  }
+
+  Future<List<ChannelData>> getTeamChannels() {
+    return (select(channels)..where((t) => t.isTeam.equals(true))).get();
+  }
+
+  /// Replaces the channel list with what the radio reports.
+  ///
+  /// The radio is the source of truth for its own slots, with one exception:
+  /// a team channel is owned by the phone. One the radio doesn't have is kept
+  /// and marked [Channels.firmwareConfirmed] false, so its history survives a
+  /// radio switch and the user can be offered to add it back.
+  ///
+  /// Those keep a negative sentinel slot index, matching the Team Link
+  /// branch, so they can never collide with a real slot.
+  ///
+  /// [unreadSlots] are slots the radio didn't answer for during the fetch.
+  /// A timeout says nothing about what is in the slot, so channels the phone
+  /// had there are kept exactly as they were — neither deleted nor marked as
+  /// not on the radio.
+  Future<void> replaceAllChannels(
+    List<ChannelsCompanion> replacements, {
+    Set<int> unreadSlots = const {},
+  }) {
     return db.transaction(() async {
       final existing = await select(channels).get();
       final preserved = {
         for (final c in existing)
-          c.hash: (notificationMode: c.notificationMode, isFavorite: c.isFavorite)
+          c.hash: (
+            notificationMode: c.notificationMode,
+            isFavorite: c.isFavorite,
+            isTeam: c.isTeam,
+          )
       };
+      final fromFirmware = {for (final c in replacements) c.hash.value};
+
+      // Kept even though the radio doesn't report them: team channels, and
+      // channels created offline that were never pushed to a radio.
+      final unanswered = existing
+          .where((c) =>
+              unreadSlots.contains(c.channelIndex) &&
+              !fromFirmware.contains(c.hash))
+          .toList();
+      final unansweredHashes = {for (final c in unanswered) c.hash};
+
+      final orphanedTeam = existing
+          .where((c) =>
+              isPhoneOwned(c) &&
+              !fromFirmware.contains(c.hash) &&
+              !unansweredHashes.contains(c.hash))
+          .toList();
 
       await delete(channels).go();
+
       for (final channel in replacements) {
         final saved = preserved[channel.hash.value];
         final merged = saved != null
             ? channel.copyWith(
                 notificationMode: Value(saved.notificationMode),
                 isFavorite: Value(saved.isFavorite),
+                isTeam: Value(saved.isTeam),
               )
             : channel;
         await into(channels).insertOnConflictUpdate(merged);
+      }
+
+      for (final channel in unanswered) {
+        await into(channels).insertOnConflictUpdate(channel.toCompanion(false));
+      }
+
+      var sentinelIndex = -1;
+      for (final channel in orphanedTeam) {
+        await into(channels).insertOnConflictUpdate(
+          channel.toCompanion(false).copyWith(
+                channelIndex: Value(sentinelIndex--),
+                firmwareConfirmed: const Value(false),
+              ),
+        );
       }
     });
   }
@@ -258,13 +405,13 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
 
   /// Watch channels with unread counts for a specific companion device
   Stream<List<ChannelWithUnread>> watchChannelsWithUnreadByCompanion(
-      String companionKey) async* {
+      String? companionKey) async* {
     // Yield current state immediately — no debounce for first emit
     yield await _buildChannelsWithUnread(
-        await getChannelsByCompanion(companionKey));
+        await getVisibleChannels(companionKey));
 
     final controller = StreamController<void>();
-    final channelsSub = watchChannelsByCompanion(companionKey).listen((_) {
+    final channelsSub = watchVisibleChannels(companionKey).listen((_) {
       if (!controller.isClosed) controller.add(null);
     });
     final messagesSub = db.messagesDao.watchMessageCount().listen((_) {
@@ -275,7 +422,7 @@ class ChannelsDao extends DatabaseAccessor<AppDatabase>
       await for (final _ in controller.stream
           .debounceTime(const Duration(milliseconds: 500))) {
         yield await _buildChannelsWithUnread(
-            await getChannelsByCompanion(companionKey));
+            await getVisibleChannels(companionKey));
       }
     } finally {
       await channelsSub.cancel();

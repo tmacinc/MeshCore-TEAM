@@ -40,7 +40,8 @@ class ForwardingV1Strategy implements ForwardingStrategy {
 
   ForwardingV1Strategy({this.onStateChanged});
 
-  // Per-contact TEL signals keyed by sender name.
+  // Per-contact TEL signals keyed by the sender's radio key (hex). Senders
+  // whose key isn't known yet can't be a contact, so they aren't tracked.
   final Map<String, _V1ContactState> _contactStates = {};
 
   // Current advisory maxHops value — 0 means forwarding disabled.
@@ -52,10 +53,15 @@ class ForwardingV1Strategy implements ForwardingStrategy {
   @override
   String get modeKey => 'forwardingV1';
 
+  static String _hex(List<int> bytes) =>
+      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
   /// Update per-contact TEL state on every received #TEL event.
   @override
   void onTelemetry(TelemetryEvent event) {
-    _contactStates[event.senderName] = _V1ContactState(
+    final key = event.radioPublicKey;
+    if (key == null) return;
+    _contactStates[_hex(key)] = _V1ContactState(
       needsForwarding: event.telemetry.needsForwarding,
       remoteMaxPathObserved: event.telemetry.maxPathObserved,
       // Store the path length WE observed when receiving this packet.
@@ -92,8 +98,7 @@ class ForwardingV1Strategy implements ForwardingStrategy {
     bool hasTracked = false;
 
     for (final contact in input.contacts) {
-      final name = contact.name ?? '';
-      final telState = _contactStates[name];
+      final telState = _contactStates[_hex(contact.publicKey)];
 
       // Only track contacts that have sent at least one #TEL.
       if (telState == null) continue;

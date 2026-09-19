@@ -56,6 +56,7 @@ class _OfflineMapsScreenState extends State<OfflineMapsScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text(title),
         content: Text(message),
         actions: [

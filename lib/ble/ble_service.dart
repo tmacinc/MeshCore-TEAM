@@ -184,26 +184,18 @@ class BleService extends ChangeNotifier {
     required List<int> publicKey,
     required String name,
     int type = 1,
-    bool isRepeater = false,
-    bool isRoomServer = false,
-    bool isDirect = true,
-    int hopCount = 0,
+    int? lastAdvertTimestamp,
     double? latitude,
     double? longitude,
-    int? lastSeen,
   }) async {
     debugPrint('📤 Adding/updating contact: $name');
     final frame = BleCommands.buildAddUpdateContact(
       publicKey: publicKey,
       name: name,
       type: type,
-      isRepeater: isRepeater,
-      isRoomServer: isRoomServer,
-      isDirect: isDirect,
-      hopCount: hopCount,
+      lastAdvertTimestamp: lastAdvertTimestamp,
       latitude: latitude,
       longitude: longitude,
-      lastSeen: lastSeen,
     );
     return await _connectionManager.sendFrame(frame);
   }

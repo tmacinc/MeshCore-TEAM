@@ -1,6 +1,5 @@
 {
   "@@locale": "es",
-
   "cancel": "Cancelar",
   "ok": "OK",
   "done": "Hecho",
@@ -42,7 +41,6 @@
   "scanQrCode": "Escanear código QR",
   "fromFile": "Desde archivo",
   "fromQrCode": "Desde código QR",
-
   "settings": "Ajustes",
   "about": "Acerca de",
   "appSettings": "Ajustes de la app",
@@ -58,7 +56,6 @@
   "exportLogs": "Exportar registros",
   "noLogEntries": "Sin entradas de registro",
   "noLogsToExport": "No hay registros que exportar",
-
   "connection": "Conexión",
   "notConnected": "No conectado",
   "noDevicesFound": "No se encontraron dispositivos",
@@ -106,7 +103,6 @@
   "batteryOptimization": "Optimización de batería",
   "battery": "Batería",
   "storage": "Almacenamiento",
-
   "channel": "Canal",
   "channelName": "Nombre del canal",
   "addChannel": "Añadir canal",
@@ -134,7 +130,6 @@
   "channelCreated": "Creado: {name}",
   "channelJoined": "Te has unido a: {name}",
   "channelAdded": "Añadido: {name}",
-
   "directMessage": "Mensaje directo",
   "directMessagesDisabledForRepeaters": "Los mensajes directos están desactivados para los repetidores",
   "typeAMessage": "Escribe un mensaje...",
@@ -150,7 +145,6 @@
   "notificationModeMutedDesc": "Sin alertas, sin distintivo",
   "sortByMessageCount": "Ordenar por número de mensajes",
   "sortByChannelNumber": "Ordenar por número de canal",
-
   "map": "Mapa",
   "mapSettings": "Ajustes del mapa",
   "mapType": "Tipo de mapa",
@@ -175,7 +169,6 @@
   "gettingLocation": "Obteniendo ubicación...",
   "featureComingSoon": "{feature} próximamente",
   "contactInfo": "{name} ({id}) • saltos:{hops} • recibido:{heard}",
-
   "manageWaypointsAndRoutes": "Gestionar waypoints y rutas",
   "waypointName": "Nombre del waypoint",
   "waypointType": "Tipo de waypoint",
@@ -223,23 +216,18 @@
   "localCount": "Locales: {count}",
   "receivedCount": "Recibidos: {count}",
   "routesCount": "Rutas: {count}",
-
   "permissionRequired": "Permiso necesario",
   "cameraPermissionRequired": "Se necesita permiso de cámara",
   "continueToPermissions": "Continuar a los permisos",
   "storage2": "Almacenamiento",
-
   "wipe": "Borrar",
   "wipeLocalData": "Borrar datos locales",
   "dataWipedSuccessfully": "Datos borrados correctamente",
   "wipingData": "Borrando datos...",
   "areYouSure": "¿Estás seguro?",
-
   "linkCopied": "Enlace copiado",
   "copied": "Copiado",
-
   "debugLogsTitleWithCount": "Registros de depuración ({count})",
-
   "exitApp": "Salir de la app",
   "finished": "Finalizado",
   "removeFromGroup": "Quitar del grupo",
@@ -247,33 +235,27 @@
   "thisWillStopTheConfigServer": "Esto detendrá el servidor de configuración. ",
   "failedToApplySettings": "No se pudieron aplicar los ajustes. Si vas a activar el modo autónomo, comprueba que el GPS del companion esté activado y tenga una posición válida.",
   "noGroupStatusChannel": "Ningún canal de grupo activo",
-
   "channels": "Canales",
   "search": "Buscar",
   "contacts": "Contactos",
   "route": "Ruta",
   "waypointsAndRoutes": "Waypoints y rutas",
-
   "channelsWithPrivateCount": "Canales ({count} privados)",
   "waypointsAndRoutesWithCount": "Waypoints y rutas ({count})",
   "offlineMapsWithCount": "Mapas sin conexión ({count} áreas)",
   "offlineMapAreas": "Áreas de mapa sin conexión",
   "overlayMaps": "Mapas superpuestos",
-
   "genericError": "Error: {error}",
   "clearAllFailed": "Error al borrar todo: {error}",
   "failedToAddWaypoint": "No se pudo añadir el waypoint: {error}",
   "wipeFailed": "Error al borrar: {error}",
-
   "channelDeleted": "Eliminado: {name}",
   "channelHash": "Hash: {hash}",
   "channelIndex": "Índice: {index}",
   "joinChannelConfirmation": "¿Unirse a {tag}?",
-
   "lastHeard": "Última recepción: {time}",
   "lastSeen": "Visto por última vez: {time}",
   "hopCountLabel": "Número de saltos: {count}",
-
   "inspectForwardingMode": "Inspeccionar el modo de reenvío activo y la topología",
   "forwardingPublicKey": "Clave pública: {key}",
   "forwardingDirect": "Directo: {value}",
@@ -285,22 +267,17 @@
   "forwardingLastApplied": "Última aplicación: {time}",
   "forwardingLastError": "Último error: {error}",
   "forwardingCandidateReason": "Motivo de candidatura: {reason}",
-
   "zoomRange": "Rango de zoom: {min}–{max}",
   "minDistanceMeters": "Distancia mín.: {distance} m",
   "mapProviderLabel": "Proveedor: {label}",
   "intervalSeconds": "Intervalo: {seconds} s",
-
   "companionBattery": "Companion: {battery}",
   "phoneBattery": "Teléfono: {battery}",
-
   "couldNotConfigureCompanionGps": "No se pudo configurar el GPS del companion — ¿sin hardware GPS?",
   "scanChannelQr": "Escanear QR del canal",
   "scanConfigQrCode": "Escanear QR de configuración",
   "wipePermanentDeleteWarning": "Esta acción eliminará permanentemente los datos seleccionados.",
-
   "tileCount": "{count} tiles",
-
   "channelTypePublic": "Tipo: público",
   "channelTypePrivate": "Tipo: privado",
   "publicChannel": "Canal público",
@@ -579,5 +556,33 @@
   "countTiles": "{count} {count, plural, =1{tesela} other{teselas}}",
   "countOverlayMaps": "{count} {count, plural, =1{mapa superpuesto} other{mapas superpuestos}}",
   "radioSettingsItem": "ajustes de radio",
-  "importedWithSkipped": "{imported} (omitido: {skipped})"
+  "importedWithSkipped": "{imported} (omitido: {skipped})",
+  "heardNearby": "Detectados cerca ({count})",
+  "heardNearbyExplanation": "Dispositivos que tu radio ha oído pero no ha añadido. Los miembros del equipo se añaden automáticamente.",
+  "dismiss": "Descartar",
+  "contactAdded": "{name} añadido",
+  "contactAddFailed": "No se pudo añadir a {name}",
+  "roomServer": "Servidor de sala",
+  "sensor": "Sensor",
+  "teamChannel": "Canal de equipo",
+  "teamChannelExplanation": "Se guarda en este teléfono con su historial, aunque cambies de radio.",
+  "notOnRadio": "No está en esta radio",
+  "addChannelToRadio": "¿Añadir a la radio?",
+  "addChannelToRadioExplanation": "Este canal debe estar en tu radio para enviar mensajes o usarlo para el seguimiento.",
+  "addChannelToRadioNoSlots": "Tu radio no tiene espacios de canal libres. Elimina antes un canal de la radio.",
+  "addedChannelToRadio": "{name} añadido a tu radio",
+  "failedToAddChannel": "No se pudo añadir el canal a tu radio",
+  "teamName": "Tu nombre",
+  "teamNamePrompt": "Elige tu nombre",
+  "teamNameSaveExplanation": "Tu equipo verá este nombre. Solo quienes están en tu canal de equipo pueden verlo.",
+  "teamNameSkipExplanation": "Si lo omites, tu equipo verá el nombre de tu radio, que todos en la malla pueden ver.",
+  "teamNameChangeLater": "Puedes establecer o cambiar tu nombre de equipo más tarde en Ajustes.",
+  "teamNameUsingRadioName": "Usando el nombre de la radio ({name})",
+  "radioNameExplanation": "Este nombre es visible para todos en la malla, incluso fuera de tu equipo. Considera un nombre anónimo.",
+  "teamNameSettingsTitle": "Nombre (oculto fuera de tu equipo)",
+  "general": "General",
+  "hideNonTeam": "Mostrar solo canales y contactos del equipo",
+  "deleteChannelNeedsRadio": "Este canal está guardado en tu radio. Conéctate a la radio para eliminarlo.",
+  "trackingChannelPrompt": "Compartir tu ubicación en",
+  "trackingNeedsPrivateChannel": "Crea primero un canal privado. Tu ubicación solo se comparte en un canal privado."
 }

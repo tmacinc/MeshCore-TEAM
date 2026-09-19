@@ -23,6 +23,7 @@ import 'database/database.dart';
 import 'models/app_language.dart';
 import 'models/app_settings.dart';
 import 'services/settings_service.dart';
+import 'services/app_identity_service.dart';
 import 'theme/night_theme.dart';
 import 'services/map_tile_cache_service.dart';
 import 'services/kmz_import_service.dart';
@@ -41,7 +42,10 @@ import 'services/neighbor_tracker.dart';
 import 'viewmodels/connection_viewmodel.dart';
 import 'services/telemetry_send_service.dart';
 import 'services/forwarding_policy_service.dart';
-import 'services/contact_capability_service.dart';
+import 'services/peer_directory.dart';
+import 'widgets/team_name_prompt.dart';
+import 'services/team_radio_service.dart';
+import 'services/retention_service.dart';
 import 'services/capability_publisher.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/direct_message_screen.dart';
@@ -223,7 +227,21 @@ Future<void> _runAppStartup() async {
       settingsService: settingsService,
     );
 
-    final contactCapabilityService = ContactCapabilityService(prefs);
+    // Legacy name-keyed capability cache, replaced by the peers table.
+    await prefs.remove('contact_capability_state_v1');
+
+    final peerDirectory = PeerDirectory(
+      peersDao: database.peersDao,
+      contactsDao: database.contactsDao,
+      settings: settingsService,
+    );
+    await peerDirectory.start();
+    messageNotificationService.peers = peerDirectory;
+    RetentionService(database).start();
+
+    // The tracking channel is a team channel by definition; make sure the
+    // flag is set for databases that predate it.
+    unawaited(channelRepository.markTrackingChannelAsTeam());
 
     final networkTopology = NetworkTopology();
     final neighborTracker = NeighborTracker();
@@ -238,7 +256,7 @@ Future<void> _runAppStartup() async {
       contactRepository: contactRepository,
       notificationService: messageNotificationService,
       settingsService: settingsService,
-      capabilityService: contactCapabilityService,
+      peerDirectory: peerDirectory,
       networkTopology: networkTopology,
       neighborTracker: neighborTracker,
     );
@@ -263,7 +281,7 @@ Future<void> _runAppStartup() async {
       settings: settingsService,
       connectionViewModel: connectionViewModel,
       contactsDao: database.contactsDao,
-      capabilityService: contactCapabilityService,
+      peerDirectory: peerDirectory,
       messageRepository: messageRepository,
       database: database,
       networkTopology: networkTopology,
@@ -280,12 +298,35 @@ Future<void> _runAppStartup() async {
       forwardingPolicy: forwardingPolicyService,
     )..start();
 
+    // This install's identity: sent in #CAP: so the team knows this phone
+    // across radio swaps, and the same ID Team Link uses.
+    final appIdentityService = AppIdentityService();
+    try {
+      await appIdentityService.ensureInitialized();
+    } catch (e) {
+      debugPrint('⚠️ App identity unavailable: $e');
+    }
+
     final capabilityPublisher = CapabilityPublisher(
       settings: settingsService,
       connectionViewModel: connectionViewModel,
       bleService: bleService,
       contactsDao: database.contactsDao,
       channelsDao: database.channelsDao,
+      messageRepository: messageRepository,
+      appIdentity: appIdentityService,
+    )..start();
+
+    // Carries team contacts onto a newly paired radio and keeps the radio's
+    // contact table from filling with strangers while tracking is on.
+    final teamRadioService = TeamRadioService(
+      settings: settingsService,
+      connectionViewModel: connectionViewModel,
+      bleService: bleService,
+      bleManager: bleManager,
+      contactsDao: database.contactsDao,
+      contactRepository: contactRepository,
+      peers: peerDirectory,
     )..start();
 
     // Startup reconnect behavior:
@@ -323,8 +364,9 @@ Future<void> _runAppStartup() async {
         mapTileCacheService: mapTileCacheService,
         telemetrySendService: telemetrySendService,
         forwardingPolicyService: forwardingPolicyService,
-        contactCapabilityService: contactCapabilityService,
+        peerDirectory: peerDirectory,
         capabilityPublisher: capabilityPublisher,
+        teamRadioService: teamRadioService,
       ));
     print('✅ App launched');
   } catch (e, stackTrace) {
@@ -437,8 +479,9 @@ class TeamFlutterApp extends StatelessWidget {
   final MapTileCacheService mapTileCacheService;
   final TelemetrySendService telemetrySendService;
   final ForwardingPolicyService forwardingPolicyService;
-  final ContactCapabilityService contactCapabilityService;
+  final PeerDirectory peerDirectory;
   final CapabilityPublisher capabilityPublisher;
+  final TeamRadioService teamRadioService;
 
   const TeamFlutterApp({
     super.key,
@@ -455,8 +498,9 @@ class TeamFlutterApp extends StatelessWidget {
     required this.mapTileCacheService,
     required this.telemetrySendService,
     required this.forwardingPolicyService,
-    required this.contactCapabilityService,
+    required this.peerDirectory,
     required this.capabilityPublisher,
+    required this.teamRadioService,
   });
 
   @override
@@ -512,12 +556,14 @@ class TeamFlutterApp extends StatelessWidget {
         ChangeNotifierProvider<ForwardingPolicyService>.value(
           value: forwardingPolicyService),
 
-        // Peer capability tracking (populated from #CAP: channel messages)
-        ChangeNotifierProvider<ContactCapabilityService>.value(
-          value: contactCapabilityService),
+        // Peer identity: resolves wire identifiers to local peers
+        ChangeNotifierProvider<PeerDirectory>.value(value: peerDirectory),
 
         // Capability publisher (sends #CAP: on discovery and settings change)
         Provider<CapabilityPublisher>.value(value: capabilityPublisher),
+
+        // Team radio setup (contact push, auto-add policy)
+        Provider<TeamRadioService>.value(value: teamRadioService),
       ],
       child: Consumer<SettingsService>(
         builder: (context, settings, _) {
@@ -812,6 +858,19 @@ class _PermissionGateState extends State<_PermissionGate>
     }
   }
 
+  bool _teamNameAsked = false;
+
+  /// Asked once, past the permission gate and before any radio is needed:
+  /// the team name is the phone's, not the radio's.
+  void _maybeAskForTeamName() {
+    if (_teamNameAsked) return;
+    _teamNameAsked = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(showTeamNamePromptIfNeeded(context));
+    });
+  }
+
   void _onPermissionsGranted() {
     unawaited(_startDeferredReconnect());
     setState(() {
@@ -868,6 +927,7 @@ class _PermissionGateState extends State<_PermissionGate>
     }
 
     // Show main app if permissions granted
+    _maybeAskForTeamName();
     return const MainNavigationScreen();
   }
 }

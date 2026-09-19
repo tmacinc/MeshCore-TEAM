@@ -33,6 +33,17 @@ class SelfInfoResponse extends BleResponse {
   final double longitude; // Device longitude
   final int capabilities; // Firmware capability flags (0 = stock)
 
+  /// Other params, sent together in CMD_SET_OTHER_PARAMS (38).
+  final int multiAcks;
+  final int advertLocPolicy;
+  final int telemetryModes;
+
+  /// Bit 0 set = the radio does NOT auto-add every contact; per-type
+  /// behaviour then comes from the auto-add config (CMD_GET_AUTO_ADD_CONFIG).
+  final int manualAddContacts;
+
+  bool get autoAddsAllContacts => (manualAddContacts & 1) == 0;
+
   // Capability flags
   static const int capabilityForwarding = 0x01;
   static const int capabilityAutonomous = 0x02;
@@ -49,6 +60,10 @@ class SelfInfoResponse extends BleResponse {
     required this.latitude,
     required this.longitude,
     required this.capabilities,
+    this.multiAcks = 0,
+    this.advertLocPolicy = 0,
+    this.telemetryModes = 0,
+    this.manualAddContacts = 0,
   }) : super(BleConstants.respSelfInfo);
 
   // Helper properties
@@ -356,8 +371,13 @@ class BleResponseParser {
     // Bytes 40-43: Longitude (int32 LE, * 1000000)
     final longitude = reader.readInt32LE() / 1e6;
 
-    // Bytes 44-47: Flags (skip)
-    reader.readBytes(4);
+    // Bytes 44-47: other params, in firmware order. Needed because
+    // CMD_SET_OTHER_PARAMS rewrites all of them at once, so changing the
+    // manual-add flag means sending the rest back unchanged.
+    final multiAcks = reader.readByte();
+    final advertLocPolicy = reader.readByte();
+    final telemetryModes = reader.readByte();
+    final manualAddContacts = reader.readByte();
 
     // Bytes 48-51: Frequency Hz (uint32 LE)
     final frequencyHz = reader.readUInt32LE();
@@ -389,7 +409,29 @@ class BleResponseParser {
       latitude: latitude,
       longitude: longitude,
       capabilities: capabilities,
+      multiAcks: multiAcks,
+      advertLocPolicy: advertLocPolicy,
+      telemetryModes: telemetryModes,
+      manualAddContacts: manualAddContacts,
     );
+  }
+
+  /// Parses a contact record that arrived as something other than
+  /// RESP_CODE_CONTACT — currently PUSH_NEW_ADVERT (0x8A), which carries the
+  /// same layout. Returns null if the frame is too short or malformed.
+  static ContactResponse? parseContactRecord(Uint8List frame) {
+    // opcode + pubkey(32) + type/flags/path_len(3) + path(64) + name(32)
+    // + last_advert(4) + lat(4) + lon(4) + lastmod(4)
+    const recordLength = 1 + 32 + 3 + 64 + 32 + 16;
+    if (frame.length < recordLength) return null;
+    try {
+      final reader = BufferReader(frame);
+      reader.readByte(); // response/push code
+      return _parseContact(reader);
+    } catch (e) {
+      debugPrint('[Parser] ❌ Failed to parse contact record: $e');
+      return null;
+    }
   }
 
   static ContactResponse _parseContact(BufferReader reader) {

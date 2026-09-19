@@ -16,6 +16,7 @@ import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
 import 'package:meshcore_team/widgets/app_bar_subtitle.dart';
+import 'package:meshcore_team/widgets/add_channel_to_radio.dart';
 import 'package:meshcore_team/widgets/night_clock.dart';
 import 'package:meshcore_team/widgets/themed_dropdown.dart';
 import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
@@ -279,6 +280,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                 !wipeChannels && !wipeWaypoints && !wipeMaps;
 
             return AlertDialog(
+              scrollable: true,
               title: Row(
                 children: [
                   const Icon(Icons.warning_amber_rounded,
@@ -356,6 +358,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                             builder: (ctx) {
                               final innerL10n = AppLocalizations.of(ctx)!;
                               return AlertDialog(
+                                scrollable: true,
                                 title: Text(innerL10n.areYouSure),
                                 content: Text(
                                   '${innerL10n.wipePermanentDeleteWarning} '
@@ -570,6 +573,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
 
     if (isPermissionError) {
       return Center(
+        child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
           child: Column(
@@ -602,6 +606,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
               ),
             ],
           ),
+        ),
         ),
       );
     }
@@ -709,7 +714,12 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
       stream: channelRepository.getAllChannels(),
       builder: (context, snapshot) {
         final allChannels = snapshot.data ?? const <ChannelData>[];
-        final privateChannels = allChannels.where((c) => !c.isPublic).toList();
+        // Radio settings (e.g. autonomous mode) configure the radio itself,
+        // so only channels it actually holds — not team channels kept on the
+        // phone for a radio that doesn't have them.
+        final privateChannels = allChannels
+            .where((c) => !c.isPublic && !channelNeedsRadio(c))
+            .toList();
 
         return ListView(
           children: [
@@ -822,6 +832,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: Text(l10n.deleteAllContacts),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -863,6 +874,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: Text(l10n.deleteAllChannels),
         content: Text(l10n.deleteAllChannelsConfirm),
         actions: [
@@ -943,14 +955,23 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
           builder: (context, setState) {
             final l10n = AppLocalizations.of(context)!;
             return AlertDialog(
+              scrollable: true,
               title: Text(l10n.deviceName),
-              content: TextField(
-                controller: controller,
-                enabled: !isSaving,
-                decoration: InputDecoration(
-                  hintText: l10n.enterDeviceName,
-                ),
-                maxLength: 31,
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    enabled: !isSaving,
+                    decoration: InputDecoration(
+                      hintText: l10n.enterDeviceName,
+                    ),
+                    maxLength: 31,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(l10n.radioNameExplanation),
+                ],
               ),
               actions: [
                 TextButton(

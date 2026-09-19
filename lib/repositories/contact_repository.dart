@@ -460,6 +460,31 @@ class ContactRepository {
     });
   }
 
+  /// Adds a contact the radio heard but declined to store (see
+  /// [HeardAdvertsDao]), then re-syncs so it appears with the radio's own
+  /// view of it. Returns false if the command couldn't be sent.
+  Future<bool> addHeardContact({
+    required Uint8List publicKey,
+    required String name,
+    required int advertType,
+    required int lastAdvertTimestamp,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final sent = await _bleManager.sendFrame(BleCommands.buildAddUpdateContact(
+      publicKey: publicKey,
+      name: name,
+      type: advertType,
+      lastAdvertTimestamp: lastAdvertTimestamp,
+      latitude: latitude,
+      longitude: longitude,
+    ));
+    if (!sent) return false;
+
+    await syncContactsComplete(since: 0);
+    return true;
+  }
+
   Future<void> setFavorite(Uint8List publicKey, bool isFavorite) {
     return _contactsDao.setFavorite(publicKey, isFavorite);
   }

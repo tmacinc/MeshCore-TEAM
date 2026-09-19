@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/l10n/app_localizations.dart';
 import 'package:meshcore_team/models/app_language.dart';
+import 'package:meshcore_team/services/peer_directory.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/utils/notification_payload.dart';
 
@@ -15,6 +16,10 @@ import 'package:meshcore_team/utils/notification_payload.dart';
 class MessageNotificationService {
   final FlutterLocalNotificationsPlugin _notifications;
   final SettingsService _settings;
+
+  /// Set after construction: the directory is built later, and notifications
+  /// only need it to put a team name on the sender.
+  PeerDirectory? peers;
 
   // Notification channels
   static const String channelIdMessages = 'mesh_messages';
@@ -33,6 +38,17 @@ class MessageNotificationService {
   bool _isSyncing = false;
   final List<({MessageData message, String channelName, bool isDirect})>
       _syncQueue = [];
+
+  /// A message attributed to a peer shows that peer's team name; everything
+  /// else falls back to the radio name stored with the message.
+  String _senderName(MessageData message, AppLocalizations l10n) {
+    final directory = peers;
+    if (directory != null) {
+      final peer = directory.byId(message.senderPeerId);
+      if (peer != null) return directory.displayName(peer);
+    }
+    return message.senderName ?? l10n.unknown;
+  }
 
   MessageNotificationService({
     required FlutterLocalNotificationsPlugin notifications,
@@ -222,7 +238,7 @@ class MessageNotificationService {
 
     // Notification title and body
     final l10n = _l10n;
-    final senderName = message.senderName ?? l10n.unknown;
+    final senderName = _senderName(message, l10n);
     final title = isDirect
         ? l10n.directMessageNotificationTitle(senderName)
         : '$channelName: $senderName';

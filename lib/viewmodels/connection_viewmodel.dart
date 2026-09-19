@@ -532,6 +532,16 @@ class ConnectionViewModel extends ChangeNotifier {
           debugPrint(
               '[ConnectionVM] ↩️ Auto-reconnected to same companion: running incremental sync (contacts + messages)');
           await _runContactAndMessageSync();
+
+          // An auto-reconnect skips the channel sync, so "not on this radio"
+          // saved last time would stick. Re-read the radio's slots whenever
+          // something is marked that way; if the radio has the channel after
+          // all, the flag clears.
+          if (await _channelRepository.hasChannelsAwaitingRadio()) {
+            debugPrint(
+                '[ConnectionVM] 📺 Channels marked not on this radio: re-checking the radio');
+            await _fetchChannels();
+          }
         } else {
           debugPrint(
               '[ConnectionVM] 🔁 Manual reconnect to same companion: running FULL sync');
@@ -824,22 +834,7 @@ class ConnectionViewModel extends ChangeNotifier {
       ));
     });
 
-    final maxChannels = _deviceCapabilities?.isCustomFirmware == true ? 8 : 4;
-
-    // Prefer device-reported maxChannels from DEVICE_INFO; fall back to legacy heuristic.
-    final reportedMaxChannels = _deviceInfo?.maxChannels;
-    final channelCapacity =
-        (reportedMaxChannels != null && reportedMaxChannels > 0)
-            ? reportedMaxChannels
-            : maxChannels;
-
-    debugPrint('[ConnectionVM] 📺 Channel capacity: $channelCapacity');
-
-    // Inform channel repository so create/import uses correct capacity.
-    _channelRepository.updateMaxChannels(channelCapacity);
-
-    final channelsSuccess = await _channelRepository.fetchChannelsFromFirmware(
-        maxChannels: channelCapacity);
+    final channelsSuccess = await _fetchChannels();
     _channelProgressSub?.cancel();
     syncTrace(
         '$_syncTraceTag phase=channels action=finish success=$channelsSuccess current=${_syncStatus.currentItem} total=${_syncStatus.totalItems} elapsedMs=${channelsPhaseStopwatch.elapsedMilliseconds}');
@@ -874,6 +869,26 @@ class ConnectionViewModel extends ChangeNotifier {
   ///
   /// Used for reconnects to the same companion. Sends only the delta since
   /// the last sync using the stored `contact_lastmod` timestamp.
+  /// Reads the radio's channel slots into the database.
+  Future<bool> _fetchChannels() async {
+    final maxChannels = _deviceCapabilities?.isCustomFirmware == true ? 8 : 4;
+
+    // Prefer device-reported maxChannels from DEVICE_INFO; fall back to legacy heuristic.
+    final reportedMaxChannels = _deviceInfo?.maxChannels;
+    final channelCapacity =
+        (reportedMaxChannels != null && reportedMaxChannels > 0)
+            ? reportedMaxChannels
+            : maxChannels;
+
+    debugPrint('[ConnectionVM] 📺 Channel capacity: $channelCapacity');
+
+    // Inform channel repository so create/import uses correct capacity.
+    _channelRepository.updateMaxChannels(channelCapacity);
+
+    return _channelRepository.fetchChannelsFromFirmware(
+        maxChannels: channelCapacity);
+  }
+
   Future<void> _runContactAndMessageSync() async {
     final companionKey = _settingsService.settings.currentCompanionPublicKey;
     final since = (companionKey != null && companionKey.isNotEmpty)

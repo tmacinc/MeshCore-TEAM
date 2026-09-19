@@ -11,7 +11,9 @@ import 'package:meshcore_team/database/daos/channels_dao.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/models/network_topology.dart';
 import 'package:meshcore_team/models/topology_event.dart';
-import 'package:meshcore_team/services/contact_capability_service.dart';
+import 'package:meshcore_team/database/daos/peers_dao.dart';
+import 'package:meshcore_team/models/team_map_visibility.dart';
+import 'package:meshcore_team/services/peer_directory.dart';
 import 'package:meshcore_team/services/forwarding/forwarding_strategy.dart';
 import 'package:meshcore_team/services/forwarding/forwarding_v1_strategy.dart';
 import 'package:meshcore_team/services/forwarding/topology_forwarding_strategy.dart';
@@ -31,7 +33,7 @@ class ForwardingPolicyService extends ChangeNotifier {
   final SettingsService _settings;
   final ConnectionViewModel _connectionViewModel;
   final ContactsDao _contactsDao;
-  final ContactCapabilityService _capabilityService;
+  final PeerDirectory _peers;
   final MessageRepository _messageRepository;
   final AppDatabase _database;
 
@@ -47,12 +49,15 @@ class ForwardingPolicyService extends ChangeNotifier {
   StreamSubscription<List<ContactData>>? _contactsSub;
   StreamSubscription<TelemetryEvent>? _telemetrySub;
   StreamSubscription<TopologyEvent>? _topologySub;
-  StreamSubscription<List<ContactDisplayStateData>>? _displayStatesSub;
+  StreamSubscription<List<PeerWithLocation>>? _locationsSub;
 
-  /// Nullable: null = not yet loaded (no filter applied), non-null = filtered set.
+  /// Radio keys (upper-case hex) of map-visible peers. Null until locations
+  /// and the tracking channel are known.
   Set<String>? _mapVisibleKeys;
-  int? _trackingChannelIndex;
-  List<ContactDisplayStateData> _latestDisplayStates = const [];
+
+  /// Number of peers on the map, including ones whose key isn't known yet.
+  int _mapVisibleCount = 0;
+  List<PeerWithLocation> _latestLocations = const [];
 
   List<ContactData> _latestContacts = const [];
   DateTime _lastPolicyPushAt = DateTime.fromMillisecondsSinceEpoch(0);
@@ -90,23 +95,21 @@ class ForwardingPolicyService extends ChangeNotifier {
 
   /// True when the tracking channel has too few visible members for
   /// forwarding to be useful (≤2 total including yourself).
-  bool get insufficientGroupMembers {
-    final keys = _mapVisibleKeys;
-    return keys == null || keys.length < _minGroupMembersForForwarding;
-  }
+  bool get insufficientGroupMembers =>
+      _mapVisibleCount < _minGroupMembersForForwarding;
 
   ForwardingPolicyService({
     required SettingsService settings,
     required ConnectionViewModel connectionViewModel,
     required ContactsDao contactsDao,
-    required ContactCapabilityService capabilityService,
+    required PeerDirectory peerDirectory,
     required MessageRepository messageRepository,
     required AppDatabase database,
     required NetworkTopology networkTopology,
   })  : _settings = settings,
         _connectionViewModel = connectionViewModel,
         _contactsDao = contactsDao,
-        _capabilityService = capabilityService,
+        _peers = peerDirectory,
         _messageRepository = messageRepository,
         _database = database,
         _networkTopology = networkTopology {
@@ -128,7 +131,12 @@ class ForwardingPolicyService extends ChangeNotifier {
 
     _topologySub = _messageRepository.topologyStream.listen(_onTopologyEvent);
 
-    unawaited(_resolveAndCacheTrackingChannelIndex());
+    _locationsSub =
+        _database.peersDao.watchPeersWithLocation().listen((locations) {
+      _latestLocations = locations;
+      _rebuildMapVisibleKeys();
+      if (_shouldRun) unawaited(_applyPolicyIfNeeded(trigger: 'locations'));
+    });
 
     _companionKeySub =
         _settings.currentCompanionPublicKeyStream.listen((companionKey) {
@@ -157,54 +165,37 @@ class ForwardingPolicyService extends ChangeNotifier {
   }
 
   void _onSettingsChanged() {
-    unawaited(_resolveAndCacheTrackingChannelIndex());
+    _rebuildMapVisibleKeys();
     _refreshLifecycle(trigger: 'settings');
   }
 
-  Future<void> _resolveAndCacheTrackingChannelIndex() async {
-    final hashStr = _settings.settings.telemetryChannelHash;
-    if (hashStr == null || hashStr.isEmpty) {
-      _trackingChannelIndex = null;
-      _rebuildMapVisibleKeys();
-      return;
-    }
-    final hash = int.tryParse(hashStr) ??
-        int.tryParse(hashStr.replaceFirst('0x', ''), radix: 16);
-    if (hash == null) {
-      _trackingChannelIndex = null;
-      _rebuildMapVisibleKeys();
-      return;
-    }
-    final channel = await _database.channelsDao.getChannelByHash(hash);
-    _trackingChannelIndex = channel?.channelIndex;
-    _rebuildMapVisibleKeys();
-    if (_shouldRun) unawaited(_applyPolicyIfNeeded(trigger: 'channelResolved'));
-  }
-
   void _rebuildMapVisibleKeys() {
-    final companionKey = _activeCompanionKey;
-    final channelIdx = _trackingChannelIndex;
-
-    if (companionKey == null || companionKey.isEmpty || channelIdx == null) {
+    final trackingHash =
+        parseTrackingChannelHash(_settings.settings.telemetryChannelHash);
+    if (trackingHash == null) {
       _mapVisibleKeys = null;
+      _mapVisibleCount = 0;
       return;
     }
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    const cutoffMs = 12 * 60 * 60 * 1000; // 12 hours
+    final visible = _latestLocations.where((p) => isVisibleOnTeamMap(
+          p.location,
+          trackingChannelHash: trackingHash,
+          nowMs: nowMs,
+        ));
 
-    final visible = _latestDisplayStates.where((state) {
-      if (state.companionDeviceKey != companionKey) return false;
-      if (state.isManuallyHidden) return false;
-      if (state.totalTelemetryReceived <= 0) return false;
-      if (state.lastChannelIdx != channelIdx) return false;
-      if (state.lastLatitude == null || state.lastLongitude == null)
-        return false;
-      return (nowMs - state.lastSeen) <= cutoffMs;
-    });
-
-    _mapVisibleKeys = {for (final s in visible) s.publicKeyHex};
+    _mapVisibleCount = visible.length;
+    _mapVisibleKeys = {
+      for (final p in visible)
+        if (p.peer.radioPublicKey != null) _upperHex(p.peer.radioPublicKey!),
+    };
   }
+
+  static String _upperHex(List<int> bytes) => bytes
+      .map((b) => b.toRadixString(16).padLeft(2, '0'))
+      .join()
+      .toUpperCase();
 
   void _onConnectionChanged() {
     _refreshLifecycle(trigger: 'connection');
@@ -293,10 +284,6 @@ class ForwardingPolicyService extends ChangeNotifier {
     _contactsSub?.cancel();
     _contactsSub = null;
     _latestContacts = const [];
-    _displayStatesSub?.cancel();
-    _displayStatesSub = null;
-    _latestDisplayStates = const [];
-    _mapVisibleKeys = null;
     _lastPolicySignature = '';
     _lastAppliedMaxHops = null;
     _lastAppliedPrefixCount = 0;
@@ -312,24 +299,12 @@ class ForwardingPolicyService extends ChangeNotifier {
       return;
     }
 
-    // Rebuild map-visible keys for the new companion immediately from cached states.
-    _rebuildMapVisibleKeys();
-
     _contactsSub =
         _contactsDao.watchContactsByCompanion(companionKey).listen((contacts) {
       _latestContacts = contacts;
       if (_shouldRun) {
         unawaited(_applyPolicyIfNeeded(trigger: 'topology'));
       }
-    });
-
-    _displayStatesSub = (_database.select(_database.contactDisplayStates)
-          ..where((t) => t.companionDeviceKey.equals(companionKey)))
-        .watch()
-        .listen((states) {
-      _latestDisplayStates = states;
-      _rebuildMapVisibleKeys();
-      if (_shouldRun) unawaited(_applyPolicyIfNeeded(trigger: 'displayStates'));
     });
   }
 
@@ -395,7 +370,7 @@ class ForwardingPolicyService extends ChangeNotifier {
     final candidates = _mapVisibleContacts();
     return strategy.compute(ForwardingStrategyInput(
       contacts: candidates,
-      capabilities: _capabilityService,
+      peers: _peers,
     ));
   }
 
@@ -405,11 +380,7 @@ class ForwardingPolicyService extends ChangeNotifier {
     final keys = _mapVisibleKeys;
     if (keys == null || keys.isEmpty) return const [];
     return _latestContacts.where((c) {
-      final hex = c.publicKey
-          .map((b) => b.toRadixString(16).padLeft(2, '0'))
-          .join()
-          .toUpperCase();
-      return keys.contains(hex);
+      return keys.contains(_upperHex(c.publicKey));
     }).toList(growable: false);
   }
 
@@ -443,7 +414,7 @@ class ForwardingPolicyService extends ChangeNotifier {
     _companionKeySub?.cancel();
     _telemetrySub?.cancel();
     _topologySub?.cancel();
-    _displayStatesSub?.cancel();
+    _locationsSub?.cancel();
     _resolveStrategy().reset();
 
     if (_started) {

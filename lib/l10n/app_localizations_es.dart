@@ -2062,4 +2062,108 @@ class AppLocalizationsEs extends AppLocalizations {
   String importedWithSkipped(String imported, String skipped) {
     return '$imported (omitido: $skipped)';
   }
+
+  @override
+  String heardNearby(int count) {
+    return 'Detectados cerca ($count)';
+  }
+
+  @override
+  String get heardNearbyExplanation =>
+      'Dispositivos que tu radio ha oído pero no ha añadido. Los miembros del equipo se añaden automáticamente.';
+
+  @override
+  String get dismiss => 'Descartar';
+
+  @override
+  String contactAdded(String name) {
+    return '$name añadido';
+  }
+
+  @override
+  String contactAddFailed(String name) {
+    return 'No se pudo añadir a $name';
+  }
+
+  @override
+  String get roomServer => 'Servidor de sala';
+
+  @override
+  String get sensor => 'Sensor';
+
+  @override
+  String get teamChannel => 'Canal de equipo';
+
+  @override
+  String get teamChannelExplanation =>
+      'Se guarda en este teléfono con su historial, aunque cambies de radio.';
+
+  @override
+  String get notOnRadio => 'No está en esta radio';
+
+  @override
+  String get addChannelToRadio => '¿Añadir a la radio?';
+
+  @override
+  String get addChannelToRadioExplanation =>
+      'Este canal debe estar en tu radio para enviar mensajes o usarlo para el seguimiento.';
+
+  @override
+  String get addChannelToRadioNoSlots =>
+      'Tu radio no tiene espacios de canal libres. Elimina antes un canal de la radio.';
+
+  @override
+  String addedChannelToRadio(String name) {
+    return '$name añadido a tu radio';
+  }
+
+  @override
+  String get failedToAddChannel => 'No se pudo añadir el canal a tu radio';
+
+  @override
+  String get teamName => 'Tu nombre';
+
+  @override
+  String get teamNamePrompt => 'Elige tu nombre';
+
+  @override
+  String get teamNameSaveExplanation =>
+      'Tu equipo verá este nombre. Solo quienes están en tu canal de equipo pueden verlo.';
+
+  @override
+  String get teamNameSkipExplanation =>
+      'Si lo omites, tu equipo verá el nombre de tu radio, que todos en la malla pueden ver.';
+
+  @override
+  String get teamNameChangeLater =>
+      'Puedes establecer o cambiar tu nombre de equipo más tarde en Ajustes.';
+
+  @override
+  String teamNameUsingRadioName(String name) {
+    return 'Usando el nombre de la radio ($name)';
+  }
+
+  @override
+  String get radioNameExplanation =>
+      'Este nombre es visible para todos en la malla, incluso fuera de tu equipo. Considera un nombre anónimo.';
+
+  @override
+  String get teamNameSettingsTitle => 'Nombre (oculto fuera de tu equipo)';
+
+  @override
+  String get general => 'General';
+
+  @override
+  String get hideNonTeam => 'Mostrar solo canales y contactos del equipo';
+
+  @override
+  String get deleteChannelNeedsRadio =>
+      'Este canal está guardado en tu radio. Conéctate a la radio para eliminarlo.';
+
+  @override
+  String get trackingChannelPrompt => 'Compartir tu ubicación en';
+
+  @override
+  String get trackingNeedsPrivateChannel =>
+      'Crea primero un canal privado. Tu ubicación solo se comparte en un canal privado.';
 }

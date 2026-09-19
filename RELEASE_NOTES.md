@@ -1,3 +1,27 @@
+# Release Notes — unreleased
+
+## Your name on the team
+- You can now set **your name**: an in-app name only members of your team channel can see, so your radio name can stay anonymous on the mesh. You're asked for one when the app first starts; skipping it keeps today's behaviour of showing your radio name.
+- Team members appear under the name they chose on the map, in contacts, in chat and in notifications, with their radio name kept underneath. Replies and @mentions still use radio names, so your chosen name never reaches a public channel.
+- Change it any time in **Settings → General**.
+
+## Team channels
+- A **team channel** belongs to your phone rather than one radio: it survives changing radio, along with its chat history, and is offered back to the new radio when you use it.
+- A team channel the radio doesn't hold is greyed out and marked *Not on this radio*; you can still read it, and adding it back is one tap.
+- New **Settings → General** section holding your name and a *Hide all but team channels and contacts* toggle.
+- Team channel history is kept for 30 days; map trails for 24 hours, while each member's last known position is kept indefinitely.
+
+## Contacts and discovery
+- Your radio no longer stores every device it hears. Team members are added automatically, and everyone else appears under **Heard nearby** on the Contacts tab, where you can add or dismiss them.
+- Team contacts are copied onto a newly paired radio, so changing radio doesn't cost you the group.
+- Changing radio, or swapping radios with a teammate, no longer makes you appear twice: your team recognises your phone, not just your radio.
+- Discovery now also asks a specific member to identify themselves, which fixes finding people who already have you, one-way links, and members who changed radio.
+- Fixed: contact discovery silently failed on radios set not to add contacts automatically.
+
+## Fixes
+- Location tracking can no longer be set to a hashtag channel, whose key anyone can derive from its name; an existing one is cleared.
+- Telemetry senders are matched to contacts by exact name only. The old fuzzy match could attach someone to an unrelated contact, overwriting its name and position and suppressing discovery.
+
 # Release Notes — v1.1.5
 
 ## Localization

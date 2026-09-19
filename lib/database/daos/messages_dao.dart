@@ -181,10 +181,45 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
         .go();
   }
 
-  /// Delete all messages for a companion device
+  /// Deletes a radio's messages when switching away from it, keeping team
+  /// channel history: it belongs to the phone, and a team channel's hash is
+  /// derived from its key, so it means the same thing on any radio. The kept
+  /// messages are untied from the old radio.
   Future<int> deleteMessagesByCompanion(String companionKey) {
+    return db.transaction(() async {
+      final teamHashes = (await db.channelsDao.getTeamChannels())
+          .map((c) => c.hash)
+          .toList();
+
+      if (teamHashes.isNotEmpty) {
+        await (update(messages)
+              ..where((t) =>
+                  t.companionDeviceKey.equals(companionKey) &
+                  t.channelHash.isIn(teamHashes)))
+            .write(const MessagesCompanion(companionDeviceKey: Value(null)));
+      }
+
+      return (delete(messages)
+            ..where((t) => t.companionDeviceKey.equals(companionKey)))
+          .go();
+    });
+  }
+
+  /// Watch a channel's messages regardless of which radio received them.
+  /// Used for team channels, whose history follows the phone.
+  Stream<List<MessageData>> watchMessagesByChannelAnyCompanion(
+      int channelHash) {
+    return watchMessagesByChannel(channelHash);
+  }
+
+  /// Delete messages older than a timestamp in the given channels.
+  Future<int> deleteMessagesInChannelsOlderThan(
+      List<int> channelHashes, int timestamp) {
+    if (channelHashes.isEmpty) return Future.value(0);
     return (delete(messages)
-          ..where((t) => t.companionDeviceKey.equals(companionKey)))
+          ..where((t) =>
+              t.channelHash.isIn(channelHashes) &
+              t.timestamp.isSmallerThanValue(timestamp)))
         .go();
   }
 

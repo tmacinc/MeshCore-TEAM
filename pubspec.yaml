@@ -3,7 +3,7 @@ description: "Cross-platform mesh networking app for iOS and Android"
 # Licensed under CC BY-NC-SA 4.0 - Non-commercial use only
 publish_to: 'none'
 
-version: 1.1.7+11704
+version: 1.2.0+12000
 
 environment:
   sdk: ^3.12.0
@@ -72,7 +72,9 @@ dependencies:
 
   # Utilities
   crypto: ^3.0.3
+  cryptography: ^2.7.0
   http: ^1.2.0
+  flutter_secure_storage: ^9.2.2
   package_info_plus: ^8.0.0
   battery_plus: ^6.2.0
 

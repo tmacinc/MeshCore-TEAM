@@ -356,7 +356,7 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
 
   Widget _buildImportView(bool isConnected, ConnectionViewModel connectionVM) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -535,6 +535,7 @@ class _TeamConfigScreenState extends State<TeamConfigScreen> {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
+          scrollable: true,
           title: Text(l10n.exportFailed),
           content: Text(e.toString()),
           actions: [

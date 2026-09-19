@@ -96,6 +96,7 @@ class _ImportedMapsScreenState extends State<ImportedMapsScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text(title),
         content: Text(message),
         actions: [
@@ -117,8 +118,10 @@ class _ImportedMapsScreenState extends State<ImportedMapsScreen> {
   Future<void> _startImport() async {
     final choice = await showModalBottomSheet<OverlayLayerType>(
       context: context,
+      isScrollControlled: true,
       builder: (context) => SafeArea(
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
@@ -136,6 +139,7 @@ class _ImportedMapsScreenState extends State<ImportedMapsScreen> {
               onTap: () => Navigator.of(context).pop(OverlayLayerType.mbtiles),
             ),
           ],
+        ),
         ),
       ),
     );

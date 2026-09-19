@@ -217,18 +217,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           child: StatefulBuilder(
             builder: (context, setState) {
               return AlertDialog(
+                scrollable: true,
                 title: Text(l10n.setIdentity),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(l10n.identityNameExplanation),
+                    Text(l10n.radioNameExplanation),
                     const SizedBox(height: 12),
                     TextField(
                       controller: controller,
                       maxLength: 31,
                       enabled: !isSaving,
                       decoration: InputDecoration(
-                        labelText: l10n.name,
+                        labelText: l10n.deviceName,
                         errorText: errorText,
                       ),
                     ),

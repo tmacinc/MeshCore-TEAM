@@ -229,9 +229,25 @@ On Android, you'll also be prompted about **battery optimization**. Disabling op
 
 On subsequent connects to the same companion, the app runs an **incremental sync** (contacts + messages only, skipping channels) for a faster reconnect.
 
+### 2b) Your two names: team name and radio name
+
+You have two names, and they are visible to different people.
+
+- **Radio name** — the name your radio advertises. **Everyone on the mesh can see it**, including people outside your team. You are asked for it the first time you connect a radio, and can change it from the Connection screen. Many people pick something anonymous here.
+- **Your name** — an in-app name that **only members of your team channel can see**. It travels in a small capability message on the tracking channel, not with every position update. You are asked for it once when the app first starts, and can change it any time in **Settings → General**.
+
+If you leave it blank, or skip the prompt, your team simply sees your radio name — the app behaves as it always did.
+
+Where each one is used:
+
+- **Your name** is what your team sees on the map, in the contact list, in chat and in notifications.
+- Your **radio name** is what people outside your team see, and it is what replies and @mentions use, so a team name is never sent into a public channel.
+- Two people can pick the same name. The app still treats them as two separate people (it identifies everyone by their radio, not their name), and both are shown under that name — sorting out any confusion is up to the group.
+
 ### 3) Contacts and direct messages
 
 - Open **Contacts** (second tab) to see synced devices.
+- Team members are shown by the **name they chose**, with their radio name underneath and a small group icon. Everyone else is shown by their radio name.
 - Tap a contact to open a **Direct Message** conversation.
 - If a contact is a **repeater**, direct messaging is disabled (you can still see it in the list).
 - Unread badges show on the Contacts tab icon when new messages arrive.
@@ -393,12 +409,46 @@ When tracking is enabled, the app broadcasts your position on the selected chann
 
 #### Automatic contact discovery
 
-Contact discovery works in two directions, so new members appear on everyone's map without manually exchanging keys:
+Contact discovery works in both directions, so new members appear on everyone's map without manually exchanging keys:
 
-- **Announcing yourself** — when a telemetry packet arrives on the private channel from a sender you don't yet have as a contact, the app broadcasts a flood (multi-hop) self-advert. That advert propagates across the mesh so every radio that hears it — including the unknown sender's — can add you.
-- **Learning about others** — whenever your companion radio receives an advert, the app runs a contact sync (incremental first, falling back to a full sync) to pull in the new or updated contact. It deliberately does **not** reply with a reciprocal advert; answering every advert with another advert would flood the mesh with duplicate traffic.
+- **Announcing yourself** — when a telemetry packet arrives on the tracking channel from a sender you don't have as a contact, the app broadcasts a flood (multi-hop) self-advert. Every radio that hears it, including that sender's, can add you.
+- **Asking them to announce themselves** — your own advert only tells them about you. If the sender stays unidentified, the app sends them a short request instead, and their app replies with one advert. This covers the cases your advert can't: a member who already has you, a one-way radio link, and someone who kept their radio name after switching radios.
+- The app alternates between the two on each packet it receives, so discovery still costs one packet per packet, with a few seconds of random delay so everyone doesn't transmit at once. It keeps trying until the sender is identified or stops transmitting.
+- **Learning about others** — whenever your radio receives an advert, the app runs a contact sync (incremental first, falling back to a full sync) to pull in the new or updated contact. It deliberately does **not** answer an advert with another advert; that would flood the mesh with duplicate traffic.
 
-This works network-wide — new members should be validated and appear on the map after a couple of telemetry intervals.
+This works network-wide — new members should appear on the map after a couple of telemetry intervals.
+
+#### Which contacts your radio stores
+
+The app manages your radio's contact list instead of letting the radio store every device it hears.
+
+- **What changes** — your radio normally adds every device it hears an advert from. The app switches that off **for other people's devices only**. Repeaters, room servers and sensors keep being added: if your radio was adding everything, the app turns those types on explicitly so they don't stop; if you had already chosen which types to add, your choices are kept and only people are removed from them.
+- **Team members are added for you** — when the radio declines an advert it hands the details to the app instead, and the app adds anyone sharing location on your tracking channel. Tracking and direct messages keep working without you doing anything.
+- **Everyone else is listed, not lost** — other devices appear under **Heard nearby** at the top of the Contacts tab, with **Add** and **Dismiss**. Dismissing hides that device until it is heard again. The list is capped, and entries disappear after 7 days.
+- **This stays set on the radio.** The app doesn't put it back, because managed contacts are how it works. If you stop using TEAM, turn auto-add back on from any MeshCore app under the radio's contact settings.
+
+#### Team channels
+
+A **team channel** is a private channel that belongs to your phone rather than to one radio. The tracking channel becomes one automatically, a private channel you create or import with no radio connected is one from the start, and you can make any private channel a team channel with the switch in its long-press menu. Public and hashtag channels can't be team channels, because anyone can work out their key.
+
+- **It survives a radio switch**, along with its chat history.
+- **It survives being missing from the radio.** If the radio doesn't have it, the channel is shown greyed out and marked *Not on this radio*: you can read its history, but the radio does the encryption, so it can't send or receive on it.
+- **Adding it back** — tapping the message box, choosing it for tracking, or using *Add to radio* in its menu asks whether to put it on the radio. If every channel slot is taken, delete a channel from the radio first.
+- **Deleting it** removes it and its history from the phone. Connected, it is cleared from the radio too. Not connected, it goes locally, and if the radio still has that slot the channel comes back on the next sync as an ordinary channel with no history.
+- **History limit** — team channel messages are kept for 30 days. Other channels are unchanged.
+
+#### Hiding everything but your team
+
+**Settings → General → Hide all but team channels and contacts** limits the Channels and Contacts tabs to your team.
+
+#### Moving to a different radio
+
+Your team is remembered by the app, not by the radio, so pairing a new radio doesn't cost you the group:
+
+- Team members' contacts are copied onto the new radio automatically, as long as it has room (the app leaves part of the table free for other contacts).
+- The app then sends one advert, because the team has never seen this radio's key and their contact for you still points at the old one.
+- Team channels, team chat history and everyone's last known position stay on the phone. The channels are offered to the new radio the first time you use them.
+- Your teammates keep recognising you. The capability message carries a random ID for your app install, so moving to another radio, even one a teammate used before, keeps you as one person on their map with your name and history. Clearing the app's data creates a new ID, as does reinstalling on Android (iOS keeps it in the Keychain).
 
 ### 10) App settings (appearance, theme, and device options)
 

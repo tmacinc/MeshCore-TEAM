@@ -7,6 +7,9 @@ import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:meshcore_team/database/database.dart';
+import 'package:meshcore_team/database/daos/peers_dao.dart';
+import 'package:meshcore_team/models/team_map_visibility.dart';
+import 'package:meshcore_team/services/peer_directory.dart';
 import '../l10n/app_localizations.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/services/forwarding_policy_service.dart';
@@ -23,8 +26,6 @@ class ForwardingDebugScreen extends StatefulWidget {
 }
 
 class _ForwardingDebugScreenState extends State<ForwardingDebugScreen> {
-  static const Duration _trackingTimeout = Duration(hours: 12);
-
   String? _selectedNodeId;
 
   @override
@@ -43,7 +44,8 @@ class _ForwardingDebugScreenState extends State<ForwardingDebugScreen> {
     final channelsStream = (companionKey == null || companionKey.isEmpty)
         ? Stream<List<ChannelData>>.value(const <ChannelData>[])
         : db.channelsDao.watchChannelsByCompanion(companionKey);
-    final displayStatesStream = db.select(db.contactDisplayStates).watch();
+    final locationsStream = db.peersDao.watchPeersWithLocation();
+    final peers = context.watch<PeerDirectory>();
 
     return Scaffold(
       appBar: AppBar(
@@ -61,19 +63,20 @@ class _ForwardingDebugScreenState extends State<ForwardingDebugScreen> {
             builder: (context, contactsSnapshot) {
               final allContacts =
                   contactsSnapshot.data ?? const <ContactData>[];
-              return StreamBuilder<List<ContactDisplayStateData>>(
-                stream: displayStatesStream,
+              return StreamBuilder<List<PeerWithLocation>>(
+                stream: locationsStream,
                 builder: (context, statesSnapshot) {
                   final allStates =
-                      statesSnapshot.data ?? const <ContactDisplayStateData>[];
+                      statesSnapshot.data ?? const <PeerWithLocation>[];
                   final visibleTrackedStates = _filterMapVisibleTrackedStates(
                     allStates,
-                    companionKey: companionKey,
-                    trackingChannelIndex: trackingChannelIndex,
+                    trackingChannelHash:
+                        parseTrackingChannelHash(settings.telemetryChannelHash),
                   );
 
                   final nodes = _buildNodes(
                     connectionVM,
+                    peers,
                     visibleTrackedStates,
                     allContacts,
                   );
@@ -173,33 +176,26 @@ class _ForwardingDebugScreenState extends State<ForwardingDebugScreen> {
     return null;
   }
 
-  List<ContactDisplayStateData> _filterMapVisibleTrackedStates(
-    List<ContactDisplayStateData> states, {
-    required String? companionKey,
-    required int? trackingChannelIndex,
+  List<PeerWithLocation> _filterMapVisibleTrackedStates(
+    List<PeerWithLocation> members, {
+    required int? trackingChannelHash,
   }) {
-    if (trackingChannelIndex == null) {
-      return const <ContactDisplayStateData>[];
-    }
+    if (trackingChannelHash == null) return const <PeerWithLocation>[];
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final cutoffMs = nowMs - _trackingTimeout.inMilliseconds;
-
-    return states.where((state) {
-      if (companionKey == null || companionKey.isEmpty) return false;
-      if (state.companionDeviceKey != companionKey) return false;
-      if (state.isManuallyHidden) return false;
-      if (state.totalTelemetryReceived <= 0) return false;
-      if (state.lastChannelIdx != trackingChannelIndex) return false;
-      if (state.lastLatitude == null || state.lastLongitude == null)
-        return false;
-      return state.lastSeen >= cutoffMs;
-    }).toList(growable: false);
+    return members
+        .where((m) => isVisibleOnTeamMap(
+              m.location,
+              trackingChannelHash: trackingChannelHash,
+              nowMs: nowMs,
+            ))
+        .toList(growable: false);
   }
 
   List<_DebugNode> _buildNodes(
     ConnectionViewModel connectionVM,
-    List<ContactDisplayStateData> visibleStates,
+    PeerDirectory peers,
+    List<PeerWithLocation> visibleMembers,
     List<ContactData> contacts,
   ) {
     final selfInfo = connectionVM.deviceCapabilities;
@@ -209,17 +205,24 @@ class _ForwardingDebugScreenState extends State<ForwardingDebugScreen> {
       for (final contact in contacts) _hex(contact.publicKey): contact,
     };
 
-    final otherStates = visibleStates.where((state) {
-      final contact = contactByHex[state.publicKeyHex];
+    ContactData? contactFor(PeerWithLocation m) {
+      final key = m.peer.radioPublicKey;
+      return key == null ? null : contactByHex[_hex(key)];
+    }
+
+    final otherMembers = visibleMembers.where((m) {
+      final contact = contactFor(m);
       if (contact == null) return false;
       if (selfKey == null || selfKey.isEmpty) return true;
       return !_sameBytes(contact.publicKey, selfKey);
     }).toList()
       ..sort((left, right) {
-        final leftHop = left.lastPathLen < 0 ? 999 : left.lastPathLen;
-        final rightHop = right.lastPathLen < 0 ? 999 : right.lastPathLen;
+        final l = left.location;
+        final r = right.location;
+        final leftHop = l.lastPathLen < 0 ? 999 : l.lastPathLen;
+        final rightHop = r.lastPathLen < 0 ? 999 : r.lastPathLen;
         if (leftHop != rightHop) return leftHop.compareTo(rightHop);
-        return right.lastSeen.compareTo(left.lastSeen);
+        return r.lastSeen.compareTo(l.lastSeen);
       });
 
     final nodes = <_DebugNode>[
@@ -240,25 +243,20 @@ class _ForwardingDebugScreenState extends State<ForwardingDebugScreen> {
         sourceContact: null,
         sourceState: null,
       ),
-      ...otherStates.map(
-        (state) {
-          final contact = contactByHex[state.publicKeyHex];
-          final publicKey =
-              contact?.publicKey ?? _bytesFromHex(state.publicKeyHex);
+      ...otherMembers.map(
+        (m) {
+          final contact = contactFor(m)!;
+          final state = m.location;
 
           return _DebugNode(
-            id: state.publicKeyHex,
-            name: state.name?.isNotEmpty == true
-                ? state.name!
-                : (contact?.name?.isNotEmpty == true
-                    ? contact!.name!
-                    : 'Contact ${state.publicKeyHex.substring(0, min(6, state.publicKeyHex.length))}'),
-            publicKey: publicKey,
+            id: 'peer_${m.peer.id}',
+            name: peers.displayName(m.peer),
+            publicKey: contact.publicKey,
             isSelf: false,
-            isDirect: contact?.isDirect ?? (state.lastPathLen <= 0),
+            isDirect: contact.isDirect,
             hopCount: state.lastPathLen,
-            isRepeater: contact?.isRepeater ?? false,
-            isOutOfRange: contact?.isOutOfRange ?? false,
+            isRepeater: contact.isRepeater,
+            isOutOfRange: contact.isOutOfRange,
             lastSeen: DateTime.fromMillisecondsSinceEpoch(state.lastSeen),
             sourceContact: contact,
             sourceState: state,
@@ -284,11 +282,11 @@ class _ForwardingDebugScreenState extends State<ForwardingDebugScreen> {
     return nodes.first;
   }
 
-  int _furthestHop(List<ContactDisplayStateData> states) {
+  int _furthestHop(List<PeerWithLocation> members) {
     var maxHop = -1;
-    for (final state in states) {
-      if (state.lastPathLen >= 0) {
-        maxHop = max(maxHop, state.lastPathLen);
+    for (final m in members) {
+      if (m.location.lastPathLen >= 0) {
+        maxHop = max(maxHop, m.location.lastPathLen);
       }
     }
     return maxHop;
@@ -439,7 +437,7 @@ class _ForwardingDebugScreenState extends State<ForwardingDebugScreen> {
             Text(l10n.lastSeen(_timeLabel(selectedNode.lastSeen))),
             if (selectedNode.sourceState != null) ...[
               Text(
-                  'Telemetry channel idx: ${selectedNode.sourceState!.lastChannelIdx}'),
+                  'Telemetry channel hash: ${selectedNode.sourceState!.lastChannelHash.toRadixString(16)}'),
               Text(
                   'Telemetry count: ${selectedNode.sourceState!.totalTelemetryReceived}'),
             ],
@@ -570,19 +568,6 @@ class _ForwardingDebugScreenState extends State<ForwardingDebugScreen> {
     return buffer.toString();
   }
 
-  Uint8List? _bytesFromHex(String hex) {
-    if (hex.isEmpty || hex.length.isOdd) return null;
-
-    final bytes = <int>[];
-    for (var i = 0; i < hex.length; i += 2) {
-      final pair = hex.substring(i, i + 2);
-      final value = int.tryParse(pair, radix: 16);
-      if (value == null) return null;
-      bytes.add(value);
-    }
-    return Uint8List.fromList(bytes);
-  }
-
   bool _sameBytes(Uint8List left, Uint8List right) {
     if (left.length != right.length) return false;
     for (var i = 0; i < left.length; i++) {
@@ -603,7 +588,7 @@ class _DebugNode {
   final bool isOutOfRange;
   final DateTime? lastSeen;
   final ContactData? sourceContact;
-  final ContactDisplayStateData? sourceState;
+  final PeerLocationData? sourceState;
 
   const _DebugNode({
     required this.id,

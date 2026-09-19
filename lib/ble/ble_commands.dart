@@ -189,62 +189,99 @@ class BleCommands {
   /// lastSeen: Last seen timestamp in milliseconds
   /// Format: [cmd][32-pubkey][type][flags][path_len][64-path][32-name][4-timestamp][4-lat][4-lon][4-lastmod]
   /// Total: 148 bytes
+  /// Build CMD_SET_OTHER_PARAMS (38).
+  ///
+  /// The firmware rewrites all of these together, so every value must be
+  /// passed, not just the one being changed. Read the current ones from
+  /// RESP_SELF_INFO.
+  ///
+  /// [manualAddContacts] bit 0 set = stop auto-adding every contact heard.
+  static Uint8List buildSetOtherParams({
+    required int manualAddContacts,
+    required int telemetryModes,
+    required int advertLocPolicy,
+    required int multiAcks,
+  }) {
+    final writer = BufferWriter();
+    writer.writeByte(BleConstants.cmdSetOtherParams);
+    writer.writeByte(manualAddContacts & 0xFF);
+    writer.writeByte(telemetryModes & 0xFF);
+    writer.writeByte(advertLocPolicy & 0xFF);
+    writer.writeByte(multiAcks & 0xFF);
+    return writer.toBytes();
+  }
+
+  /// Build CMD_GET_AUTO_ADD_CONFIG (59).
+  static Uint8List buildGetAutoAddConfig() {
+    final writer = BufferWriter();
+    writer.writeByte(BleConstants.cmdGetAutoAddConfig);
+    return writer.toBytes();
+  }
+
+  /// Build CMD_SET_AUTO_ADD_CONFIG (58). Per-type auto-add bits, consulted
+  /// only when manual-add is on: 0x01 overwrite-oldest, 0x02 chat,
+  /// 0x04 repeater, 0x08 room server, 0x10 sensor.
+  static Uint8List buildSetAutoAddConfig(int config) {
+    final writer = BufferWriter();
+    writer.writeByte(BleConstants.cmdSetAutoAddConfig);
+    writer.writeByte(config & 0xFF);
+    return writer.toBytes();
+  }
+
+  /// Turns a PUSH_NEW_ADVERT (0x8A) frame into CMD_ADD_UPDATE_CONTACT.
+  ///
+  /// The firmware sends that push only when it did NOT store the contact
+  /// (manual-add mode, past the auto-add hop limit, or a full contact table),
+  /// and its payload is byte-identical to the add-contact command from byte 1
+  /// on: pubkey, type, flags, out_path_len, out_path, name, last_advert,
+  /// lat, lon, lastmod. So adding the contact in software is the same bytes
+  /// with a different opcode, which keeps the radio's own values (including
+  /// the unknown/flood path) exactly as the advert delivered them.
+  static Uint8List buildAddUpdateContactFromAdvert(Uint8List pushFrame) {
+    final frame = Uint8List.fromList(pushFrame);
+    frame[0] = BleConstants.cmdAddUpdateContact;
+    return frame;
+  }
+
+  /// Build CMD_ADD_UPDATE_CONTACT (9) for a contact whose key we already
+  /// hold — used to carry team contacts onto a newly paired radio.
+  ///
+  /// Layout after the opcode: pubkey(32), type, flags, out_path_len,
+  /// out_path(64), name(32), last_advert(4), lat(4), lon(4).
+  ///
+  /// The route is sent as unknown (0xFF) so the radio floods until it learns
+  /// one. Sending a hop count with an empty path instead would hand the radio
+  /// a route that goes nowhere. Flags are the firmware's contact flags, not
+  /// repeater/room-server bits — those live in [type].
   static Uint8List buildAddUpdateContact({
     required List<int> publicKey,
     required String name,
     int type = 1, // ADV_TYPE_CHAT
-    bool isRepeater = false,
-    bool isRoomServer = false,
-    bool isDirect = true,
-    int hopCount = 0,
+    int flags = 0,
+    int? lastAdvertTimestamp,
     double? latitude,
     double? longitude,
-    int? lastSeen,
   }) {
+    const outPathUnknown = 0xFF;
+
     final writer = BufferWriter();
     writer.writeByte(BleConstants.cmdAddUpdateContact);
-
-    // Public key (32 bytes)
     writer.writeBytes(Uint8List.fromList(publicKey));
-
-    // Type (1 byte)
     writer.writeByte(type);
-
-    // Flags (1 byte): bit 0 = repeater, bit 1 = room server
-    int flags = 0;
-    if (isRepeater) flags |= 0x01;
-    if (isRoomServer) flags |= 0x02;
     writer.writeByte(flags);
+    writer.writeByte(outPathUnknown);
+    writer.writeBytes(Uint8List(64)); // empty path
 
-    // Path length (1 byte)
-    writer.writeByte(isDirect ? 0 : hopCount);
+    // Name: UTF-8, null-padded to 32 bytes, truncated on a byte boundary.
+    final nameBytes = utf8.encode(name).take(31).toList();
+    final nameField = Uint8List(32);
+    nameField.setRange(0, nameBytes.length, nameBytes);
+    writer.writeBytes(nameField);
 
-    // Path (64 bytes, zeroed)
-    writer.writeBytes(Uint8List(64));
-
-    // Name (32 bytes, null-padded)
-    final nameBytes = name.codeUnits.take(32).toList();
-    writer.writeBytes(Uint8List.fromList(nameBytes));
-    for (int i = nameBytes.length; i < 32; i++) {
-      writer.writeByte(0);
-    }
-
-    // Timestamp (4 bytes, seconds since epoch)
-    final ts = (lastSeen ?? DateTime.now().millisecondsSinceEpoch) ~/ 1000;
-    writer.writeInt32LE(ts);
-
-    // Latitude (4 bytes, microdegrees)
-    final latInt = ((latitude ?? 0.0) * 1000000).round();
-    writer.writeInt32LE(latInt);
-
-    // Longitude (4 bytes, microdegrees)
-    final lonInt = ((longitude ?? 0.0) * 1000000).round();
-    writer.writeInt32LE(lonInt);
-
-    // Lastmod (4 bytes, current time in seconds)
-    final lastmod = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    writer.writeInt32LE(lastmod);
-
+    writer.writeInt32LE(
+        lastAdvertTimestamp ?? DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    writer.writeInt32LE(((latitude ?? 0) * 1e6).round());
+    writer.writeInt32LE(((longitude ?? 0) * 1e6).round());
     return writer.toBytes();
   }
 

@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import 'package:meshcore_team/models/unread_models.dart';
 import 'package:meshcore_team/repositories/contact_repository.dart';
 import 'package:meshcore_team/models/app_settings.dart';
+import 'package:meshcore_team/services/peer_directory.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/theme/night_theme.dart';
 import 'package:meshcore_team/widgets/status_bar_actions.dart';
@@ -121,14 +122,24 @@ class _ContactsScreenState extends State<ContactsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final contactRepository = context.watch<ContactRepository>();
-    final isNighttime = context.watch<SettingsService>().settings.appTheme ==
-        AppThemeMode.nighttime;
+    final settings = context.watch<SettingsService>();
+    final peers = context.watch<PeerDirectory>();
+    final isNighttime =
+        settings.settings.appTheme == AppThemeMode.nighttime;
+    final teamOnly = settings.settings.teamOnlyFilter;
 
     return StreamBuilder<List<ContactWithUnread>>(
       stream: contactRepository.watchContactsWithUnread(),
       builder: (context, snapshot) {
         final all = snapshot.data ?? [];
-        final contacts = _applyFilterAndSort(all);
+        final visible = teamOnly
+            ? all
+                .where((c) =>
+                    peers.byRadioKey(c.contact.publicKey)?.isTeamMember ??
+                    false)
+                .toList()
+            : all;
+        final contacts = _applyFilterAndSort(visible);
 
         return Scaffold(
           appBar: AppBar(
@@ -156,6 +167,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
           body: Column(
             children: [
               _buildSearchRow(l10n),
+              const _HeardNearbySection(),
               Expanded(
                 child: Builder(
                   builder: (context) {
@@ -307,6 +319,22 @@ class _ContactsScreenState extends State<ContactsScreen> {
   }
 }
 
+/// "Just now" / "5m ago" / "3h ago" / "2d ago" for a millisecond timestamp.
+String formatTimeAgo(AppLocalizations l10n, int timestampMs) {
+  final now = DateTime.now();
+  final then = DateTime.fromMillisecondsSinceEpoch(timestampMs);
+  final difference = then.isAfter(now) ? Duration.zero : now.difference(then);
+
+  if (difference.inMinutes < 1) {
+    return l10n.justNow;
+  } else if (difference.inMinutes < 60) {
+    return l10n.minutesAgo(difference.inMinutes);
+  } else if (difference.inHours < 24) {
+    return l10n.hoursAgo(difference.inHours);
+  }
+  return l10n.daysAgo(difference.inDays);
+}
+
 class ContactListTile extends StatelessWidget {
   final ContactData contact;
   final int unreadCount;
@@ -323,9 +351,19 @@ class ContactListTile extends StatelessWidget {
     final contactRepository = context.read<ContactRepository>();
     final hasLocation = contact.latitude != null && contact.longitude != null;
     final lastSeenText =
-        _formatLastSeen(AppLocalizations.of(context)!, contact.lastSeen);
+        formatTimeAgo(AppLocalizations.of(context)!, contact.lastSeen);
     final isNighttime = context.watch<SettingsService>().settings.appTheme ==
         AppThemeMode.nighttime;
+
+    // Team members are shown by their team name, with the radio name — the
+    // one the rest of the mesh sees — kept underneath.
+    final peers = context.watch<PeerDirectory>();
+    final peer = peers.byRadioKey(contact.publicKey);
+    final displayName = peer != null
+        ? peers.displayName(peer)
+        : (contact.name ?? l10n.unknown);
+    final radioName = contact.name ?? '';
+    final showRadioName = radioName.isNotEmpty && radioName != displayName;
 
     final minutesSinceLastSeen =
         (DateTime.now().millisecondsSinceEpoch - contact.lastSeen).toDouble();
@@ -399,9 +437,17 @@ class ContactListTile extends StatelessWidget {
         ),
         title: Row(
           children: [
+            if (peer?.isTeamMember ?? false)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Icon(Icons.group,
+                    size: 14,
+                    color:
+                        isNighttime ? NightColors.primary : Colors.blue),
+              ),
             Expanded(
               child: Text(
-                contact.name ?? l10n.unknown,
+                displayName,
                 style: TextStyle(
                   fontWeight:
                       unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
@@ -425,6 +471,15 @@ class ContactListTile extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (showRadioName)
+              Text(
+                radioName,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             Text(l10n.channelHash(contact.hash.toRadixString(16))),
             Text(l10n.lastSeen(lastSeenText)),
             if (hasLocation)
@@ -488,8 +543,10 @@ class ContactListTile extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
@@ -528,7 +585,17 @@ class ContactListTile extends StatelessWidget {
               ),
               onTap: () async {
                 Navigator.of(ctx).pop();
+                // The person is kept (their last known position matters),
+                // but deleting them means "not in my group": hide them from
+                // the map, as "Remove from group" does. Like that, it lasts
+                // until they are heard again.
+                final peer =
+                    context.read<PeerDirectory>().byRadioKey(contact.publicKey);
+                final db = context.read<AppDatabase>();
                 await repo.deleteContact(contact);
+                if (peer != null) {
+                  await db.peersDao.setHidden(peer.id, hidden: true);
+                }
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(l10n.contactDeletedName(name))),
@@ -538,24 +605,9 @@ class ContactListTile extends StatelessWidget {
             ),
           ],
         ),
+        ),
       ),
     );
-  }
-
-  String _formatLastSeen(AppLocalizations l10n, int timestamp) {
-    final now = DateTime.now();
-    final lastSeen = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final difference = lastSeen.isAfter(now) ? Duration.zero : now.difference(lastSeen);
-
-    if (difference.inMinutes < 1) {
-      return l10n.justNow;
-    } else if (difference.inMinutes < 60) {
-      return l10n.minutesAgo(difference.inMinutes);
-    } else if (difference.inHours < 24) {
-      return l10n.hoursAgo(difference.inHours);
-    } else {
-      return l10n.daysAgo(difference.inDays);
-    }
   }
 
   Color _getConnectivityColor(int millisSinceLastSeen, bool isNighttime) {
@@ -574,5 +626,144 @@ class ContactListTile extends StatelessWidget {
     if (minutesSince < 10) return Colors.orange;
     if (minutesSince < 30) return Colors.red;
     return Colors.grey;
+  }
+}
+
+/// Nodes the radio heard but did not store, offered for adding by hand.
+///
+/// The radio declines an advert when the app manages its contacts (see
+/// [TeamRadioService]), when the sender is further away than its auto-add hop
+/// limit, or when its contact table is full. Team members are added
+/// automatically and never appear here.
+class _HeardNearbySection extends StatelessWidget {
+  const _HeardNearbySection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final db = context.read<AppDatabase>();
+
+    return StreamBuilder<List<HeardAdvertData>>(
+      stream: db.heardAdvertsDao.watchPending(),
+      builder: (context, snapshot) {
+        final heard = snapshot.data ?? const <HeardAdvertData>[];
+        if (heard.isEmpty) return const SizedBox.shrink();
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: ExpansionTile(
+            leading: const Icon(Icons.wifi_tethering),
+            title: Text(
+              l10n.heardNearby(heard.length),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              l10n.heardNearbyExplanation,
+              style: const TextStyle(fontSize: 11),
+            ),
+            children: [
+              for (final advert in heard)
+                _HeardAdvertTile(advert: advert),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HeardAdvertTile extends StatefulWidget {
+  final HeardAdvertData advert;
+
+  const _HeardAdvertTile({required this.advert});
+
+  @override
+  State<_HeardAdvertTile> createState() => _HeardAdvertTileState();
+}
+
+class _HeardAdvertTileState extends State<_HeardAdvertTile> {
+  bool _busy = false;
+
+  Future<void> _add() async {
+    final l10n = AppLocalizations.of(context)!;
+    final db = context.read<AppDatabase>();
+    final contactRepository = context.read<ContactRepository>();
+    final messenger = ScaffoldMessenger.of(context);
+    final advert = widget.advert;
+
+    setState(() => _busy = true);
+    final ok = await contactRepository.addHeardContact(
+      publicKey: advert.publicKey,
+      name: advert.name,
+      advertType: advert.advertType,
+      lastAdvertTimestamp: advert.lastAdvertTimestamp,
+      latitude: advert.latitude,
+      longitude: advert.longitude,
+    );
+
+    if (ok) await db.heardAdvertsDao.remove(advert.publicKey);
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    messenger.showSnackBar(SnackBar(
+      content: Text(
+        ok ? l10n.contactAdded(advert.name) : l10n.contactAddFailed(advert.name),
+      ),
+    ));
+  }
+
+  String _typeLabel(AppLocalizations l10n, int advertType) {
+    switch (advertType) {
+      case 2:
+        return l10n.repeater;
+      case 3:
+        return l10n.roomServer;
+      case 4:
+        return l10n.sensor;
+      default:
+        return l10n.contacts;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final advert = widget.advert;
+    final keyHex = advert.publicKey
+        .take(4)
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join()
+        .toUpperCase();
+
+    return ListTile(
+      dense: true,
+      title: Text(
+        advert.name.trim().isEmpty ? keyHex : advert.name,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        '${_typeLabel(l10n, advert.advertType)} · $keyHex · '
+        '${formatTimeAgo(l10n, advert.lastHeard)}',
+        style: const TextStyle(fontSize: 11),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextButton(
+            onPressed: _busy
+                ? null
+                : () => context
+                    .read<AppDatabase>()
+                    .heardAdvertsDao
+                    .dismiss(advert.publicKey),
+            child: Text(l10n.dismiss),
+          ),
+          FilledButton(
+            onPressed: _busy ? null : _add,
+            child: Text(l10n.add),
+          ),
+        ],
+      ),
+    );
   }
 }

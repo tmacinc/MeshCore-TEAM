@@ -2032,4 +2032,109 @@ class AppLocalizationsDe extends AppLocalizations {
   String importedWithSkipped(String imported, String skipped) {
     return '$imported (übersprungen: $skipped)';
   }
+
+  @override
+  String heardNearby(int count) {
+    return 'In der Nähe gehört ($count)';
+  }
+
+  @override
+  String get heardNearbyExplanation =>
+      'Geräte, die dein Funkgerät gehört, aber nicht hinzugefügt hat. Teammitglieder werden automatisch hinzugefügt.';
+
+  @override
+  String get dismiss => 'Ausblenden';
+
+  @override
+  String contactAdded(String name) {
+    return '$name hinzugefügt';
+  }
+
+  @override
+  String contactAddFailed(String name) {
+    return '$name konnte nicht hinzugefügt werden';
+  }
+
+  @override
+  String get roomServer => 'Raum-Server';
+
+  @override
+  String get sensor => 'Sensor';
+
+  @override
+  String get teamChannel => 'Team-Kanal';
+
+  @override
+  String get teamChannelExplanation =>
+      'Bleibt mit Verlauf auf diesem Telefon, auch wenn du das Funkgerät wechselst.';
+
+  @override
+  String get notOnRadio => 'Nicht auf diesem Funkgerät';
+
+  @override
+  String get addChannelToRadio => 'Zum Funkgerät hinzufügen?';
+
+  @override
+  String get addChannelToRadioExplanation =>
+      'Dieser Kanal muss auf deinem Funkgerät sein, um Nachrichten zu senden oder ihn für das Tracking zu nutzen.';
+
+  @override
+  String get addChannelToRadioNoSlots =>
+      'Dein Funkgerät hat keine freien Kanalplätze. Lösche zuerst einen Kanal auf dem Funkgerät.';
+
+  @override
+  String addedChannelToRadio(String name) {
+    return '$name zum Funkgerät hinzugefügt';
+  }
+
+  @override
+  String get failedToAddChannel =>
+      'Kanal konnte nicht zum Funkgerät hinzugefügt werden';
+
+  @override
+  String get teamName => 'Dein Name';
+
+  @override
+  String get teamNamePrompt => 'Lege deinen Namen fest';
+
+  @override
+  String get teamNameSaveExplanation =>
+      'Dein Team sieht diesen Namen. Nur Personen in deinem Teamkanal können ihn sehen.';
+
+  @override
+  String get teamNameSkipExplanation =>
+      'Wenn du das überspringst, sieht dein Team deinen Funkgerätnamen, den jeder im Mesh sehen kann.';
+
+  @override
+  String get teamNameChangeLater =>
+      'Du kannst deinen Teamnamen später in den Einstellungen festlegen oder ändern.';
+
+  @override
+  String teamNameUsingRadioName(String name) {
+    return 'Funkgerätname wird verwendet ($name)';
+  }
+
+  @override
+  String get radioNameExplanation =>
+      'Dieser Name ist für alle im Mesh sichtbar, auch außerhalb deines Teams. Erwäge einen anonymen Namen.';
+
+  @override
+  String get teamNameSettingsTitle => 'Name (außerhalb deines Teams verborgen)';
+
+  @override
+  String get general => 'Allgemein';
+
+  @override
+  String get hideNonTeam => 'Nur Team-Kanäle und -Kontakte anzeigen';
+
+  @override
+  String get deleteChannelNeedsRadio =>
+      'Dieser Kanal ist auf deinem Funkgerät gespeichert. Verbinde dich mit dem Funkgerät, um ihn zu löschen.';
+
+  @override
+  String get trackingChannelPrompt => 'Standort teilen in';
+
+  @override
+  String get trackingNeedsPrivateChannel =>
+      'Erstelle zuerst einen privaten Kanal. Dein Standort wird nur in einem privaten Kanal geteilt.';
 }

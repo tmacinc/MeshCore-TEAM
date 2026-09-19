@@ -64,6 +64,17 @@ class Channels extends Table {
   TextColumn get companionDeviceKey =>
       text().nullable()(); // Which companion this channel belongs to
 
+  /// Owned by the phone rather than the radio: kept across radio switches,
+  /// pushed to a radio that doesn't have it, and its history is kept.
+  /// Only ever true for a private channel with a secret key.
+  BoolColumn get isTeam => boolean().withDefault(const Constant(false))();
+
+  /// False when the channel is not in the current radio's slots — either
+  /// never pushed, or the radio no longer has it. Named to match the Team
+  /// Link branch so the two converge on merge.
+  BoolColumn get firmwareConfirmed =>
+      boolean().withDefault(const Constant(true))();
+
   @override
   Set<Column> get primaryKey => {hash};
 }
@@ -91,6 +102,8 @@ class Messages extends Table {
   BoolColumn get isRead =>
       boolean().withDefault(const Constant(false))(); // Message read status
   TextColumn get companionDeviceKey => text().nullable()();
+  IntColumn get senderPeerId =>
+      integer().nullable()(); // Resolved sender, set on receive when known
 
   @override
   Set<Column> get primaryKey => {id};
@@ -137,52 +150,95 @@ class CompanionDevices extends Table {
   Set<Column> get primaryKey => {publicKeyHex};
 }
 
-/// Contact display state table - persistent state for contact display on map
-/// Matches Android ContactDisplayStateEntity
-@DataClassName('ContactDisplayStateData')
-class ContactDisplayStates extends Table {
-  TextColumn get publicKeyHex =>
-      text()(); // Hex string of public key (primary key)
-  TextColumn get companionDeviceKey => text()();
-  IntColumn get lastSeen => integer()(); // Last telemetry received timestamp
-  RealColumn get lastLatitude => real().nullable()();
-  RealColumn get lastLongitude => real().nullable()();
-  IntColumn get lastChannelIdx => integer()(); // Which channel they were on
-  IntColumn get lastPathLen => integer()(); // Hop count (for color coding)
-  BoolColumn get isManuallyHidden => boolean()
-      .withDefault(const Constant(false))(); // User clicked "Remove from Group"
-  IntColumn get hiddenAt => integer().nullable()(); // When manually hidden
-  TextColumn get name => text().nullable()();
-  IntColumn get firstSeen => integer()(); // When first discovered
-  IntColumn get totalTelemetryReceived =>
-      integer().withDefault(const Constant(0))();
-  BoolColumn get isAutonomousDevice => boolean().withDefault(const Constant(
-      false))(); // Contact is an autonomous GPS tracker (no phone)
-
-  @override
-  Set<Column> get primaryKey => {publicKeyHex};
+/// Peers table - one row per person we know from team traffic.
+///
+/// [id] is local to this phone and never transmitted. Every way a peer can be
+/// identified on the wire (radio name, radio key, Link app identity) is a
+/// nullable column, so peers survive radio switches and renames, and a peer
+/// first heard only by name can later be bound to its key.
+@DataClassName('PeerData')
+class Peers extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  BlobColumn get radioPublicKey =>
+      blob().nullable().unique()(); // 32-byte radio key, once known
+  TextColumn get radioKeyPrefix =>
+      text().nullable()(); // 12 lowercase hex chars, from CAP before full key
+  TextColumn get appIdentityId =>
+      text().nullable().unique()(); // Team Link uploaderId (hex)
+  TextColumn get radioName =>
+      text().nullable()(); // Last radio name seen; exact sender matching
+  TextColumn get alias => text().nullable()(); // Team alias from CAP
+  IntColumn get aliasUpdatedAt => integer().nullable()();
+  IntColumn get capFlags => integer().nullable()(); // Last CAP flag byte
+  IntColumn get capObservedAt => integer().nullable()();
+  BoolColumn get isTeamMember => boolean()
+      .withDefault(const Constant(false))(); // Seen on a private channel
+  IntColumn get lastTeamChannelHash => integer().nullable()();
+  IntColumn get firstSeen => integer()(); // Unix timestamp ms
+  IntColumn get lastSeen => integer()(); // Unix timestamp ms
 }
 
-/// Contact position history table - historical position tracking with variable-time binning
-/// Matches Android ContactPositionHistoryEntity
-@DataClassName('ContactPositionHistoryData')
-class ContactPositionHistories extends Table {
+/// Last known location per peer. Kept indefinitely: the last position of a
+/// team member is what matters if they go missing.
+@DataClassName('PeerLocationData')
+class PeerLocations extends Table {
+  IntColumn get peerId => integer().references(Peers, #id)();
+  IntColumn get lastSeen => integer()(); // Last telemetry received (ms)
+  RealColumn get lastLatitude => real().nullable()();
+  RealColumn get lastLongitude => real().nullable()();
+  IntColumn get lastChannelHash => integer()(); // Channel the TEL arrived on
+  IntColumn get lastPathLen => integer()(); // Hop count (for color coding)
+  IntColumn get companionBatteryMilliVolts => integer().nullable()();
+  IntColumn get phoneBatteryMilliVolts => integer().nullable()();
+  BoolColumn get isAutonomousDevice =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get isManuallyHidden => boolean()
+      .withDefault(const Constant(false))(); // User clicked "Remove from Group"
+  IntColumn get hiddenAt => integer().nullable()();
+  IntColumn get firstSeen => integer()();
+  IntColumn get totalTelemetryReceived =>
+      integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {peerId};
+}
+
+/// Recent position trail per peer. Short-lived: thinned per peer and pruned
+/// by age (see RetentionService).
+@DataClassName('PeerPositionData')
+class PeerPositionHistory extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get publicKeyHex =>
-      text()(); // Which contact this position belongs to
-  TextColumn get companionDeviceKey => text()();
-  IntColumn get timestamp => integer()(); // Unix timestamp
+  IntColumn get peerId => integer().references(Peers, #id)();
+  IntColumn get timestamp => integer()(); // Unix timestamp ms
   RealColumn get latitude => real()();
   RealColumn get longitude => real()();
-  RealColumn get accuracy => real().nullable()(); // GPS accuracy if available
-  IntColumn get channelIdx =>
-      integer()(); // Which channel this telemetry came on
-  IntColumn get pathLen => integer()(); // Hop count at this position
-  RealColumn get batteryVoltage =>
-      real().nullable()(); // Battery level if available
-  IntColumn get binLevel => integer()(); // 0=raw, 1=5min, 2=30min, 3=1hr
-  BoolColumn get isAggregated =>
-      boolean()(); // True if averaged from multiple points
+  IntColumn get channelHash => integer()();
+  IntColumn get pathLen => integer()();
+}
+
+/// Adverts the radio heard but did not store, so the user can add them by
+/// hand. The radio declines an advert when auto-add is off for that node
+/// type, when the advert came from further than the auto-add hop limit, or
+/// when its contact table is full — in every case it hands the whole contact
+/// record to the app instead (PUSH_NEW_ADVERT).
+///
+/// Team members are added automatically and never land here.
+@DataClassName('HeardAdvertData')
+class HeardAdverts extends Table {
+  BlobColumn get publicKey => blob()(); // 32-byte key (primary key)
+  TextColumn get name => text()();
+  IntColumn get advertType => integer()(); // ADV_TYPE_*: 1 chat, 2 repeater...
+  RealColumn get latitude => real().nullable()();
+  RealColumn get longitude => real().nullable()();
+  IntColumn get lastHeard => integer()(); // Unix timestamp ms
+  IntColumn get lastAdvertTimestamp => integer()(); // From the advert itself
+
+  /// When the user dismissed it. A newer advert clears this, so dismissing
+  /// silences the entry without hiding the node forever.
+  IntColumn get dismissedAt => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {publicKey};
 }
 
 /// ACK records table - tracks message acknowledgments

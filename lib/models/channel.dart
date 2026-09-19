@@ -1,7 +1,9 @@
 // Copyright (c) 2026 tmacinc
 // Licensed under CC BY-NC-SA 4.0
 
+import 'dart:convert';
 import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
 import 'package:meshcore_team/database/database.dart';
 
@@ -120,4 +122,40 @@ class Channel {
 
   @override
   int get hashCode => hash.hashCode;
+}
+
+/// Derive the PSK for a hashtag channel from its name.
+///
+/// PSK = first 16 bytes of SHA256(name), where [name] includes the '#' prefix
+/// (e.g. "#public"). This is the same derivation used by the reference firmware
+/// so any device that knows the channel name arrives at the same AES key.
+Uint8List hashtagChannelPsk(String name) {
+  final digest = sha256.convert(utf8.encode(name));
+  return Uint8List.fromList(digest.bytes.sublist(0, 16));
+}
+
+extension ChannelDataKind on ChannelData {
+  /// True when the key is derived from the channel name, so anyone who knows
+  /// (or guesses) the name can read the channel. Detected from the key rather
+  /// than a stored flag so channels synced from firmware are covered too.
+  bool get isHashtag {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return false;
+    final candidate = trimmed.startsWith('#') ? trimmed : '#$trimmed';
+    final derived = hashtagChannelPsk(candidate);
+    if (sharedKey.length != derived.length) return false;
+    for (var i = 0; i < derived.length; i++) {
+      if (sharedKey[i] != derived[i]) return false;
+    }
+    return true;
+  }
+
+  /// Location tracking may only use a private channel with a secret key:
+  /// never the public channel and never a hashtag channel.
+  bool get canBeTrackingChannel => !isPublic && !isHashtag;
+
+  /// Whether the connected radio holds this channel, so it can send and
+  /// receive on it. Channels the phone keeps without a radio slot are parked
+  /// on negative sentinel slots; slot 0 is real (the public channel).
+  bool get isOnRadio => firmwareConfirmed && channelIndex >= 0;
 }

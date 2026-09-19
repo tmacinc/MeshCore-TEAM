@@ -12,7 +12,11 @@ import 'package:meshcore_team/repositories/channel_repository.dart';
 import 'package:meshcore_team/screens/qr_scan_screen.dart';
 import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/services/settings_service.dart';
+import 'package:meshcore_team/ble/ble_connection_manager.dart';
+import 'package:meshcore_team/database/daos/channels_dao.dart';
+import 'package:meshcore_team/models/channel.dart' show ChannelDataKind;
 import 'package:meshcore_team/theme/night_theme.dart';
+import 'package:meshcore_team/widgets/add_channel_to_radio.dart';
 import 'package:meshcore_team/widgets/status_bar_actions.dart';
 import 'package:meshcore_team/widgets/night_clock.dart';
 import 'package:meshcore_team/widgets/sort_menu_button.dart';
@@ -99,8 +103,10 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final channelRepository = context.watch<ChannelRepository>();
-    final isNighttime = context.watch<SettingsService>().settings.appTheme ==
-        AppThemeMode.nighttime;
+    final settings = context.watch<SettingsService>();
+    final isNighttime =
+        settings.settings.appTheme == AppThemeMode.nighttime;
+    final teamOnly = settings.settings.teamOnlyFilter;
 
     return Scaffold(
       appBar: AppBar(
@@ -146,7 +152,10 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             );
           }
 
-          final channelsWithUnread = _applySort(snapshot.data ?? []);
+          final all = snapshot.data ?? <ChannelWithUnread>[];
+          final channelsWithUnread = _applySort(
+            teamOnly ? all.where((c) => c.channel.isTeam).toList() : all,
+          );
 
           if (channelsWithUnread.isEmpty) {
             final emptyColor = Theme.of(context).colorScheme.outline;
@@ -190,10 +199,12 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       BuildContext context, ChannelRepository channelRepository) async {
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) {
         final sheetL10n = AppLocalizations.of(ctx)!;
         return SafeArea(
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
@@ -222,6 +233,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                 },
               ),
             ],
+          ),
           ),
         );
       },
@@ -257,7 +269,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString())),
+                    SnackBar(content: Text(_errorText(e))),
                   );
                 }
                 if (dialogContext.mounted) {
@@ -269,6 +281,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             }
 
             return AlertDialog(
+              scrollable: true,
               title: Text(AppLocalizations.of(dialogContext)!.createPrivateChannel),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -333,7 +346,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString())),
+                    SnackBar(content: Text(_errorText(e))),
                   );
                 }
                 if (dialogContext.mounted) {
@@ -345,6 +358,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             }
 
             return AlertDialog(
+              scrollable: true,
               title: Text(AppLocalizations.of(dialogContext)!.joinHashtagChannel),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -495,7 +509,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                     } catch (e) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(e.toString())),
+                          SnackBar(content: Text(_errorText(e))),
                         );
                       }
                     }
@@ -529,12 +543,21 @@ class ChannelListTile extends StatelessWidget {
     final repo = context.read<ChannelRepository>();
     final mode = ChannelNotificationMode.fromString(channel.notificationMode);
     final isPublic = channel.isPublic;
+    // A channel the radio owns can only be deleted with the radio connected;
+    // say so up front rather than failing after the confirmation.
+    final canDelete = context.read<BleConnectionManager>().isConnected ||
+        ChannelsDao.isPhoneOwned(channel);
 
+    // The sheet has grown (notifications, team switch, add to radio,
+    // delete) past the default bottom-sheet height on small screens, so it
+    // sizes to its content and scrolls when that is taller than the screen.
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) {
         return SafeArea(
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
@@ -574,14 +597,44 @@ class ChannelListTile extends StatelessWidget {
                   repo.setNotificationMode(channel.hash, 'muted');
                 },
               ),
+              if (!isPublic && channel.canBeTrackingChannel) ...[
+                const Divider(),
+                // A switch, not an action: "Not a team channel" as a menu
+                // item read as the channel's current state.
+                SwitchListTile(
+                  secondary: Icon(
+                    channel.isTeam ? Icons.group : Icons.group_outlined,
+                  ),
+                  title: Text(l10n.teamChannel),
+                  subtitle: Text(l10n.teamChannelExplanation),
+                  value: channel.isTeam,
+                  onChanged: (isTeam) {
+                    Navigator.of(ctx).pop();
+                    repo.setTeamChannel(channel, isTeam);
+                  },
+                ),
+                if (channelNeedsRadio(channel))
+                  ListTile(
+                    leading: const Icon(Icons.radio),
+                    title: Text(l10n.addChannelToRadio),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      promptAddChannelToRadio(context, channel);
+                    },
+                  ),
+              ],
               if (!isPublic) ...[
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  enabled: canDelete,
+                  leading: Icon(Icons.delete_outline,
+                      color: canDelete ? Colors.red : null),
                   title: Text(
                     l10n.deleteChannel,
-                    style: const TextStyle(color: Colors.red),
+                    style: canDelete ? const TextStyle(color: Colors.red) : null,
                   ),
+                  subtitle:
+                      canDelete ? null : Text(l10n.deleteChannelNeedsRadio),
                   onTap: () {
                     Navigator.of(ctx).pop();
                     _showDeleteDialog(context, repo);
@@ -590,6 +643,7 @@ class ChannelListTile extends StatelessWidget {
               ],
               const SizedBox(height: 8),
             ],
+          ),
           ),
         );
       },
@@ -621,7 +675,7 @@ class ChannelListTile extends StatelessWidget {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString())),
+                    SnackBar(content: Text(_errorText(e))),
                   );
                 }
                 if (dialogContext.mounted) {
@@ -631,6 +685,7 @@ class ChannelListTile extends StatelessWidget {
             }
 
             return AlertDialog(
+              scrollable: true,
               title: Text(AppLocalizations.of(dialogContext)!.deleteChannel),
               content: Text(
                 'Delete "${channel.name}" from the companion and this phone?\n\nThis cannot be undone.',
@@ -681,7 +736,11 @@ class ChannelListTile extends StatelessWidget {
     final isTelemetryChannel =
         settings.telemetryEnabled && channel.hash == telemetryHashInt;
 
-    return Card(
+    // A channel the radio doesn't hold can be opened and read, not used:
+    // dim the whole row, which reads the same in every theme.
+    return Opacity(
+      opacity: channelNeedsRadio(channel) ? 0.5 : 1,
+      child: Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: GestureDetector(
         onLongPress: () => _showChannelOptions(context),
@@ -690,13 +749,20 @@ class ChannelListTile extends StatelessWidget {
           leading: Stack(
             children: [
               CircleAvatar(
-                backgroundColor: isNighttime
-                    ? (isPublic
-                        ? NightColors.connectStale
-                        : NightColors.surfaceHigh)
-                    : (isPublic ? Colors.green : Colors.blue),
+                // A channel the radio doesn't hold can be read but not used.
+                backgroundColor: channelNeedsRadio(channel)
+                    ? (isNighttime ? NightColors.surfaceHigh : Colors.grey)
+                    : isNighttime
+                        ? (isPublic
+                            ? NightColors.connectStale
+                            : NightColors.surfaceHigh)
+                        : (isPublic ? Colors.green : Colors.blue),
                 child: Icon(
-                  isPublic ? Icons.public : Icons.lock,
+                  channelNeedsRadio(channel)
+                      ? Icons.link_off
+                      : isPublic
+                          ? Icons.public
+                          : Icons.lock,
                   color: isNighttime ? NightColors.onSurface : Colors.white,
                 ),
               ),
@@ -739,8 +805,33 @@ class ChannelListTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l10n.channelHash(channel.hash.toRadixString(16))),
-              Text(l10n.channelIndex(channel.channelIndex.toString())),
+              if (!channelNeedsRadio(channel))
+                Text(l10n.channelIndex(channel.channelIndex.toString())),
               Text(isPublic ? l10n.channelTypePublic : l10n.channelTypePrivate),
+              if (channel.isTeam)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.group,
+                        size: 14,
+                        color: isNighttime ? NightColors.primary : Colors.blue),
+                    const SizedBox(width: 2),
+                    Text(l10n.teamChannel),
+                  ],
+                ),
+              if (channelNeedsRadio(channel))
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.radio_button_unchecked,
+                        size: 14,
+                        color: isNighttime
+                            ? NightColors.connectStale
+                            : Colors.orange),
+                    const SizedBox(width: 2),
+                    Text(l10n.notOnRadio),
+                  ],
+                ),
               if (isMuted) Text(l10n.notificationsMuted),
               if (isSilent) Text(l10n.notificationsSilent),
               if (isTelemetryChannel)
@@ -814,6 +905,7 @@ class ChannelListTile extends StatelessWidget {
           },
         ),
       ),
+    ),
     );
   }
 }
@@ -854,3 +946,8 @@ class _NotificationModeOption extends StatelessWidget {
     );
   }
 }
+
+/// The user-facing text of an error. Repository errors are StateErrors whose
+/// message is already written for the user; toString() would prefix it with
+/// "Bad state: ".
+String _errorText(Object e) => e is StateError ? e.message : e.toString();

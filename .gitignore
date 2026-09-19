@@ -65,3 +65,5 @@ lib/l10n/app_localizations_*.dart
 windows/flutter/generated_plugins.cmake
 macos/Flutter/GeneratedPluginRegistrant.swift
 /notes/
+# Scratch folder for passing test logs to Claude; never committed.
+docs/peerTests/

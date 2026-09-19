@@ -1,6 +1,5 @@
 {
   "@@locale": "nl",
-
   "cancel": "Annuleren",
   "ok": "OK",
   "done": "Klaar",
@@ -42,7 +41,6 @@
   "scanQrCode": "QR-code scannen",
   "fromFile": "Uit bestand",
   "fromQrCode": "Via QR-code",
-
   "settings": "Instellingen",
   "about": "Over",
   "appSettings": "App-instellingen",
@@ -58,7 +56,6 @@
   "exportLogs": "Logboeken exporteren",
   "noLogEntries": "Geen logboekvermeldingen",
   "noLogsToExport": "Geen logboeken om te exporteren",
-
   "connection": "Verbinding",
   "notConnected": "Niet verbonden",
   "noDevicesFound": "Geen apparaten gevonden",
@@ -106,7 +103,6 @@
   "batteryOptimization": "Batterijoptimalisatie",
   "battery": "Batterij",
   "storage": "Opslag",
-
   "channel": "Kanaal",
   "channelName": "Kanaalnaam",
   "addChannel": "Kanaal toevoegen",
@@ -134,7 +130,6 @@
   "channelCreated": "Aangemaakt: {name}",
   "channelJoined": "Deelgenomen: {name}",
   "channelAdded": "Toegevoegd: {name}",
-
   "directMessage": "Direct bericht",
   "directMessagesDisabledForRepeaters": "Directe berichten zijn uitgeschakeld voor repeaters",
   "typeAMessage": "Typ een bericht...",
@@ -150,7 +145,6 @@
   "notificationModeMutedDesc": "Geen waarschuwingen, geen badge",
   "sortByMessageCount": "Sorteren op aantal berichten",
   "sortByChannelNumber": "Sorteren op kanaalnummer",
-
   "map": "Kaart",
   "mapSettings": "Kaartinstellingen",
   "mapType": "Kaarttype",
@@ -175,7 +169,6 @@
   "gettingLocation": "Locatie ophalen...",
   "featureComingSoon": "{feature} binnenkort beschikbaar",
   "contactInfo": "{name} ({id}) • hops:{hops} • ontvangen:{heard}",
-
   "manageWaypointsAndRoutes": "Waypoints en routes beheren",
   "waypointName": "Waypointnaam",
   "waypointType": "Waypointtype",
@@ -223,23 +216,18 @@
   "localCount": "Lokaal: {count}",
   "receivedCount": "Ontvangen: {count}",
   "routesCount": "Routes: {count}",
-
   "permissionRequired": "Toestemming vereist",
   "cameraPermissionRequired": "Cameratoestemming vereist",
   "continueToPermissions": "Doorgaan naar toestemmingen",
   "storage2": "Opslag",
-
   "wipe": "Wissen",
   "wipeLocalData": "Lokale gegevens wissen",
   "dataWipedSuccessfully": "Gegevens gewist",
   "wipingData": "Gegevens wissen...",
   "areYouSure": "Weet je het zeker?",
-
   "linkCopied": "Link gekopieerd",
   "copied": "Gekopieerd",
-
   "debugLogsTitleWithCount": "Debuglogboeken ({count})",
-
   "exitApp": "App afsluiten",
   "finished": "Voltooid",
   "removeFromGroup": "Uit groep verwijderen",
@@ -247,33 +235,27 @@
   "thisWillStopTheConfigServer": "Hiermee stopt de configuratieserver. ",
   "failedToApplySettings": "Kan instellingen niet toepassen. Zorg bij het inschakelen van de autonome modus dat de companion-gps aanstaat en een geldige fix heeft.",
   "noGroupStatusChannel": "Geen groepskanaal actief",
-
   "channels": "Kanalen",
   "search": "Zoeken",
   "contacts": "Contacten",
   "route": "Route",
   "waypointsAndRoutes": "Waypoints en routes",
-
   "channelsWithPrivateCount": "Kanalen ({count} privé)",
   "waypointsAndRoutesWithCount": "Waypoints en routes ({count})",
   "offlineMapsWithCount": "Offlinekaarten ({count} gebieden)",
   "offlineMapAreas": "Offlinekaartgebieden",
   "overlayMaps": "Overlaykaarten",
-
   "genericError": "Fout: {error}",
   "clearAllFailed": "Alles wissen mislukt: {error}",
   "failedToAddWaypoint": "Kan waypoint niet toevoegen: {error}",
   "wipeFailed": "Wissen mislukt: {error}",
-
   "channelDeleted": "Verwijderd: {name}",
   "channelHash": "Hash: {hash}",
   "channelIndex": "Index: {index}",
   "joinChannelConfirmation": "Deelnemen aan {tag}?",
-
   "lastHeard": "Laatst ontvangen: {time}",
   "lastSeen": "Laatst gezien: {time}",
   "hopCountLabel": "Aantal hops: {count}",
-
   "inspectForwardingMode": "Actieve doorstuurmodus en topologie inspecteren",
   "forwardingPublicKey": "Publieke sleutel: {key}",
   "forwardingDirect": "Direct: {value}",
@@ -285,22 +267,17 @@
   "forwardingLastApplied": "Laatst toegepast: {time}",
   "forwardingLastError": "Laatste fout: {error}",
   "forwardingCandidateReason": "Reden kandidaat: {reason}",
-
   "zoomRange": "Zoombereik: {min}–{max}",
   "minDistanceMeters": "Min. afstand: {distance} m",
   "mapProviderLabel": "Aanbieder: {label}",
   "intervalSeconds": "Interval: {seconds} s",
-
   "companionBattery": "Companion: {battery}",
   "phoneBattery": "Telefoon: {battery}",
-
   "couldNotConfigureCompanionGps": "Kan companion-gps niet configureren — geen gps-hardware?",
   "scanChannelQr": "Kanaal-QR scannen",
   "scanConfigQrCode": "Configuratie-QR scannen",
   "wipePermanentDeleteWarning": "Hiermee worden de geselecteerde gegevens definitief verwijderd.",
-
   "tileCount": "{count} tegels",
-
   "channelTypePublic": "Type: openbaar",
   "channelTypePrivate": "Type: privé",
   "publicChannel": "Openbaar kanaal",
@@ -579,5 +556,33 @@
   "countTiles": "{count} {count, plural, =1{tegel} other{tegels}}",
   "countOverlayMaps": "{count} {count, plural, =1{overlaykaart} other{overlaykaarten}}",
   "radioSettingsItem": "radio-instellingen",
-  "importedWithSkipped": "{imported} (overgeslagen: {skipped})"
+  "importedWithSkipped": "{imported} (overgeslagen: {skipped})",
+  "heardNearby": "In de buurt gehoord ({count})",
+  "heardNearbyExplanation": "Apparaten die je radio heeft gehoord maar niet heeft toegevoegd. Teamleden worden automatisch toegevoegd.",
+  "dismiss": "Negeren",
+  "contactAdded": "{name} toegevoegd",
+  "contactAddFailed": "Kon {name} niet toevoegen",
+  "roomServer": "Kamerserver",
+  "sensor": "Sensor",
+  "teamChannel": "Teamkanaal",
+  "teamChannelExplanation": "Blijft met geschiedenis op deze telefoon staan, ook als je van radio wisselt.",
+  "notOnRadio": "Niet op deze radio",
+  "addChannelToRadio": "Aan radio toevoegen?",
+  "addChannelToRadioExplanation": "Dit kanaal moet op je radio staan om berichten te sturen of het voor tracking te gebruiken.",
+  "addChannelToRadioNoSlots": "Je radio heeft geen vrije kanaalplekken. Verwijder eerst een kanaal van de radio.",
+  "addedChannelToRadio": "{name} toegevoegd aan je radio",
+  "failedToAddChannel": "Kon het kanaal niet aan je radio toevoegen",
+  "teamName": "Je naam",
+  "teamNamePrompt": "Stel je naam in",
+  "teamNameSaveExplanation": "Je team ziet deze naam. Alleen mensen in je teamkanaal kunnen hem zien.",
+  "teamNameSkipExplanation": "Als je dit overslaat, ziet je team je radionaam, die iedereen op het mesh kan zien.",
+  "teamNameChangeLater": "Je kunt je teamnaam later instellen of wijzigen in Instellingen.",
+  "teamNameUsingRadioName": "Radionaam wordt gebruikt ({name})",
+  "radioNameExplanation": "Deze naam is zichtbaar voor iedereen op het mesh, ook buiten je team. Overweeg een anonieme naam.",
+  "teamNameSettingsTitle": "Naam (verborgen buiten je team)",
+  "general": "Algemeen",
+  "hideNonTeam": "Alleen teamkanalen en -contacten tonen",
+  "deleteChannelNeedsRadio": "Dit kanaal staat op je radio. Maak verbinding met de radio om het te verwijderen.",
+  "trackingChannelPrompt": "Je locatie delen op",
+  "trackingNeedsPrivateChannel": "Maak eerst een privékanaal. Je locatie wordt alleen op een privékanaal gedeeld."
 }

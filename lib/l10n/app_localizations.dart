@@ -3449,6 +3449,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{imported} (skipped {skipped})'**
   String importedWithSkipped(String imported, String skipped);
+
+  /// No description provided for @heardNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'Heard nearby ({count})'**
+  String heardNearby(int count);
+
+  /// No description provided for @heardNearbyExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices your radio heard but did not add. Team members are added for you.'**
+  String get heardNearbyExplanation;
+
+  /// No description provided for @dismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get dismiss;
+
+  /// No description provided for @contactAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {name}'**
+  String contactAdded(String name);
+
+  /// No description provided for @contactAddFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not add {name}'**
+  String contactAddFailed(String name);
+
+  /// No description provided for @roomServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Room server'**
+  String get roomServer;
+
+  /// No description provided for @sensor.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensor'**
+  String get sensor;
+
+  /// No description provided for @teamChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Team channel'**
+  String get teamChannel;
+
+  /// No description provided for @teamChannelExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept on this phone with its history, even if you change radio.'**
+  String get teamChannelExplanation;
+
+  /// No description provided for @notOnRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'Not on this radio'**
+  String get notOnRadio;
+
+  /// No description provided for @addChannelToRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to radio?'**
+  String get addChannelToRadio;
+
+  /// No description provided for @addChannelToRadioExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'This channel has to be on your radio to send messages or use it for tracking.'**
+  String get addChannelToRadioExplanation;
+
+  /// No description provided for @addChannelToRadioNoSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'Your radio has no free channel slots. Delete a channel on the radio first.'**
+  String get addChannelToRadioNoSlots;
+
+  /// No description provided for @addedChannelToRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {name} to your radio'**
+  String addedChannelToRadio(String name);
+
+  /// No description provided for @failedToAddChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not add the channel to your radio'**
+  String get failedToAddChannel;
+
+  /// No description provided for @teamName.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name'**
+  String get teamName;
+
+  /// No description provided for @teamNamePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Set your name'**
+  String get teamNamePrompt;
+
+  /// No description provided for @teamNameSaveExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your team will see this name. Only people on your team channel can see it.'**
+  String get teamNameSaveExplanation;
+
+  /// No description provided for @teamNameSkipExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'If you skip this, your team will see your radio name, which everyone on the mesh can see.'**
+  String get teamNameSkipExplanation;
+
+  /// No description provided for @teamNameChangeLater.
+  ///
+  /// In en, this message translates to:
+  /// **'You can set or change your team name later in Settings.'**
+  String get teamNameChangeLater;
+
+  /// No description provided for @teamNameUsingRadioName.
+  ///
+  /// In en, this message translates to:
+  /// **'Using radio name ({name})'**
+  String teamNameUsingRadioName(String name);
+
+  /// No description provided for @radioNameExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'This name is visible to everyone on the mesh, including people outside your team. Consider an anonymous name.'**
+  String get radioNameExplanation;
+
+  /// No description provided for @teamNameSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (hidden outside your team)'**
+  String get teamNameSettingsTitle;
+
+  /// No description provided for @general.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get general;
+
+  /// No description provided for @hideNonTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide all but team channels and contacts'**
+  String get hideNonTeam;
+
+  /// No description provided for @deleteChannelNeedsRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'This channel is stored on your radio. Connect to the radio to delete it.'**
+  String get deleteChannelNeedsRadio;
+
+  /// No description provided for @trackingChannelPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your location on'**
+  String get trackingChannelPrompt;
+
+  /// No description provided for @trackingNeedsPrivateChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a private channel first. Your location is only shared on a private channel.'**
+  String get trackingNeedsPrivateChannel;
 }
 
 class _AppLocalizationsDelegate
