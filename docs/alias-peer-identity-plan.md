@@ -1,7 +1,7 @@
 # Team Alias, Peer Identity and Hybrid Sync — Plan
 
-Status: Phases 0-4 are committed on branch `PeerIdentity`; none of it is device-tested yet. Remaining: device testing, then Part B (Team Link) when `D0sockets` takes this.
-Target branch: `dev`. Team Link (`D0sockets`) adopts this afterwards; its changes are in [Part B](#part-b--team-link-d0sockets-update-spec).
+Status: Phases 0-4 are committed, device-tested, and merged into `dev` (`00608ba`). Remaining: Part B — `dev → D0sockets`.
+Target branch: `dev` — done. Team Link (`D0sockets`) adopts this next; its changes are in [Part B](#part-b--team-link-d0sockets-update-spec).
 
 ---
 
@@ -30,6 +30,25 @@ Target branch: `dev`. Team Link (`D0sockets`) adopts this afterwards; its change
 | **Resolved** | The peer has a key, and that key is a contact on the current radio. |
 | **Known, not on radio** | The peer has a key, but the current radio doesn't have that contact (e.g. after a radio switch). |
 | **Unresolved** | We only have a radio name and no key yet. This is a placeholder peer. |
+
+### 2.1 How the mesh identifies a sender
+
+Verified against `tmacinc/MeshCore` (`src/Packet.h`, `src/Mesh.cpp`). The two message types identify senders by opposite means, and most of this plan follows from that:
+
+| | Channel — `PAYLOAD_TYPE_GRP_TXT` (0x05) | DM — `PAYLOAD_TYPE_TXT_MSG` (0x02) |
+|---|---|---|
+| Packet prefix | channel hash, MAC | dest hash, src hash, MAC |
+| Encrypted body | `timestamp, "name: msg"` | `timestamp, text` — no name |
+| MAC keyed with | the channel secret, shared by every member | the pairwise ECDH secret for one contact |
+| Sender established by | the self-asserted name inside the body | which contact's shared secret verifies the MAC (`searchPeersByHash` → `getPeerSharedSecret` → `MACThenDecrypt`, first match wins) |
+| MeshCore's own label | "an (unverified) group text message" | verified by construction |
+| Companion frame | `CHANNEL_MSG_RECV_V3` — no sender field | `CONTACT_MSG_RECV_V3` — 6 bytes of the sender's public key |
+
+Consequences used throughout:
+
+- **Channel messages are identified, not anonymous, and not forgeable by outsiders** — a valid MAC requires the channel secret. What they cannot do is tell one member from another, because the name is the only discriminator. **Unique radio names within a team are therefore a requirement of the protocol's design, not a nicety** — MeshCore relies on the convention and never enforces it.
+- **DMs carry no name at all.** The displayed name comes from the local contact record. Duplicate radio names cannot affect a DM, and an inbound DM proves the contact is on the current radio (the radio needs that pairwise secret to decrypt).
+- This is why CAP is treated as unsigned and spoofable by any channel member (§1, §9), and why identity is anchored on keys and app IDs rather than names.
 
 ## 3. Data model
 
@@ -68,7 +87,7 @@ Target branch: `dev`. Team Link (`D0sockets`) adopts this afterwards; its change
   - No `peerId` column was added in the end: a contact is matched to its peer by public key, which can't go stale.
 - **`Channels`**
   - Add `isTeam`.
-  - Add radio-presence tracking. **Use the same columns as `D0sockets`**, so the later merge converges: `firmwareConfirmed` (false = not on the current radio) and `isLocalOnly`.
+  - Add radio-presence tracking: `firmwareConfirmed` (false = not on the current radio). `D0sockets`’ `isLocalOnly` is **not** adopted — `isTeam` + `firmwareConfirmed` supersede it, and it is dropped on merge (Part B, B6).
   - Channels that aren't on the radio take an index from `D0sockets`' negative sentinel pool.
 - **`Messages`**
   - Add `senderPeerId` (nullable). `senderName` stays: message IDs are derived from it (§5.6), and it is the fallback for display.
@@ -86,9 +105,9 @@ Target branch: `dev`. Team Link (`D0sockets`) adopts this afterwards; its change
 
 ### 3.5 Migration (breaking)
 
-- **Version number.** `schemaVersion` jumps **9 → 12**, because `D0sockets` already uses 10 and 11.
+- **Version number.** `schemaVersion` jumps **9 → 14**, clearing the 10 and 11 that `D0sockets` already uses.
   - Port `_reconcileSchema()` from `D0sockets` to `dev` first.
-  - It only adds tables and columns, so the drop/replace steps below need an explicit `from <= 11 && to >= 12` step.
+  - It only adds tables and columns, so the drop/replace steps below need an explicit `from <= 13 && to >= 14` step.
 - **Explicit step:**
   1. Create `Peers`.
   2. **Copy** `ContactDisplayStates` into `Peers` and `PeerLocations`, one peer per `publicKeyHex`, with `radioName` taken from `name`. This keeps last known positions across the upgrade.
@@ -423,43 +442,167 @@ Each phase can ship to beta on its own.
 - **Contact table capacity** varies by firmware; handled by the §6.4 prompt.
 
 ---
-
 # Part B — Team Link (`D0sockets`) update spec
 
 Link ships as a separate app in a private test group. Changes flow **dev → D0sockets only**, and breaking changes to Link's own formats are acceptable.
 
-**B1. Envelope IDs stay as they are.**
+**Guiding decision.** Link gets **no separate identity path**. Everything that gave Link-only users their own naming and peer-keying scheme is removed, and Link becomes one more transport for the payloads the mesh already carries. Where mesh and Link would otherwise behave differently, mesh behaviour wins.
+
+The one deliberate exception is **B4**: `#LINK:` entries carry the origin's app ID. That is not a parallel identity scheme — it is the *same* `appIdentityId` anchor, put on the one off-mesh wire format that was not carrying it. Parity with the mesh is unattainable there because the mesh channel-message format cannot be changed (§1, non-goals).
+
+## B1. Envelope IDs stay as they are
+
 - `CloudEnvelope.computeEnvelopeId` hashes the sender name, timestamp and full plaintext.
 - Every mesh listener must be able to compute the same value from what it heard, and a mesh listener only has the sender name.
 - Anything based on a resolved peer would differ between phones and break duplicate removal. Identity improvements apply only **after** duplicate removal (attribution and display).
 
-**B2. Replace the `CLOUD:` keys with `Peers`.**
+**Therefore `lastKnownRadioName` and `SettingsService.effectiveSelfName` survive the Part B cleanup.** They look like part of the old Link-only naming scheme and are not: they are what makes the cloud copy of a message say what the radio would have said. Remove them and every Link message duplicates instead of deduping against its mesh twin. Only the fallback changes:
+
+```dart
+// was: lastKnownRadioName ?? localDisplayName
+String? get effectiveSelfName => lastKnownRadioName ?? teamAlias;
+```
+
+## B2. Replace the `CLOUD:` keys with `Peers`
+
 - **Flagged (off-mesh) envelopes:** `usableSenderUploaderId` → `PeerDirectory.byAppId`, creating a peer with `appIdentityId` if needed.
 - **Unflagged mesh mirrors:** `resolveChannelSender(senderName)`.
-- **Delete:** `cloudPeerKeyFromUploader`, `cloudPeerKeyFromName`, `kCloudPeerKeyPrefix`, and the `CLOUD:%` filters in `message_repository.dart` and `forwarding_policy_service.dart`.
 - **Forwarding** excludes peers with `radioPublicKey == null`, instead of matching the string prefix.
-- **Tests:** rewrite `test/database/cloud_peer_display_state_test.dart` against `PeerLocations`.
 
-**B3. Names**
-- **`localDisplayName` is replaced by `teamAlias`,** so radio-less users and radio users have one setting.
+**Delete:**
+
+| What | Where |
+|---|---|
+| `kCloudPeerKeyPrefix`, `cloudPeerKeyFromUploader`, `cloudPeerKeyFromName` | `services/cloud_sync/cloud_peer_identity.dart` |
+| the whole store | `repositories/contact_display_state_store.dart` — `PeerDirectory` + `PeerLocations` replace it |
+| `CLOUD:%` filter | `repositories/message_repository.dart` (~line 1846) |
+| `CLOUD:` prefix check | `services/forwarding_policy_service.dart` (~line 200) |
+| tests | `test/cloud_sync/cloud_peer_identity_test.dart`, `test/database/cloud_peer_display_state_test.dart` |
+
+**Keep:** `usableSenderUploaderId`, in the same file. It is not a naming helper — it is the "off-mesh, not the zero placeholder, not our own" filter, and it is what now feeds `byAppId`.
+
+## B3. Names
+
+- **`localDisplayName` is replaced by `teamAlias`,** so radio-less users and radio users have one setting. Drop `_keyLocalDisplayName`, `AppSettings.localDisplayName` and `setLocalDisplayName`.
 - **Keep `lastKnownRadioName` / `effectiveSelfName`** for sender-name stability on the wire (B1).
   - For a phone with no radio, the effective name is the alias.
   - Changing the alias only affects messages sent afterwards, which is fine.
-- `team_link_prompt.dart` uses the alias prompt from Phase 4 instead of its own name prompt.
+- `team_link_prompt.dart` is replaced by the alias prompt from Phase 4 (`widgets/team_name_prompt.dart`).
+- Rewrite `test/display_name_dialog_test.dart` and `test/self_name_resolution_test.dart` against `teamAlias`.
 
-**B4. `#LINK:` entries carry the origin's app ID**
-- Add an origin app ID field (16 hex characters) to each entry whose origin is off-mesh. Bump the container version; the test group updates together.
-- Mesh-only receivers use it to link the entry to a peer through `byAppId`. A radio-less origin has no radio name to resolve, and its alias isn't unique.
-- Keep `0x1E`/`0x1F` reserved as today.
+## B4. `#LINK:` entries carry the origin's app ID
 
-**B5. CAP over Link**
-- Radio-less phones send CAP v2 over Link, with the key prefix field set to `-`.
-- Gateways inject it onto the mesh inside `#LINK:`, like other tracking-channel traffic.
-- CAP carries the app ID (§5.1), so a person seen through both Link and mesh already becomes one peer through `byAppId`; no separate linking step is needed.
+**The anchor is `appIdentityId`, not the alias.** A peer's identity lives in `Peers.appIdentityId`, and it survives an alias change, a radio swap and a rename. Aliases are display, not identity. For that anchor to reach a mesh-only receiver, the app ID has to be on the wire — and the `#LINK:` container is the one off-mesh path where it currently isn't. So it goes on the entry.
 
-**B6. Channels**
-- `isLocalOnly` / `firmwareConfirmed` / the sentinel index pool now come from `dev` (§3.2, §7.3). Remove Link's separate reconciliation code where it duplicates them.
-- A local-only channel is a team channel that has never been on a radio.
-- The "Add to radio" prompt (§7.4) needs Link wording: with Link active, messages can be sent without the radio; the radio is only needed to reach mesh-only members.
+This is the only place Link carries *more* identity than the mesh does, and that is deliberate: the mesh channel-message format cannot be changed (§1, non-goals), so parity is impossible there. Everywhere the mesh format allows it, mesh behaviour still wins.
 
-**B7. Schema.** Once `dev` is at v12 with `_reconcileSchema`, merging into `D0sockets` needs no renumbering. Keep D0sockets' duplicate v8→v9 blocks as they are.
+**Format — bump to version 2:**
+
+```
+#LINK:2<RS><ts><US><appid><US><fullText><RS><ts><US><appid><US><fullText>…
+```
+
+- `appid`: 16 lower-case hex characters, or `-` when unavailable — the same value and the same `-` convention CAP v2 uses, so one phone reads as one person on both.
+- Every `#LINK:` entry is off-mesh by construction (injection is gated on `CloudEnvelope.flagNotOnMesh`), so the field applies to all of them.
+- `0x1E`/`0x1F` stay reserved; `canEncodeEntry` is unchanged.
+
+**`decode` must become version-aware.** It currently ignores the version token and splits each entry on its first `US`. That is fine for appending *containers*, not for appending *fields*: a v1 decoder reading a v2 entry would hand back `"<appid><US><text>"` as the message body. Read the version token and parse two fields for v1, three for v2. Keep the v1 branch for one release so a half-upgraded group degrades to name resolution rather than showing control characters in chat. `encode` always emits v2.
+
+**Cost on the wire.** Ceiling is `MessageRepository.maxMeshMessageBytes` = 140; the header (`#LINK:2`) is 7, leaving 133 for entries. A telemetry entry is `RS` + 10-digit ts + `US` + `"Alias: #TEL:"` + 16 Base64 chars ≈ 43 bytes, so a container holds 3 today. Adding 16 hex + a separator (17 bytes) makes it ≈ 60, so it holds 2.
+
+**Use the full 16 hex — do not truncate.** An 8-hex form saves 8 bytes per entry and still lands at 2 entries per container, so the shorter field buys nothing at this ceiling while making the value stop matching CAP's. Chat entries are one per container either way.
+
+**What this does not fix.** After B4, the only name-based resolution left is for senders who *have* a radio (a direct mesh channel message, or its cloud mirror, which carries the mirroring phone's uploader ID rather than the sender's). Those are ambiguous only when two radios share a name — unreachable by any app-ID scheme, because the mesh channel-message format carries nothing but the firmware-prepended name. See B9.
+
+## B5. CAP travels normally
+
+CAP is a tracking-channel payload like `#TEL:`/`#WAY:`, and must reach Link the same way they do.
+
+**Receive: already done.** `MessageRepository.processChannelPlaintext` is transport-agnostic and already dispatches `#CAP:`/`#T:`/`#TEL:`/`#WAY:`/`#WRC:` for both the BLE path and the cloud merge path. Bridge-injected `#LINK:` entries are unwrapped into the same method. Nothing to add.
+
+**The catch:** the peer-identity work branched before that refactor and put its CAP v2 handling in `_handleChannelMessage`, which is BLE-only. See B8.
+
+**Send: this is the work.** `CapabilityPublisher._publish()` bypasses `MessageRepository` entirely and is radio-gated:
+
+1. Emit `_emitChannelPlaintext(authoredLocally: true, reachedMesh: <ble send result>)` after building the CAP, so it mirrors like any other tracking-channel payload.
+2. Replace the `!isConnected` early return with "no radio **and** no Link → skip".
+3. Relax the `!channel.isOnRadio` gate to allow a team channel that is not on a radio.
+
+The wire format needs nothing: `noRadioKeyPrefix` (`-`) is already in v2 for exactly this sender.
+
+**Cadence over Link: discovery and change only.** `CapabilityPublisher` has three triggers — discovery, change (alias / flags / radio name, via the publish signature) and a periodic republish. The first two mirror to Link; **the periodic republish is skipped when Link is the only transport.** That timer exists to beat mesh packet loss, which the relay does not have, so dropping it costs nothing in reliability and keeps CAP off the per-user cloud-write budget. When a radio is connected, the periodic republish goes out over the mesh exactly as it does today and is simply not mirrored.
+
+Gateways inject CAP onto the mesh inside `#LINK:` like other tracking-channel traffic. Because CAP carries the app ID, a person seen through both Link and mesh becomes one peer through `byAppId`, with no separate linking step. With B4 in place the container entry carries the same app ID, so a mesh-only receiver can attribute an injected `#TEL:` even if it never heard that origin's CAP.
+
+## B6. Channels — `isTeam` replaces `isLocalOnly`
+
+`isLocalOnly` is **removed**, not merged. `isTeam` + `firmwareConfirmed` from `dev` supersede it.
+
+`isLocalOnly` is a *birth* property ("created while no radio was paired") that goes stale: a channel created while a companion was paired stays `isLocalOnly: false` forever after that companion is unpaired. D0sockets already documents this as a regression (the `telemetry_send_service.dart` header comment and `test/tracking_transport_test.dart`). `firmwareConfirmed` is current-state and does not have that failure mode.
+
+| D0sockets | becomes |
+|---|---|
+| `isLocalOnly == true` | `isTeam && !firmwareConfirmed` |
+| `!isLocalOnly && bleConnected` (mesh leg live) | `channel.isOnRadio && bleConnected` |
+| `channelIndex < 0` sentinel checks | unchanged — `dev` kept the negative pool |
+| wipe on radio switch: `delete where !isLocalOnly` | `delete where !isTeam && firmwareConfirmed` — `channels_dao` already does this |
+
+Use the `dev` helpers rather than open-coding the predicates: `Channel.isOnRadio => firmwareConfirmed && channelIndex >= 0`, and `ChannelsDao.isPhoneOwned(c) => c.isTeam || !c.firmwareConfirmed`. Most call sites collapse onto those two.
+
+Roughly 40 non-generated sites across 12 files. The substantive ones: `channel_repository.dart` (9), `message_repository.dart` (6), `telemetry_send_service.dart` (5), `channels_screen.dart` (5), `cloud_sync_service.dart` (4, including `_bridgeEligible`). Also rewrite `test/database/channels_dao_test.dart` and `test/tracking_transport_test.dart`.
+
+**The column is physically dropped**, not left dead:
+
+```dart
+await customStatement('ALTER TABLE channels DROP COLUMN is_local_only');
+```
+
+`DROP COLUMN` needs SQLite 3.35+, which `sqlite3_flutter_libs` bundles on both platforms, so the host OS version is irrelevant. It goes in the same step that removes `isLocalOnly` from `tables.dart`, and it is guarded the way the existing drops are — the step already runs raw DDL via `customStatement`. Dropping it keeps the physical schema honest, which matters here because `dev` and `D0sockets` keep reconciling against each other.
+
+A local-only channel is now simply a team channel that has never been on a radio. The "Add to radio" prompt (§7.4) needs Link wording: with Link active, messages can be sent without the radio; the radio is only needed to reach mesh-only members.
+
+## B7. Schema
+
+`dev` arrives at **v14** (not v12, as an earlier draft said); `D0sockets` is at v11. Both branches carry `_reconcileSchema()`, so merging needs **no renumbering**. Keep D0sockets' duplicate v8→v9 blocks as they are.
+
+**Where the `isLocalOnly` drop goes.** No new version is needed. Every D0sockets database is at v11 or lower, so the existing `from <= 13 && to >= 14` step already runs for all of them — put the `ALTER TABLE channels DROP COLUMN is_local_only` there, guarded by a column-exists check (a `_dropColumnIfPresent` mirroring the existing `_addColumnIfMissing`). The guard is what makes it a no-op for databases that came up through `dev` and never had the column.
+
+`_reconcileSchema()` only ever adds tables and columns, so once `isLocalOnly` is gone from `tables.dart` it will not be re-added.
+
+## B8. Merge mechanics
+
+`peerIdentity` is merged into `dev` (commit `00608ba`), so the remaining step is **`dev → D0sockets`**.
+
+**The one rule that matters — `message_repository.dart` (10 conflict hunks): keep D0sockets' structure, and move `dev`'s `#CAP:`/`#T:` handlers down out of `_handleChannelMessage` into `processChannelPlaintext`.** Resolving those hunks the other way silently makes every structured payload mesh-only again, with no compile error to catch it.
+
+Trial merge (`git merge-tree D0sockets dev`) — 12 conflicted files:
+
+| File | Hunks | Note |
+|---|---|---|
+| `database/database.g.dart` | 54 | Do not resolve — regenerate with build_runner |
+| `repositories/message_repository.dart` | 10 | The rule above |
+| `repositories/channel_repository.dart` | 9 | B6 |
+| `database/database.dart` | 7 | Migration steps interleave |
+| `database/daos/channels_dao.dart`, `main.dart` | 4 each | |
+| `screens/settings_screen.dart` | 3 | B3 |
+| `screens/channels_screen.dart`, `services/forwarding_policy_service.dart`, `services/telemetry_send_service.dart`, `pubspec.yaml` | 2 each | |
+| `database/tables.dart` | 1 | B6 — drop `isLocalOnly`, keep `isTeam` + `firmwareConfirmed` |
+
+**Auto-merges clean but will not compile** — D0sockets-only files referencing tables `dev` dropped. These are the B2/B3 work list, not merge conflicts:
+`repositories/contact_display_state_store.dart`, `services/cloud_sync/cloud_peer_identity.dart`, `widgets/team_link_prompt.dart`, `models/companion_scope.dart` (doc comment only), plus the four tests named in B2 and B3.
+
+Suggested sequence: resolve conflicts → regenerate drift → B2 → B3 → B6 until it builds → then B5 and B4 as their own commits.
+
+## B9. Follow-up — `PeerResolutionState.ambiguous` is computed but never read
+
+Independent of Link and of this merge; can ship on `dev` separately.
+
+**Channel messages only** — per §2.1, DMs are key-verified and cannot be ambiguous.
+
+`PeerDirectory.resolveChannelSender` sets `PeerResolutionState.ambiguous` when more than one radio contact, or more than one keyed peer, matches the sender name (`peer_directory.dart`, the two `onRadio.length > 1` / equivalent branches). **Nothing consumes the value** — those two assignments are its only occurrences in `lib/`. The resolver returns the most-recently-seen match and the caller attributes to it silently.
+
+Unique radio names are a requirement (§2.1), so `ambiguous` means **the requirement is being violated right now** — a misconfiguration to surface, not a routine case to handle. No wire change can fix it: `GRP_TXT` carries nothing but the name. B4 does not apply here (that is off-mesh origins, where no radio is involved).
+
+**Fix:** have the telemetry path check the returned state and skip the position update when it is `ambiguous`, leaving the peer's last known position intact, and flag the duplicate name in the team list so someone renames a radio. A wrong pin is worse than a missing one in the search-and-rescue case the app exists for. Only reads a signal the resolver already produces — no wire change, no schema change.
+
+Note the README encourages anonymizing radio names, which makes collisions likelier than real names would; the warning is what reconciles that advice with the uniqueness requirement.
