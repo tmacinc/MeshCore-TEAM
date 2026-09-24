@@ -1464,6 +1464,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Configure le suivi autonome du firmware. Utilise les valeurs des réglages de suivi de position.';
 
   @override
+  String get autonomousModeSettingsHint =>
+      'Pour modifier l\'intervalle, la distance ou le canal, allez dans Réglages de l\'app → Position → Suivi de position. Cet interrupteur n\'active pas le suivi de l\'app.';
+
+  @override
   String get noGpsFixWarning =>
       'Pas encore de position GPS. Aucune télémétrie ne sera envoyée tant que la radio n’aura pas acquis une position GPS valide.';
 

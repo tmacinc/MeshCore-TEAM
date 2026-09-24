@@ -7,17 +7,21 @@ This folder is referenced by the main [README](../../README.md) so screenshots r
 Use this stable naming scheme so README links don’t change:
 
 - `01-connection.png` — Connection
-- `02-identity.png` — Identity prompt
-- `03-connection2.png` — Connection (sync)
-- `04-radiosettings.png` — Radio settings
-- `05-trackingsettings.png` — Location tracking
-- `06-contacts.png` — Contacts
-- `07-directmesage.png` — Direct message
-- `08-channels.png` — Channels
-- `09-privatechannel.png` — Private channel
-- `10-sharechannel.png` — Share channel
-- `11-createAddchannel.png` — Create/Add channel
+- `02-identity.png` — Identity
+- `03-connection2.png` — Scanning
+- `04-connection3.png` — Connected radio
+- `05-radiosettings.png` — Radio settings
+- `06-teamconfigmenu.png` — Team Config menu
+- `07-teamconfigexport.png` — Team Config export
+- `08-settings.png` — Settings: general
+- `09-settings.png` — Settings: location tracking
+- `10-settings.png` — Settings: data
+- `11-settingsRedLightTheme.png` — Red Light theme
 - `12-map.png` — Map
+- `13-mapSat.png` — Satellite map
+- `14-mapSettingsmenu.png` — Map settings menu
+- `15-addwaypoint.png` — Add waypoint
+- `16-addRoute.png` — Add route
 
 ## Capture guidelines
 

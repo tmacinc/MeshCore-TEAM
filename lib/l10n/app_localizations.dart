@@ -2556,6 +2556,12 @@ abstract class AppLocalizations {
   /// **'Configures firmware autonomous tracking. Uses values from Location Tracking settings.'**
   String get autonomousModeDescription;
 
+  /// No description provided for @autonomousModeSettingsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'To change interval, distance or channel, use App Settings → Location → Location Tracking. This toggle does not turn on app tracking.'**
+  String get autonomousModeSettingsHint;
+
   /// No description provided for @noGpsFixWarning.
   ///
   /// In en, this message translates to:

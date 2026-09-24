@@ -408,6 +408,7 @@
   "campModeDescription": "Limita la radio ai preset compatibili con il camp e attiva la modalità ripetitore del firmware",
   "smartForwardingDescription": "Usa l’inoltro intelligente gestito dall’app mentre la modalità camp è attiva",
   "autonomousModeDescription": "Configura il tracciamento autonomo del firmware. Usa i valori delle impostazioni di tracciamento posizione.",
+  "autonomousModeSettingsHint": "Per cambiare intervallo, distanza o canale, vai su Impostazioni app → Posizione → Tracciamento posizione. Questo interruttore non attiva il tracciamento dell'app.",
   "noGpsFixWarning": "Nessun fix GPS. La telemetria non verrà inviata finché la radio non acquisisce una posizione GPS valida.",
   "txPowerWithMax": "Potenza TX: {power} dBm (max {maxPower})",
   "invalidFrequency": "Frequenza non valida",

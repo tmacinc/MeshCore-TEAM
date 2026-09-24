@@ -1459,6 +1459,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Configura il tracciamento autonomo del firmware. Usa i valori delle impostazioni di tracciamento posizione.';
 
   @override
+  String get autonomousModeSettingsHint =>
+      'Per cambiare intervallo, distanza o canale, vai su Impostazioni app → Posizione → Tracciamento posizione. Questo interruttore non attiva il tracciamento dell\'app.';
+
+  @override
   String get noGpsFixWarning =>
       'Nessun fix GPS. La telemetria non verrà inviata finché la radio non acquisisce una posizione GPS valida.';
 

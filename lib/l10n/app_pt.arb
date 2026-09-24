@@ -408,6 +408,7 @@
   "campModeDescription": "Limita o rádio às predefinições compatíveis com camp e ativa o modo de repetição do firmware",
   "smartForwardingDescription": "Usar reencaminhamento inteligente gerido pela aplicação enquanto o modo camp estiver ativo",
   "autonomousModeDescription": "Configura o seguimento autónomo do firmware. Usa os valores das definições de seguimento de localização.",
+  "autonomousModeSettingsHint": "Para alterar o intervalo, a distância ou o canal, use Definições da app → Localização → Registo de localização. Este interruptor não ativa o registo da app.",
   "noGpsFixWarning": "Ainda sem sinal GPS. Não será enviada telemetria até o rádio obter uma posição GPS válida.",
   "txPowerWithMax": "Potência TX: {power} dBm (máx. {maxPower})",
   "invalidFrequency": "Frequência inválida",

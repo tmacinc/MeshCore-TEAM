@@ -860,6 +860,7 @@
   "campModeDescription": "Beschränkt das Funkgerät auf camp-kompatible Presets und aktiviert den Firmware-Repeat-Modus",
   "smartForwardingDescription": "App-gesteuerte intelligente Weiterleitung nutzen, solange der Camp-Modus aktiv ist",
   "autonomousModeDescription": "Konfiguriert die autonome Standortverfolgung der Firmware. Verwendet die Werte aus den Standortverfolgungs-Einstellungen.",
+  "autonomousModeSettingsHint": "Intervall, Distanz oder Kanal änderst du unter App-Einstellungen → Standort → Standortverfolgung. Dieser Schalter aktiviert nicht die Standortverfolgung der App.",
   "noGpsFixWarning": "Noch kein GPS-Fix. Telemetrie wird erst gesendet, wenn das Companion-Funkgerät eine gültige GPS-Position hat.",
   "txPowerWithMax": "Sendeleistung: {power} dBm (max. {maxPower})",
   "invalidFrequency": "Ungültige Frequenz",

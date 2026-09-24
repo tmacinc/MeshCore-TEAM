@@ -408,6 +408,7 @@
   "campModeDescription": "Limite la radio aux préréglages compatibles camp et active le mode répéteur du firmware",
   "smartForwardingDescription": "Utiliser le relais intelligent géré par l’application tant que le mode camp est actif",
   "autonomousModeDescription": "Configure le suivi autonome du firmware. Utilise les valeurs des réglages de suivi de position.",
+  "autonomousModeSettingsHint": "Pour modifier l'intervalle, la distance ou le canal, allez dans Réglages de l'app → Position → Suivi de position. Cet interrupteur n'active pas le suivi de l'app.",
   "noGpsFixWarning": "Pas encore de position GPS. Aucune télémétrie ne sera envoyée tant que la radio n’aura pas acquis une position GPS valide.",
   "txPowerWithMax": "Puissance TX : {power} dBm (max {maxPower})",
   "invalidFrequency": "Fréquence non valide",

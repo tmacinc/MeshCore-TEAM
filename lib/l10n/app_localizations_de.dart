@@ -1440,6 +1440,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Konfiguriert die autonome Standortverfolgung der Firmware. Verwendet die Werte aus den Standortverfolgungs-Einstellungen.';
 
   @override
+  String get autonomousModeSettingsHint =>
+      'Intervall, Distanz oder Kanal änderst du unter App-Einstellungen → Standort → Standortverfolgung. Dieser Schalter aktiviert nicht die Standortverfolgung der App.';
+
+  @override
   String get noGpsFixWarning =>
       'Noch kein GPS-Fix. Telemetrie wird erst gesendet, wenn das Companion-Funkgerät eine gültige GPS-Position hat.';
 

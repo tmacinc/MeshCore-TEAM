@@ -1461,6 +1461,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Configura el seguimiento autónomo del firmware. Usa los valores de los ajustes de seguimiento de ubicación.';
 
   @override
+  String get autonomousModeSettingsHint =>
+      'Para cambiar el intervalo, la distancia o el canal, ve a Ajustes de la app → Ubicación → Seguimiento de ubicación. Este interruptor no activa el seguimiento de la app.';
+
+  @override
   String get noGpsFixWarning =>
       'Aún sin señal GPS. No se enviará telemetría hasta que la radio obtenga una posición GPS válida.';
 

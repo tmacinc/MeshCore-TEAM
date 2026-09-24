@@ -1447,6 +1447,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Configures firmware autonomous tracking. Uses values from Location Tracking settings.';
 
   @override
+  String get autonomousModeSettingsHint =>
+      'To change interval, distance or channel, use App Settings → Location → Location Tracking. This toggle does not turn on app tracking.';
+
+  @override
   String get noGpsFixWarning =>
       'No GPS fix yet. Telemetry will not be sent until the companion radio acquires a valid GPS position.';
 

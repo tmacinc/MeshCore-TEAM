@@ -1,3 +1,8 @@
+---
+title: Privacy Policy
+permalink: /privacy/
+---
+
 # Privacy Policy for MeshCore-TEAM
 
 **Effective Date:** April 24, 2026

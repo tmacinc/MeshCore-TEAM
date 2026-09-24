@@ -941,6 +941,7 @@
   "campModeDescription": "Locks radio to camp-compatible presets and enables firmware repeat mode",
   "smartForwardingDescription": "Use app-managed smart forwarding while camp mode is active",
   "autonomousModeDescription": "Configures firmware autonomous tracking. Uses values from Location Tracking settings.",
+  "autonomousModeSettingsHint": "To change interval, distance or channel, use App Settings → Location → Location Tracking. This toggle does not turn on app tracking.",
   "noGpsFixWarning": "No GPS fix yet. Telemetry will not be sent until the companion radio acquires a valid GPS position.",
   "txPowerWithMax": "TX Power: {power} dBm (max {maxPower})",
   "@txPowerWithMax": {

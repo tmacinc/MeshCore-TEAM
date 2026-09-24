@@ -1,0 +1,25 @@
+# GitHub Pages site for MeshCore TEAM (served from /docs).
+# User guide at /, privacy policy at /privacy/.
+title: MeshCore TEAM
+description: Offline team tracking and messaging over a MeshCore mesh radio.
+baseurl: /MeshCore-TEAM
+repository: tmacinc/MeshCore-TEAM
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+# Internal development notes live in docs/ too; keep them off the site.
+exclude:
+  - alias-peer-identity-plan.md
+  - peer-identity-hardware-test-plan.md
+  - peer-identity-two-phone-walkthrough.md
+  - peerTests/
+  - screenshots/README.md

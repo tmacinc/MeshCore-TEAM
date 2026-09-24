@@ -1207,13 +1207,13 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                                       });
                                     },
                             ),
-                            const Padding(
-                              padding: EdgeInsets.only(top: 4),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
                               child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  'To change interval/distance/channel, use Companion Settings → Location Tracking. This toggle does not enable app tracking.',
-                                  style: TextStyle(color: Colors.grey),
+                                  l10n.autonomousModeSettingsHint,
+                                  style: const TextStyle(color: Colors.grey),
                                 ),
                               ),
                             ),

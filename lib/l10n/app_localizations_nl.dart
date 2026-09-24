@@ -1455,6 +1455,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Configureert autonome tracking in de firmware. Gebruikt de waarden uit de locatietracking-instellingen.';
 
   @override
+  String get autonomousModeSettingsHint =>
+      'Wijzig interval, afstand of kanaal via App-instellingen → Locatie → Locatietracking. Deze schakelaar zet de tracking van de app niet aan.';
+
+  @override
   String get noGpsFixWarning =>
       'Nog geen GPS-fix. Er wordt geen telemetrie verzonden totdat de radio een geldige GPS-positie heeft.';
 

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page.title %}{{ page.title }} · {% endif %}{{ site.title }}</title>
+  <meta name="description" content="{{ page.description | default: site.description }}">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f4f6f8;
+      --text: #1b1f24;
+      --muted: #5b6570;
+      --border: #d9dee4;
+      --accent: #1a5a96;
+      --accent-soft: #e3eef8;
+      --code-bg: #eef1f4;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111418;
+        --surface: #1b2026;
+        --text: #e4e8ec;
+        --muted: #9aa4ae;
+        --border: #2c333b;
+        --accent: #8ec3f5;
+        --accent-soft: #1c2a38;
+        --code-bg: #232a31;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-padding-top: 72px; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    header.site {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    header.site .inner {
+      max-width: 860px; margin: 0 auto; padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    header.site .brand { font-weight: 700; color: var(--text); text-decoration: none; }
+    header.site nav { display: flex; gap: 4px; flex-wrap: wrap; }
+    header.site nav a {
+      color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; font-size: 15px;
+    }
+    header.site nav a:hover { color: var(--text); background: var(--surface); }
+    header.site nav a.active { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+    main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 2em; line-height: 1.2; margin: 0.4em 0 0.6em; }
+    h2 { font-size: 1.45em; margin-top: 2.2em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
+    h3 { font-size: 1.15em; margin-top: 1.8em; }
+    a { color: var(--accent); }
+    code { background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.9em; }
+    pre { background: var(--code-bg); padding: 12px; border-radius: 6px; overflow-x: auto; }
+    pre code { background: none; padding: 0; }
+    hr { border: 0; border-top: 1px solid var(--border); margin: 2em 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; display: block; overflow-x: auto; }
+    th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: var(--surface); }
+    blockquote {
+      margin: 1em 0; padding: 10px 14px; border-left: 4px solid var(--accent);
+      background: var(--accent-soft); border-radius: 0 6px 6px 0;
+    }
+    blockquote p { margin: 0.3em 0; }
+    #markdown-toc {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px 14px 14px 34px; margin: 1.5em 0;
+    }
+    #markdown-toc ul { padding-left: 20px; }
+    .shots { display: flex; gap: 12px; flex-wrap: wrap; margin: 1.2em 0; }
+    .shots figure { margin: 0; flex: 0 1 200px; text-align: center; }
+    .shots img {
+      width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border); display: block;
+    }
+    .shots figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    img { max-width: 100%; }
+    footer.site {
+      border-top: 1px solid var(--border); color: var(--muted); font-size: 14px;
+    }
+    footer.site .inner { max-width: 860px; margin: 0 auto; padding: 20px 16px; }
+    @media (max-width: 520px) {
+      .shots figure { flex-basis: calc(50% - 6px); }
+    }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <div class="inner">
+      <a class="brand" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+      <nav>
+        <a href="{{ '/' | relative_url }}"{% if page.url == '/' %} class="active"{% endif %}>User Guide</a>
+        <a href="{{ '/privacy/' | relative_url }}"{% if page.url contains '/privacy' %} class="active"{% endif %}>Privacy Policy</a>
+        <a href="https://github.com/{{ site.repository }}">GitHub</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    {{ content }}
+  </main>
+  <footer class="site">
+    <div class="inner">
+      MeshCore TEAM ·
+      <a href="{{ '/' | relative_url }}">User Guide</a> ·
+      <a href="{{ '/privacy/' | relative_url }}">Privacy Policy</a> ·
+      <a href="https://github.com/{{ site.repository }}/issues">Report an issue</a> ·
+      <a href="mailto:tmacinc090@gmail.com">tmacinc090@gmail.com</a>
+    </div>
+  </footer>
+</body>
+</html>
