@@ -273,10 +273,10 @@ Planned features and improvements (see also the [issues tracker](../../issues)):
 - ~~**Contact search, filtering, favorites, and auto-purge**~~ — shipped in v1.1.5
 - ~~**Per-channel notification modes**~~ — shipped in v1.1.5
 - ~~**Message copy/reply + new-message indicator**~~ — shipped in v1.1.5
+- ~~**User alias**~~ — shipped in v1.2.0 ("your name", visible only to your team, while your radio name stays public on the mesh)
 
 ### Possible future features
 
-- **User alias** — allow members to use an alias on the mesh, maintaining privacy outside of their private group.
 - **Multiple group handling with tagging** — manage membership in multiple groups with tagging/filtering to keep conversations organized.
 
 ## Troubleshooting
