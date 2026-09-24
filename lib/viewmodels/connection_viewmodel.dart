@@ -1359,6 +1359,9 @@ class ConnectionViewModel extends ChangeNotifier {
         _database.companionDevicesDao.updateCompanionDevice(
           CompanionDevicesCompanion(
             publicKeyHex: drift.Value(publicKeyHex),
+            // Follows renames: PeerDirectory matches our own radios by name
+            // when a sender can't be tied to a key.
+            name: drift.Value(_deviceCapabilities!.name),
             lastConnected: drift.Value(now),
             connectionCount: drift.Value(existing.connectionCount + 1),
           ),

@@ -14,6 +14,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/models/capability_message.dart';
+import 'package:meshcore_team/services/app_identity_service.dart';
 import 'package:meshcore_team/services/peer_directory.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,6 +72,7 @@ void main() {
     peers = PeerDirectory(
       peersDao: db.peersDao,
       contactsDao: db.contactsDao,
+      companionDevicesDao: db.companionDevicesDao,
       settings: SettingsService(await SharedPreferences.getInstance()),
     );
     await peers.start();
@@ -417,6 +419,7 @@ void main() {
       final directory = PeerDirectory(
         peersDao: db.peersDao,
         contactsDao: db.contactsDao,
+        companionDevicesDao: db.companionDevicesDao,
         settings: settings,
       );
       await directory.start();
@@ -434,6 +437,125 @@ void main() {
       expect(benNow.radioPublicKey, isNull);
       expect(benNow.alias, 'Ben');
       expect(benNow.appIdentityId, ben);
+      directory.dispose();
+    });
+  });
+
+  group('our own radios', () {
+    const ben = '1a2b3c4d5e6f7788';
+
+    // Radio 1 is one this phone used before; radio 2 is the one it carries
+    // now. Radio 1's buffered traffic comes back through radio 2 on connect.
+    Future<PeerDirectory> phoneOnRadio2({String? ownAppId}) async {
+      for (final seed in [1, 2]) {
+        await db.companionDevicesDao
+            .insertCompanionDevice(CompanionDevicesCompanion.insert(
+          publicKeyHex: _hexKey(_key(seed)),
+          name: seed == 1 ? 'MyOldRadio' : 'MyRadio',
+          firstConnected: 0,
+          lastConnected: 0,
+        ));
+      }
+      final settings = SettingsService(await SharedPreferences.getInstance());
+      await settings.setCurrentCompanionPublicKey(_hexKey(_key(2)));
+      final directory = PeerDirectory(
+        peersDao: db.peersDao,
+        contactsDao: db.contactsDao,
+        companionDevicesDao: db.companionDevicesDao,
+        settings: settings,
+        appIdentity: ownAppId == null ? null : _FixedIdentity(ownAppId),
+      );
+      await directory.start();
+      return directory;
+    }
+
+    test('our own beacon, relayed back by the radio we moved to, is ignored',
+        () async {
+      final directory = await phoneOnRadio2();
+
+      // The old radio adverts, so the new one holds a contact for it.
+      expect(
+        directory.isOwnRadioName('MyOldRadio', [_contact('MyOldRadio', 1)]),
+        isTrue,
+      );
+      // And with radio auto-add off there is no contact, only the name.
+      expect(directory.isOwnRadioName('MyOldRadio', const []), isTrue);
+      // A teammate is still a teammate.
+      expect(directory.isOwnRadioName('Scout', [_contact('Scout', 7)]),
+          isFalse);
+      directory.dispose();
+    });
+
+    test('a teammate whose radio happens to share the name is not us',
+        () async {
+      final directory = await phoneOnRadio2();
+
+      // Same name, a key that was never ours: a different radio, a person.
+      expect(directory.isOwnRadioName('MyOldRadio', [_contact('MyOldRadio', 7)]),
+          isFalse);
+      directory.dispose();
+    });
+
+    test('a ghost of ourselves is dropped when the directory loads', () async {
+      // What the bug left behind: a peer standing on the radio we used to
+      // carry, holding our own app id and a position on the map.
+      final id = await db.peersDao.insertPeer(PeersCompanion.insert(
+        radioPublicKey: Value(_key(1)),
+        radioName: const Value('MyOldRadio'),
+        appIdentityId: const Value(ben),
+        firstSeen: 0,
+        lastSeen: 0,
+      ));
+      await db.peersDao.upsertLocation(PeerLocationsCompanion.insert(
+        peerId: Value(id),
+        lastSeen: 0,
+        lastChannelHash: _trackingChannelHash,
+        lastPathLen: 0,
+        firstSeen: 0,
+      ));
+
+      final directory = await phoneOnRadio2(ownAppId: ben);
+
+      expect(directory.byId(id), isNull);
+      expect(await db.peersDao.getPeer(id), isNull);
+      expect(await db.peersDao.getLocation(id), isNull);
+      directory.dispose();
+    });
+
+    test('a nameless ghost on a radio we carried is dropped too', () async {
+      final id = await db.peersDao.insertPeer(PeersCompanion.insert(
+        radioPublicKey: Value(_key(1)),
+        radioName: const Value('MyOldRadio'),
+        firstSeen: 0,
+        lastSeen: 0,
+      ));
+
+      final directory = await phoneOnRadio2();
+
+      expect(await db.peersDao.getPeer(id), isNull);
+      directory.dispose();
+    });
+
+    test('a teammate now carrying our old radio keeps everything but it',
+        () async {
+      final id = await db.peersDao.insertPeer(PeersCompanion.insert(
+        radioPublicKey: Value(_key(1)),
+        radioName: const Value('MyOldRadio'),
+        appIdentityId: const Value(ben),
+        alias: const Value('Ben'),
+        firstSeen: 0,
+        lastSeen: 0,
+      ));
+
+      // Our own app id is a different one, so Ben is someone else.
+      final directory = await phoneOnRadio2(ownAppId: '99887766554433aa');
+
+      final benNow = await db.peersDao.getPeer(id);
+      expect(benNow, isNotNull);
+      expect(benNow!.alias, 'Ben');
+      expect(benNow.radioPublicKey, isNull);
+      // Their traffic is theirs, not ours, even under our old radio's name.
+      expect(directory.isOwnRadioName('MyOldRadio', const []), isFalse);
       directory.dispose();
     });
   });
@@ -487,3 +609,21 @@ void main() {
     });
   });
 }
+
+/// Stands in for the real Ed25519 identity: only the hex app id matters here.
+class _FixedIdentity implements AppIdentityService {
+  final String _hex;
+
+  _FixedIdentity(this._hex);
+
+  @override
+  Uint8List get uploaderId => Uint8List.fromList([
+        for (var i = 0; i < _hex.length; i += 2)
+          int.parse(_hex.substring(i, i + 2), radix: 16),
+      ]);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      super.noSuchMethod(invocation);
+}
+

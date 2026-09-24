@@ -5,10 +5,12 @@ import 'dart:async';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import 'package:meshcore_team/database/daos/companion_devices_dao.dart';
 import 'package:meshcore_team/database/daos/contacts_dao.dart';
 import 'package:meshcore_team/database/daos/peers_dao.dart';
 import 'package:meshcore_team/database/database.dart';
 import 'package:meshcore_team/models/capability_message.dart';
+import 'package:meshcore_team/services/app_identity_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 
 enum PeerResolutionState {
@@ -59,7 +61,9 @@ class PeerResolution {
 class PeerDirectory extends ChangeNotifier {
   final PeersDao _dao;
   final ContactsDao _contactsDao;
+  final CompanionDevicesDao _companionsDao;
   final SettingsService _settings;
+  final AppIdentityService? _appIdentity;
 
   final Map<int, PeerData> _byId = {};
   bool _loaded = false;
@@ -72,13 +76,27 @@ class PeerDirectory extends ChangeNotifier {
   StreamSubscription<List<ContactData>>? _contactsSub;
   String? _activeCompanionKey;
 
+  /// Every radio this phone has ever been the companion of, by full key hex.
+  final Set<String> _ownRadioKeys = {};
+
+  /// The names those radios advertise. Used only when a radio name can't be
+  /// tied to a key, which is the case for a sender we hold no contact for.
+  final Set<String> _ownRadioNames = {};
+
+  /// This install's `#CAP:` app id, when secure storage gave us one.
+  String? _ownAppId;
+
   PeerDirectory({
     required PeersDao peersDao,
     required ContactsDao contactsDao,
+    required CompanionDevicesDao companionDevicesDao,
     required SettingsService settings,
+    AppIdentityService? appIdentity,
   })  : _dao = peersDao,
         _contactsDao = contactsDao,
-        _settings = settings;
+        _companionsDao = companionDevicesDao,
+        _settings = settings,
+        _appIdentity = appIdentity;
 
   Future<void> start() async {
     if (_loaded) return;
@@ -86,6 +104,9 @@ class PeerDirectory extends ChangeNotifier {
       _byId[p.id] = p;
     }
     _loaded = true;
+    _ownAppId = _readOwnAppId();
+    await _refreshOwnRadios();
+    await _reconcileOwnRadios();
     _companionSub =
         _settings.currentCompanionPublicKeyStream.listen(_switchCompanion);
     _switchCompanion(_settings.settings.currentCompanionPublicKey);
@@ -160,6 +181,43 @@ class PeerDirectory extends ChangeNotifier {
       return prefix.substring(0, 8).toUpperCase();
     }
     return '#${peer.id}';
+  }
+
+  /// True when team traffic signed "[radioName]" came from this phone.
+  ///
+  /// A radio with no phone attached buffers the channel traffic it hears,
+  /// including ours. Connecting to it hands all of that back, so our own
+  /// beacons arrive looking like a teammate on the radio we just left.
+  ///
+  /// [radioContacts] are the contacts on the current radio. When one of them
+  /// carries the name, its key settles it either way. When none does, the
+  /// name is all there is, and a name we have advertised ourselves is taken
+  /// as ours.
+  bool isOwnRadioName(String radioName, List<ContactData> radioContacts) {
+    // Another install has told us it is on this radio, so it isn't ours any
+    // more: we gave it away, or someone rebuilt it under the same name.
+    if (_foreignAppOn(radioName)) return false;
+    var named = false;
+    for (final c in radioContacts) {
+      if ((c.name ?? '') != radioName) continue;
+      if (_ownRadioKeys.contains(_hex(c.publicKey))) return true;
+      named = true;
+    }
+    return named ? false : _ownRadioNames.contains(radioName);
+  }
+
+  /// True when [appId] from a `#CAP:` is this install's own.
+  bool isOwnAppId(String? appId) =>
+      appId != null && _ownAppId != null && appId.toLowerCase() == _ownAppId;
+
+  /// True when some other install currently answers to [radioName].
+  bool _foreignAppOn(String radioName) {
+    for (final p in _byId.values) {
+      if (p.radioName != radioName) continue;
+      final app = p.appIdentityId;
+      if (app != null && app != _ownAppId) return true;
+    }
+    return false;
   }
 
   // --- Resolution ---
@@ -452,30 +510,87 @@ class PeerDirectory extends ChangeNotifier {
     _contactsSub?.cancel();
     _contactsSub = null;
     if (companionKey == null || companionKey.isEmpty) return;
-    unawaited(_releaseOwnRadio(companionKey));
+    unawaited(_refreshOwnRadios().then((_) => _reconcileOwnRadios()));
     _contactsSub = _contactsDao
         .watchContactsByCompanion(companionKey)
         .listen((contacts) => unawaited(_onRadioContacts(contacts)));
   }
 
-  /// A teammate's old radio can be the one this phone just connected to.
-  /// It is ours now: they keep their history and last position, without it.
-  Future<void> _releaseOwnRadio(String companionKey) {
+  /// Reloads the set of radios this phone has been the companion of.
+  Future<void> _refreshOwnRadios() async {
+    final devices = await _companionsDao.getAllCompanionDevices();
+    _ownRadioKeys
+      ..clear()
+      ..addAll(devices.map((d) => d.publicKeyHex.toLowerCase()));
+    _ownRadioNames
+      ..clear()
+      ..addAll(devices.map((d) => d.name).where((n) => n.isNotEmpty));
+    final current = _settings.settings.currentCompanionPublicKey;
+    if (current != null && current.isNotEmpty) {
+      _ownRadioKeys.add(current.toLowerCase());
+    }
+  }
+
+  /// Makes sure no peer is one of our own radios, or us.
+  ///
+  /// Whoever was on the radio this phone just picked up is still a person:
+  /// they keep their history and last position, without the radio. So is
+  /// anyone whose own install we have heard from. What goes is a record with
+  /// no identity but one of the radios we have carried, or one carrying our
+  /// own app id: both are our own traffic, heard back through another radio.
+  Future<void> _reconcileOwnRadios() {
     return _serialized(() async {
-      final wanted = companionKey.toLowerCase();
+      final current =
+          _settings.settings.currentCompanionPublicKey?.toLowerCase();
       for (final p in _byId.values.toList()) {
         final key = p.radioPublicKey;
-        if (key == null || _hex(key) != wanted) continue;
-        debugPrint(
-            '[Peers] 📻 ${displayName(p)} was using this radio; kept without it');
-        await _update(
-            p.id,
-            const PeersCompanion(
-              radioPublicKey: Value(null),
-              radioKeyPrefix: Value(null),
-            ));
+        final keyHex = key == null ? null : _hex(key);
+        final ownKey = keyHex != null && _ownRadioKeys.contains(keyHex);
+        final ownName =
+            p.radioName != null && _ownRadioNames.contains(p.radioName);
+        final theirApp =
+            p.appIdentityId != null && p.appIdentityId != _ownAppId;
+
+        if (_ownAppId != null && p.appIdentityId == _ownAppId) {
+          debugPrint('[Peers] 👤 Removing a record of ourselves '
+              '(peer ${p.id}, "${p.radioName}")');
+          await _delete(p);
+          continue;
+        }
+
+        if (ownKey && (keyHex == current || theirApp)) {
+          debugPrint('[Peers] 📻 ${displayName(p)} was using one of our '
+              'radios; kept without it');
+          await _update(
+              p.id,
+              const PeersCompanion(
+                radioPublicKey: Value(null),
+                radioKeyPrefix: Value(null),
+              ));
+          continue;
+        }
+
+        if (theirApp) continue;
+
+        if (ownKey || (key == null && ownName)) {
+          debugPrint('[Peers] 👤 Dropping our own radio "${p.radioName}" '
+              'from the group (peer ${p.id})');
+          await _delete(p);
+        }
       }
     });
+  }
+
+  String? _readOwnAppId() {
+    final identity = _appIdentity;
+    if (identity == null) return null;
+    try {
+      return identity.uploaderId
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join();
+    } on StateError {
+      return null;
+    }
   }
 
   /// Runs the radio-contact sync directly; the app drives it from the
@@ -615,6 +730,12 @@ class PeerDirectory extends ChangeNotifier {
     _byId[id] = row;
     notifyListeners();
     return row;
+  }
+
+  Future<void> _delete(PeerData peer) async {
+    await _dao.deletePeer(peer.id);
+    _byId.remove(peer.id);
+    notifyListeners();
   }
 
   Future<PeerData> _update(int id, PeersCompanion changes) async {

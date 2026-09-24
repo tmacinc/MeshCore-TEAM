@@ -36,6 +36,19 @@ class PeersDao extends DatabaseAccessor<AppDatabase> with _$PeersDaoMixin {
   Future<void> updatePeer(int id, PeersCompanion changes) =>
       (update(peers)..where((t) => t.id.equals(id))).write(changes);
 
+  /// Removes a peer and everything hanging off it. Messages keep their text
+  /// but lose the sender link, since the peer they named is gone.
+  Future<void> deletePeer(int id) {
+    return transaction(() async {
+      await (delete(peerPositionHistory)..where((t) => t.peerId.equals(id)))
+          .go();
+      await (delete(peerLocations)..where((t) => t.peerId.equals(id))).go();
+      await (update(db.messages)..where((t) => t.senderPeerId.equals(id)))
+          .write(const MessagesCompanion(senderPeerId: Value(null)));
+      await (delete(peers)..where((t) => t.id.equals(id))).go();
+    });
+  }
+
   /// Moves everything that references [dropId] onto [keepId], then deletes
   /// [dropId]. The newer of the two locations is kept.
   Future<void> mergePeers({required int keepId, required int dropId}) {

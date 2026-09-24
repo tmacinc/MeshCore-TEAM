@@ -1390,10 +1390,19 @@ class MessageRepository {
           '[Capability] ⚠️ Failed to parse #CAP payload from "$senderName"');
       return;
     }
+    // Settles it whatever radio it came in on: the advert is our own.
+    if (_peers.isOwnAppId(msg.appId)) {
+      debugPrint(
+          '[Capability] ↩️ Ignoring our own #CAP, relayed back by "$senderName"');
+      return;
+    }
     final sender = await _resolveTeamSender(
       senderName: senderName,
       receivedChannelIdx: receivedChannelIdx,
       logTag: 'Capability',
+      // An app id that isn't ours settles who is on that radio, even when the
+      // radio is one we used to carry: they have it now.
+      senderProvenForeign: msg.appId != null,
     );
     if (sender == null) return;
 
@@ -1427,6 +1436,7 @@ class MessageRepository {
     required String senderName,
     required int receivedChannelIdx,
     required String logTag,
+    bool senderProvenForeign = false,
   }) async {
     final companionKey = _settingsService.settings.currentCompanionPublicKey;
     if (companionKey == null || companionKey.isEmpty) {
@@ -1450,6 +1460,16 @@ class MessageRepository {
     }
 
     final contacts = await _contactsDao.getContactsByCompanion(companionKey);
+
+    // Our own beacon, buffered by this radio while it had no phone and handed
+    // back on connect. Resolving it would put us in the group as the radio we
+    // used to carry.
+    if (!senderProvenForeign && _peers.isOwnRadioName(senderName, contacts)) {
+      debugPrint(
+          '[$logTag] ↩️ Ignoring our own traffic, relayed back by "$senderName"');
+      return null;
+    }
+
     final resolution = await _peers.resolveChannelSender(
       radioName: senderName,
       radioContacts: contacts,

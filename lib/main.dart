@@ -230,10 +230,22 @@ Future<void> _runAppStartup() async {
     // Legacy name-keyed capability cache, replaced by the peers table.
     await prefs.remove('contact_capability_state_v1');
 
+    // This install's identity: sent in #CAP: so the team knows this phone
+    // across radio swaps, and the same ID Team Link uses. PeerDirectory needs
+    // it to recognise our own adverts coming back to us.
+    final appIdentityService = AppIdentityService();
+    try {
+      await appIdentityService.ensureInitialized();
+    } catch (e) {
+      debugPrint('⚠️ App identity unavailable: $e');
+    }
+
     final peerDirectory = PeerDirectory(
       peersDao: database.peersDao,
       contactsDao: database.contactsDao,
+      companionDevicesDao: database.companionDevicesDao,
       settings: settingsService,
+      appIdentity: appIdentityService,
     );
     await peerDirectory.start();
     messageNotificationService.peers = peerDirectory;
@@ -297,15 +309,6 @@ Future<void> _runAppStartup() async {
       neighborTracker: neighborTracker,
       forwardingPolicy: forwardingPolicyService,
     )..start();
-
-    // This install's identity: sent in #CAP: so the team knows this phone
-    // across radio swaps, and the same ID Team Link uses.
-    final appIdentityService = AppIdentityService();
-    try {
-      await appIdentityService.ensureInitialized();
-    } catch (e) {
-      debugPrint('⚠️ App identity unavailable: $e');
-    }
 
     final capabilityPublisher = CapabilityPublisher(
       settings: settingsService,
