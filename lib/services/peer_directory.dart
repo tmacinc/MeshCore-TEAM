@@ -193,29 +193,52 @@ class PeerDirectory extends ChangeNotifier {
   /// carries the name, its key settles it either way. When none does, the
   /// name is all there is, and a name we have advertised ourselves is taken
   /// as ours.
+  ///
+  /// Either way, a radio another install has told us it now carries is
+  /// theirs: we gave it away, or swapped with them.
   bool isOwnRadioName(String radioName, List<ContactData> radioContacts) {
-    // Another install has told us it is on this radio, so it isn't ours any
-    // more: we gave it away, or someone rebuilt it under the same name.
-    if (_foreignAppOn(radioName)) return false;
     var named = false;
     for (final c in radioContacts) {
       if ((c.name ?? '') != radioName) continue;
-      if (_ownRadioKeys.contains(_hex(c.publicKey))) return true;
       named = true;
+      if (!_ownRadioKeys.contains(_hex(c.publicKey))) continue;
+      if (_heldByAnotherApp(c.publicKey)) continue;
+      return true;
     }
-    return named ? false : _ownRadioNames.contains(radioName);
+    if (named) return false;
+    return _ownRadioNames.contains(radioName) &&
+        !_anotherAppHoldsName(radioName);
   }
 
   /// True when [appId] from a `#CAP:` is this install's own.
   bool isOwnAppId(String? appId) =>
       appId != null && _ownAppId != null && appId.toLowerCase() == _ownAppId;
 
-  /// True when some other install currently answers to [radioName].
-  bool _foreignAppOn(String radioName) {
+  bool _isForeignApp(PeerData p) =>
+      p.appIdentityId != null && p.appIdentityId != _ownAppId;
+
+  /// True when another install carries the radio with [key] now.
+  bool _heldByAnotherApp(List<int> key) {
+    final prefix = _hex(key.take(6));
     for (final p in _byId.values) {
-      if (p.radioName != radioName) continue;
-      final app = p.appIdentityId;
-      if (app != null && app != _ownAppId) return true;
+      if (!_isForeignApp(p)) continue;
+      final k = p.radioPublicKey;
+      if (k != null ? _hex(k.take(6)) == prefix : p.radioKeyPrefix == prefix) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// True when another install carries a radio called [radioName] now.
+  ///
+  /// Someone who has lost their radio keeps its name on record, so only
+  /// peers still holding a radio count: otherwise a teammate whose radio
+  /// we took would make our own traffic under its name look like theirs.
+  bool _anotherAppHoldsName(String radioName) {
+    for (final p in _byId.values) {
+      if (p.radioName != radioName || !_isForeignApp(p)) continue;
+      if (p.radioPublicKey != null || p.radioKeyPrefix != null) return true;
     }
     return false;
   }
@@ -534,10 +557,12 @@ class PeerDirectory extends ChangeNotifier {
   /// Makes sure no peer is one of our own radios, or us.
   ///
   /// Whoever was on the radio this phone just picked up is still a person:
-  /// they keep their history and last position, without the radio. So is
-  /// anyone whose own install we have heard from. What goes is a record with
-  /// no identity but one of the radios we have carried, or one carrying our
-  /// own app id: both are our own traffic, heard back through another radio.
+  /// they keep their history and last position, without the radio. Anyone
+  /// whose own install we have heard from keeps a radio we used to carry:
+  /// it is theirs now, and taking it away would split them in two on their
+  /// next beacon. What goes is a record with no identity but one of the
+  /// radios we have carried, or one carrying our own app id: both are our
+  /// own traffic, heard back through another radio.
   Future<void> _reconcileOwnRadios() {
     return _serialized(() async {
       final current =
@@ -548,8 +573,7 @@ class PeerDirectory extends ChangeNotifier {
         final ownKey = keyHex != null && _ownRadioKeys.contains(keyHex);
         final ownName =
             p.radioName != null && _ownRadioNames.contains(p.radioName);
-        final theirApp =
-            p.appIdentityId != null && p.appIdentityId != _ownAppId;
+        final theirApp = _isForeignApp(p);
 
         if (_ownAppId != null && p.appIdentityId == _ownAppId) {
           debugPrint('[Peers] 👤 Removing a record of ourselves '
@@ -558,9 +582,9 @@ class PeerDirectory extends ChangeNotifier {
           continue;
         }
 
-        if (ownKey && (keyHex == current || theirApp)) {
-          debugPrint('[Peers] 📻 ${displayName(p)} was using one of our '
-              'radios; kept without it');
+        if (keyHex != null && keyHex == current) {
+          debugPrint('[Peers] 📻 ${displayName(p)} was using this radio; '
+              'kept without it');
           await _update(
               p.id,
               const PeersCompanion(

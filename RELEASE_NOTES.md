@@ -22,6 +22,7 @@
 - Location tracking can no longer be set to a hashtag channel, whose key anyone can derive from its name; an existing one is cleared.
 - Telemetry senders are matched to contacts by exact name only. The old fuzzy match could attach someone to an unrelated contact, overwriting its name and position and suppressing discovery.
 - Changing radio no longer puts you on your own map. A radio with no phone attached stores the team traffic it hears, including yours, and hands it over when you connect to it; your own beacons were being taken for a teammate on the radio you had just left. Any such copy of you already in the group is removed.
+- A teammate carrying a radio you once used, including after swapping radios with you, no longer splits into a second contact under the radio's name while their named one goes stale, and their beacons are no longer mistaken for your own. A teammate who turns up on a radio you already have a contact for is asked who they are, instead of staying unnamed until their hourly check-in.
 
 # Release Notes — v1.1.5
 

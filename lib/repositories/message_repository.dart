@@ -1487,6 +1487,11 @@ class MessageRepository {
       );
     } else if (resolution.isOnRadio) {
       _discovery.remove(senderName)?.timer?.cancel();
+      if (resolution.peer.appIdentityId == null &&
+          _isTrackingChannel(channel)) {
+        _requestIdentity(
+            senderName: senderName, channel: channel, peer: resolution.peer);
+      }
     }
     _pruneDiscovery();
 
@@ -2205,6 +2210,52 @@ class MessageRepository {
               '[Discovery] 📤 Advertising ourselves for "$senderName"');
           await _bleService.sendSelfAdvert();
         }
+      },
+    );
+  }
+
+  /// How often one sender is asked for its `#CAP:`. Older installs never send
+  /// an app id, so the question can go unanswered; this bounds the airtime.
+  static const Duration _identityRequestInterval = Duration(minutes: 30);
+
+  final Map<int, DateTime> _identityRequestedAt = {};
+
+  /// Asks a sender we can reach, but whose phone we don't know, for its
+  /// `#CAP:`.
+  ///
+  /// A teammate who moves to a radio we already hold a contact for resolves
+  /// straight to that contact, as a new peer with no alias, so discovery
+  /// never runs for them. Their CAP carries the app id that folds that peer
+  /// back into the person they are. They publish one shortly after
+  /// connecting, but if we missed it the next is up to an hour away.
+  void _requestIdentity({
+    required String senderName,
+    required ChannelData channel,
+    required PeerData peer,
+  }) {
+    final now = DateTime.now();
+    final last = _identityRequestedAt[peer.id];
+    if (last != null && now.difference(last) < _identityRequestInterval) {
+      return;
+    }
+    _identityRequestedAt[peer.id] = now;
+
+    Timer(
+      Duration(milliseconds: _random.nextInt(_discoveryJitter.inMilliseconds)),
+      () async {
+        // Their CAP may have landed during the delay.
+        if (_peers.byId(peer.id)?.appIdentityId != null) return;
+        final key = peer.radioPublicKey;
+        final request = CapabilityRequest(
+          targetRadioName: senderName,
+          targetKeyPrefix: key == null
+              ? null
+              : _bytesToHex(Uint8List.fromList(key.take(6).toList())),
+        );
+        debugPrint(
+            '[Discovery] 🪪 Asking "$senderName" who they are: ${request.encode()}');
+        await _bleService.sendChannelMessage(
+            channel.channelIndex, request.encode());
       },
     );
   }

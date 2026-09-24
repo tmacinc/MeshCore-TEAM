@@ -536,10 +536,10 @@ void main() {
       directory.dispose();
     });
 
-    test('a teammate now carrying our old radio keeps everything but it',
-        () async {
+    test('a teammate now carrying our old radio keeps it', () async {
       final id = await db.peersDao.insertPeer(PeersCompanion.insert(
         radioPublicKey: Value(_key(1)),
+        radioKeyPrefix: Value(_hexPrefix(_key(1))),
         radioName: const Value('MyOldRadio'),
         appIdentityId: const Value(ben),
         alias: const Value('Ben'),
@@ -553,9 +553,61 @@ void main() {
       final benNow = await db.peersDao.getPeer(id);
       expect(benNow, isNotNull);
       expect(benNow!.alias, 'Ben');
-      expect(benNow.radioPublicKey, isNull);
-      // Their traffic is theirs, not ours, even under our old radio's name.
+      expect(benNow.radioPublicKey, _key(1));
+      // Their traffic is theirs, not ours, with or without the contact.
       expect(directory.isOwnRadioName('MyOldRadio', const []), isFalse);
+      expect(
+        directory.isOwnRadioName('MyOldRadio', [_contact('MyOldRadio', 1)]),
+        isFalse,
+      );
+
+      // And their next beacon finds them, not a new peer under the radio name.
+      final next = await directory.resolveChannelSender(
+        radioName: 'MyOldRadio',
+        radioContacts: [_contact('MyOldRadio', 1)],
+        channelHash: _trackingChannelHash,
+        isTeamChannel: true,
+      );
+      expect(next.peer.id, id);
+      expect(directory.all.length, 1);
+      directory.dispose();
+    });
+
+    test('a teammate who told us they moved to our old radio is not us',
+        () async {
+      // Ben's CAP named radio 1, whose advert hasn't reached us yet.
+      await db.peersDao.insertPeer(PeersCompanion.insert(
+        radioKeyPrefix: Value(_hexPrefix(_key(1))),
+        radioName: const Value('MyOldRadio'),
+        appIdentityId: const Value(ben),
+        firstSeen: 0,
+        lastSeen: 0,
+      ));
+
+      final directory = await phoneOnRadio2(ownAppId: '99887766554433aa');
+
+      expect(
+        directory.isOwnRadioName('MyOldRadio', [_contact('MyOldRadio', 1)]),
+        isFalse,
+      );
+      directory.dispose();
+    });
+
+    test('a teammate whose radio we took no longer answers to its name',
+        () async {
+      // Ben handed us radio 1 and hasn't been heard since. His record keeps
+      // its name, but not the radio.
+      await db.peersDao.insertPeer(PeersCompanion.insert(
+        radioName: const Value('MyOldRadio'),
+        appIdentityId: const Value(ben),
+        firstSeen: 0,
+        lastSeen: 0,
+      ));
+
+      final directory = await phoneOnRadio2(ownAppId: '99887766554433aa');
+
+      // Our own traffic under that name, handed back by the old radio.
+      expect(directory.isOwnRadioName('MyOldRadio', const []), isTrue);
       directory.dispose();
     });
   });
