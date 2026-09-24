@@ -309,6 +309,13 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
             const SizedBox(height: 24),
 
+            // Prominent location disclosure. Play policy requires this to
+            // spell out collection, use, background access and sharing in
+            // the app itself, before the first OS location prompt.
+            _buildLocationDisclosure(l10n),
+
+            const SizedBox(height: 24),
+
             // Primary action (show before any OS prompts)
             if (!_isRequesting && !_permissionsDenied) ...[
               ElevatedButton(
@@ -387,6 +394,49 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             ],
 
             const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Prominent location disclosure shown before any permission prompt.
+  Widget _buildLocationDisclosure(AppLocalizations l10n) {
+    final theme = Theme.of(context);
+    final bodyStyle = theme.textTheme.bodyMedium;
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.my_location,
+                    size: 24, color: theme.colorScheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.locationDisclosureTitle,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(l10n.locationDisclosureUse, style: bodyStyle),
+            const SizedBox(height: 8),
+            Text(l10n.locationDisclosureBackground, style: bodyStyle),
+            const SizedBox(height: 8),
+            Text(l10n.locationDisclosureSharing, style: bodyStyle),
           ],
         ),
       ),

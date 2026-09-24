@@ -1319,6 +1319,21 @@ class AppLocalizationsNl extends AppLocalizations {
       'Je kunt dit later wijzigen in de systeeminstellingen.';
 
   @override
+  String get locationDisclosureTitle => 'Hoe MeshCore TEAM je locatie gebruikt';
+
+  @override
+  String get locationDisclosureUse =>
+      'MeshCore TEAM verzamelt de locatie van je apparaat om je op de kaart te tonen, je eigen spoor en waypoints vast te leggen en — zodra je locatiedeling voor een teamkanaal inschakelt — je positie naar de leden van dat kanaal te sturen.';
+
+  @override
+  String get locationDisclosureBackground =>
+      'Als je locatie op de achtergrond toestaat, wordt je locatie ook verzameld terwijl de app gesloten of niet in gebruik is, zodat je team je blijft zien met het scherm uit.';
+
+  @override
+  String get locationDisclosureSharing =>
+      'Je locatie gaat alleen via je mesh-radio naar je team. Ze wordt niet naar een server geüpload, niet met ons of anderen gedeeld en nooit voor advertenties gebruikt. Je kunt locatiedeling altijd uitzetten in Instellingen.';
+
+  @override
   String get requestingPermissions => 'Machtigingen aanvragen...';
 
   @override

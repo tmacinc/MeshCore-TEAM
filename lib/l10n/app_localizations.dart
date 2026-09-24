@@ -2352,6 +2352,30 @@ abstract class AppLocalizations {
   /// **'You can change these later in system settings.'**
   String get changePermissionsLaterHint;
 
+  /// Heading of the prominent location disclosure on the first-run permissions screen
+  ///
+  /// In en, this message translates to:
+  /// **'How MeshCore TEAM uses your location'**
+  String get locationDisclosureTitle;
+
+  /// Prominent disclosure: what location data is collected and what it is used for
+  ///
+  /// In en, this message translates to:
+  /// **'MeshCore TEAM collects your device\'s location to show where you are on the map, to record your own track and waypoints, and — once you turn on location sharing for a team channel — to send your position to the members of that channel.'**
+  String get locationDisclosureUse;
+
+  /// Prominent disclosure: background/closed-app location collection
+  ///
+  /// In en, this message translates to:
+  /// **'If you allow background location, your location is also collected while the app is closed or not in use, so your team keeps seeing where you are while your screen is off.'**
+  String get locationDisclosureBackground;
+
+  /// Prominent disclosure: who location data is shared with and how to turn it off
+  ///
+  /// In en, this message translates to:
+  /// **'Your location is sent over your mesh radio to your team only. It is not uploaded to a server, not shared with us or anyone else, and never used for advertising. You can turn location sharing off at any time in Settings.'**
+  String get locationDisclosureSharing;
+
   /// No description provided for @requestingPermissions.
   ///
   /// In en, this message translates to:

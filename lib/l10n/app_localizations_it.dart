@@ -1323,6 +1323,22 @@ class AppLocalizationsIt extends AppLocalizations {
       'Puoi modificarle in seguito nelle impostazioni di sistema.';
 
   @override
+  String get locationDisclosureTitle =>
+      'Come MeshCore TEAM usa la tua posizione';
+
+  @override
+  String get locationDisclosureUse =>
+      'MeshCore TEAM raccoglie la posizione del tuo dispositivo per mostrare dove ti trovi sulla mappa, registrare la tua traccia e i tuoi waypoint e — quando attivi la condivisione della posizione su un canale del team — inviare la tua posizione ai membri di quel canale.';
+
+  @override
+  String get locationDisclosureBackground =>
+      'Se consenti la posizione in background, viene raccolta anche mentre l\'app è chiusa o non in uso, così il tuo team continua a vedere dove sei a schermo spento.';
+
+  @override
+  String get locationDisclosureSharing =>
+      'La tua posizione viene inviata solo al tuo team tramite la radio mesh. Non viene caricata su un server, non viene condivisa con noi o con terzi e non viene mai usata per la pubblicità. Puoi disattivare la condivisione della posizione in qualsiasi momento nelle Impostazioni.';
+
+  @override
   String get requestingPermissions => 'Richiesta autorizzazioni...';
 
   @override

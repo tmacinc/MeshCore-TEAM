@@ -1303,6 +1303,22 @@ class AppLocalizationsDe extends AppLocalizations {
       'Du kannst dies später in den Systemeinstellungen ändern.';
 
   @override
+  String get locationDisclosureTitle =>
+      'So verwendet MeshCore TEAM deinen Standort';
+
+  @override
+  String get locationDisclosureUse =>
+      'MeshCore TEAM erfasst den Standort deines Geräts, um dich auf der Karte anzuzeigen, deine eigene Spur und Wegpunkte aufzuzeichnen und — sobald du die Standortfreigabe für einen Team-Kanal aktivierst — deine Position an die Mitglieder dieses Kanals zu senden.';
+
+  @override
+  String get locationDisclosureBackground =>
+      'Wenn du den Standortzugriff im Hintergrund erlaubst, wird dein Standort auch erfasst, während die App geschlossen oder nicht in Benutzung ist, damit dein Team dich weiterhin sieht, wenn dein Bildschirm aus ist.';
+
+  @override
+  String get locationDisclosureSharing =>
+      'Dein Standort wird ausschließlich über dein Mesh-Funkgerät an dein Team gesendet. Er wird nicht auf einen Server hochgeladen, nicht an uns oder Dritte weitergegeben und nie für Werbung genutzt. Du kannst die Standortfreigabe jederzeit in den Einstellungen deaktivieren.';
+
+  @override
   String get requestingPermissions => 'Berechtigungen werden angefordert ...';
 
   @override
