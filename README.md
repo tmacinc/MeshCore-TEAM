@@ -23,9 +23,9 @@ Please include device type and app version when reporting issues.
 
 ## Screenshots
 
-| Connection | Identity | Scanning | Connected radio |
-|---|---|---|---|
-| ![Connection](docs/screenshots/01-connection.png) | ![Identity](docs/screenshots/02-identity.png) | ![Scanning](docs/screenshots/03-connection2.png) | ![Connected radio](docs/screenshots/04-connection3.png) |
+| Connection | Identity | Your name | Scanning | Connected radio |
+|---|---|---|---|---|
+| ![Connection](docs/screenshots/01-connection.png) | ![Identity](docs/screenshots/02-identity.png) | ![Your name](docs/screenshots/02-setAlias.png) | ![Scanning](docs/screenshots/03-connection2.png) | ![Connected radio](docs/screenshots/04-connection3.png) |
 
 | Radio settings | Team Config menu | Team Config export | Settings: general |
 |---|---|---|---|

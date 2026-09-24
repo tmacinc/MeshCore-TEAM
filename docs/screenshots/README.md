@@ -8,6 +8,7 @@ Use this stable naming scheme so README links don’t change:
 
 - `01-connection.png` — Connection
 - `02-identity.png` — Identity
+- `02-setAlias.png` — Your name (team alias)
 - `03-connection2.png` — Scanning
 - `04-connection3.png` — Connected radio
 - `05-radiosettings.png` — Radio settings

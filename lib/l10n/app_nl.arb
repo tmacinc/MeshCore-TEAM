@@ -408,6 +408,7 @@
   "campModeDescription": "Beperkt de radio tot camp-compatibele presets en schakelt de firmware-repeatmodus in",
   "smartForwardingDescription": "Gebruik door de app beheerde slimme forwarding zolang campmodus actief is",
   "autonomousModeDescription": "Configureert autonome tracking in de firmware. Gebruikt de waarden uit de locatietracking-instellingen.",
+  "autonomousModeSettingsHint": "Wijzig interval, afstand of kanaal via App-instellingen → Locatie → Locatietracking. Deze schakelaar zet de tracking van de app niet aan.",
   "noGpsFixWarning": "Nog geen GPS-fix. Er wordt geen telemetrie verzonden totdat de radio een geldige GPS-positie heeft.",
   "txPowerWithMax": "TX-vermogen: {power} dBm (max {maxPower})",
   "invalidFrequency": "Ongeldige frequentie",

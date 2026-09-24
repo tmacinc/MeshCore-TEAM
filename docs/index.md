@@ -85,6 +85,7 @@ The app reconnects to the same radio automatically if the link drops. To stop it
 
 <div class="shots">
   <figure><img src="screenshots/02-identity.png" alt="Set Identity dialog"><figcaption>Setting the radio name</figcaption></figure>
+  <figure><img src="screenshots/02-setAlias.png" alt="Set your name dialog"><figcaption>Setting your name</figcaption></figure>
 </div>
 
 You have two names, and they're seen by different people.
