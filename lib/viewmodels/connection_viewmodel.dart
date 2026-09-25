@@ -337,6 +337,22 @@ class ConnectionViewModel extends ChangeNotifier {
         _database = database {
     // Listen to connection state changes
     _bleManager.addListener(_onConnectionStateChanged);
+
+    // On Android the native service can still be connected when the app is
+    // reopened after a swipe-away, and the manager may learn that before
+    // this view model exists. The transition to connected is then never
+    // seen, the initial sync never runs, and messages pile up on the radio.
+    // Run it now instead. Deferred to a microtask so the services wired up
+    // after this view model in main.dart exist before the sync notifies.
+    if (_bleManager.state == BleConnectionState.connected) {
+      debugPrint(
+          '[ConnectionVM] 🔗 Radio already connected at startup - scheduling initial sync');
+      scheduleMicrotask(() {
+        if (_bleManager.state == BleConnectionState.connected) {
+          _onConnectionStateChanged();
+        }
+      });
+    }
   }
 
   Future<bool> _pollAndVerifyRadioSettings({
@@ -854,7 +870,7 @@ class ConnectionViewModel extends ChangeNotifier {
     _messageRepository.beginNotificationSync();
 
     // Actively pull any queued messages now (some firmware won't emit a PUSH immediately).
-    final pulled = await _messageRepository.syncMessagesNow();
+    final pulled = await _messageRepository.syncMessagesNow(reason: 'connect');
     debugPrint(
         '[ConnectionVM] ✅ Phase 3 complete: pulled $pulled messages (listener active)');
 
@@ -928,7 +944,7 @@ class ConnectionViewModel extends ChangeNotifier {
 
     _messageRepository.startPushListener();
     _messageRepository.beginNotificationSync();
-    final pulled = await _messageRepository.syncMessagesNow();
+    final pulled = await _messageRepository.syncMessagesNow(reason: 'connect');
     debugPrint(
         '[ConnectionVM] ✅ Reconnect sync complete: pulled $pulled messages (channels skipped)');
 

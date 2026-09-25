@@ -382,7 +382,7 @@ class MessageRepository {
 
   /// Actively pull any queued messages from firmware right now.
   /// Safe to call even if the push listener is already running.
-  Future<int> syncMessagesNow() async {
+  Future<int> syncMessagesNow({String reason = 'direct'}) async {
     if (_isSyncingMessages) {
       debugPrint('[MessageSync] Message sync already in progress - skipping');
       return 0;
@@ -390,9 +390,18 @@ class MessageRepository {
 
     _isSyncingMessages = true;
     try {
-      return await _syncMessagesInternal();
+      return await _syncMessagesInternal(reason: reason);
     } finally {
       _isSyncingMessages = false;
+
+      // Pushes that arrived mid-sync can mean messages were queued after the
+      // loop's last request; run one more pass for them. Done here rather
+      // than only on push-triggered runs, so a direct call (the connect-time
+      // sync) doesn't leave them on the radio until the next push.
+      if (_syncRequestedWhileSyncing && _isListeningForPushes) {
+        _syncRequestedWhileSyncing = false;
+        _requestMessageSync(delay: Duration.zero, reason: 'TAIL($reason)');
+      }
     }
   }
 
@@ -422,27 +431,22 @@ class MessageRepository {
     _syncDebounceTimer?.cancel();
     _syncDebounceTimer = Timer(delay, () {
       _syncDebounceTimer = null;
-      unawaited(_runSyncWithTail(reason: reason));
+      unawaited(syncMessagesNow(reason: reason));
     });
-  }
-
-  Future<void> _runSyncWithTail({required String reason}) async {
-    await syncMessagesNow();
-
-    // If pushes arrived while syncing, run one more pass to avoid missing
-    // messages queued mid-sync.
-    if (_syncRequestedWhileSyncing) {
-      _syncRequestedWhileSyncing = false;
-      _requestMessageSync(delay: Duration.zero, reason: 'TAIL($reason)');
-    }
   }
 
   /// Sync messages from firmware
   /// Loops SYNC_NEXT_MESSAGE until RESP_NO_MORE_MESSAGES
-  Future<int> _syncMessagesInternal() async {
-    debugPrint('[MessageSync] 🔄 Syncing messages from firmware...');
+  Future<int> _syncMessagesInternal({required String reason}) async {
+    debugPrint('[MessageSync] 🔄 Syncing messages from firmware ($reason)...');
 
     int messageCount = 0;
+    // One timeout may be a dropped request or reply; retry once before
+    // giving up, so a single hiccup doesn't strand the rest of the queue
+    // until the next push. A late reply to the first request is still
+    // handled by the push listener, so nothing is lost by re-asking.
+    const maxConsecutiveTimeouts = 2;
+    int consecutiveTimeouts = 0;
 
     while (true) {
       final result = await _requestNextMessage(timeoutMs: 2000);
@@ -456,10 +460,14 @@ class MessageRepository {
         // No frame arrived within the timeout — the firmware never answered
         // the request (dropped write, firmware busy, or a lost notification),
         // as opposed to an explicit "no more messages" reply.
+        consecutiveTimeouts++;
         debugPrint('[MessageSync] ⏱️ TIMEOUT waiting for SYNC_NEXT_MESSAGE '
-            'response (no frame received)');
-        break;
+            'response (no frame received, '
+            '$consecutiveTimeouts/$maxConsecutiveTimeouts)');
+        if (consecutiveTimeouts >= maxConsecutiveTimeouts) break;
+        continue;
       }
+      consecutiveTimeouts = 0;
 
       if (result.noMore) {
         debugPrint('[MessageSync] ✅ No more messages (RESP_NO_MORE_MESSAGES)');

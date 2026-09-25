@@ -19,6 +19,8 @@
 - Fixed: contact discovery silently failed on radios set not to add contacts automatically.
 
 ## Fixes
+- Android: reopening the app after swiping it away while still connected no longer leaves it stuck on the connection screen, showing the radio as connected but idle with a spinner and receiving no chat or teammate locations until you disconnected and reconnected. Messages the radio held while the app was closed are now pulled in when it opens.
+- Incoming messages no longer sit on the radio waiting for the next one to arrive when they land during a sync, or when the radio is briefly slow to answer.
 - The first-run permissions screen now spells out, before any system prompt, what location data the app collects, what it is used for, that it is also collected in the background, and that it only goes to your team over the radio.
 - The Autonomous Mode hint in Radio Settings now points to the right place for tracking settings (**App Settings → Location → Location Tracking**) and is translated.
 - Location tracking can no longer be set to a hashtag channel, whose key anyone can derive from its name; an existing one is cleared.
