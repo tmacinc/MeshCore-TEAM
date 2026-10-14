@@ -1068,6 +1068,24 @@ abstract class AppLocalizations {
   /// **'Show Contact Paths'**
   String get showContactPaths;
 
+  /// No description provided for @showRepeaters.
+  ///
+  /// In en, this message translates to:
+  /// **'Show Repeaters'**
+  String get showRepeaters;
+
+  /// No description provided for @hideFromMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide from map'**
+  String get hideFromMap;
+
+  /// No description provided for @repeaterHiddenFromMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden from map. Show it again from its options in Contacts.'**
+  String get repeaterHiddenFromMap;
+
   /// No description provided for @showTrackedUserNames.
   ///
   /// In en, this message translates to:

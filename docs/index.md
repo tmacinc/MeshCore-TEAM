@@ -233,6 +233,7 @@ The map shows you, your teammates, waypoints and routes.
   - **Manage Waypoints & Routes**.
   - **Show Tracked User Names** and **Show Waypoint & Route Names** turn map labels on or off to reduce clutter.
   - **Show Contact Paths** draws a dotted trail of each teammate's recent positions.
+  - **Show Repeaters** marks the repeaters in your radio's contact list that advertise a position, as small square tower icons. A green border means your radio hears that repeater directly. Tap one for its details, to navigate to it, or to hide it from the map. To show a hidden repeater again, open its options (long-press) on the Contacts tab.
 
 **Buttons on the right**
 

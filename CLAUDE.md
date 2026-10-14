@@ -55,7 +55,7 @@ In-band protocols travel as channel text with prefixes such as `#TEL` (telemetry
 
 - **UI imports:** use `package:material_ui/material_ui.dart` / `package:cupertino_ui/cupertino_ui.dart`, not `package:flutter/material.dart` (migrated in #80).
 - **No hardcoded user-facing strings.** Add keys to `app_en.arb` **and every other locale's `.arb`**, regenerate, and use `AppLocalizations.of(context)`. Recent commits fixed missed translations, so check all 7 locales.
-- **Database changes:** bump `schemaVersion` in `database/database.dart` (currently 9), add a `from <= N && to >= N+1` step in `onUpgrade`, then regenerate with build_runner.
+- **Database changes:** bump `schemaVersion` in `database/database.dart` (currently 15), add a `from <= N && to >= N+1` step in `onUpgrade`, then regenerate with build_runner.
 - **Location streams:** every `Geolocator.getPositionStream` caller must use `buildAppLocationSettings()` from `utils/location_settings.dart`. iOS shares a single native session, so a bare `LocationSettings` breaks background tracking. See `memory/geolocator-shared-stream-background.md`.
 - **Logging:** release builds suppress `print` / `debugPrint`. Debug logging goes through `debug_log_service` (enabled in debug and `BETA` builds). Gate debug-only UI behind `kDebugMode || isBetaBuild`.
 - Platform-specific behavior (Android foreground service, battery optimization, iOS BLE lifecycle and deferred reconnect) is deliberate. Don't simplify it away without checking both platforms.

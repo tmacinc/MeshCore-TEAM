@@ -40,6 +40,10 @@ class Contacts extends Table {
   BoolColumn get isFavorite =>
       boolean().withDefault(const Constant(false))();
 
+  /// Keeps a repeater off the map's repeater layer. Sync never writes it, so
+  /// the choice survives the contact being re-synced from the radio.
+  BoolColumn get hideOnMap => boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {publicKey};
 }

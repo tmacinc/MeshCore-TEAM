@@ -18,6 +18,10 @@
 - Discovery now also asks a specific member to identify themselves, which fixes finding people who already have you, one-way links, and members who changed radio.
 - Fixed: contact discovery silently failed on radios set not to add contacts automatically.
 
+## Map
+- New **Show Repeaters** layer in the map settings (gear) menu shows the repeaters your radio knows about, wherever they've advertised a position. A green border means your radio hears it directly.
+- Tap a repeater to see its details, navigate to it, or hide it from the map. Hidden repeaters can be shown again from their options on the Contacts tab.
+
 ## Fixes
 - Android: reopening the app after swiping it away while still connected no longer leaves it stuck on the connection screen, showing the radio as connected but idle with a spinner and receiving no chat or teammate locations until you disconnected and reconnected. Messages the radio held while the app was closed are now pulled in when it opens.
 - Incoming messages no longer sit on the radio waiting for the next one to arrive when they land during a sync, or when the radio is briefly slow to answer.

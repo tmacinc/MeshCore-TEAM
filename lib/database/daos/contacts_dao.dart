@@ -206,6 +206,13 @@ class ContactsDao extends DatabaseAccessor<AppDatabase>
     ));
   }
 
+  Future<void> setHideOnMap(Uint8List publicKey, bool hideOnMap) {
+    return (update(contacts)..where((t) => t.publicKey.equals(publicKey)))
+        .write(ContactsCompanion(
+      hideOnMap: Value(hideOnMap),
+    ));
+  }
+
   /// Update battery levels
   Future<void> updateBatteryLevels(
     Uint8List publicKey, {

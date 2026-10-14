@@ -45,6 +45,7 @@ ContactData _contact(String name, int seed) => ContactData(
       isOutOfRange: false,
       isAutonomousDevice: false,
       isFavorite: false,
+      hideOnMap: false,
     );
 
 void main() {

@@ -70,6 +70,7 @@ Core user-facing features that are already implemented:
 	- Toggle name labels for tracked users and waypoints/routes to declutter the map
 	- Contact markers (when location tracking is enabled)
 		- Contact path history (dotted trail showing recent GPS fixes per contact)
+	- Repeater layer — shows the repeaters in your radio's contact list that advertise a position (green when heard directly); hide individual repeaters from the map
 		- Waypoints (create/edit/manage)
 		- Routes (create multi-point paths, edit, color-code, share via mesh)
 		- Offline map download + management

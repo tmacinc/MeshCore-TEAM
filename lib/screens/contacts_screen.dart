@@ -577,6 +577,21 @@ class ContactListTile extends StatelessWidget {
                 }
               },
             ),
+            if (contact.isRepeater &&
+                contact.latitude != null &&
+                contact.longitude != null)
+              ListTile(
+                leading: Icon(contact.hideOnMap
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined),
+                title: Text(
+                    contact.hideOnMap ? l10n.showOnMap : l10n.hideFromMap),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  await repo.setHideOnMap(
+                      contact.publicKey, !contact.hideOnMap);
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
               title: Text(

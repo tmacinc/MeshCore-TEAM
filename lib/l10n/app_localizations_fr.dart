@@ -502,6 +502,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get showContactPaths => 'Afficher les trajets des contacts';
 
   @override
+  String get showRepeaters => 'Afficher les répéteurs';
+
+  @override
+  String get hideFromMap => 'Masquer de la carte';
+
+  @override
+  String get repeaterHiddenFromMap =>
+      'Masqué de la carte. Réaffichez-le depuis ses options dans Contacts.';
+
+  @override
   String get showTrackedUserNames =>
       'Afficher les noms des utilisateurs suivis';
 

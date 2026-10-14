@@ -23,6 +23,7 @@ import 'package:meshcore_team/models/app_settings.dart';
 import 'package:meshcore_team/models/map_tile_providers.dart';
 import 'package:meshcore_team/models/route_payload.dart';
 import 'package:meshcore_team/models/waypoint.dart' as waypoint_model;
+import 'package:meshcore_team/repositories/contact_repository.dart';
 import 'package:meshcore_team/repositories/message_repository.dart';
 import 'package:meshcore_team/screens/direct_message_screen.dart';
 import 'package:meshcore_team/screens/manage_waypoints_screen.dart';
@@ -100,6 +101,10 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
 
   Set<int> _contactPathsVisible = <int>{};
   bool _pendingPathsSelectAll = false;
+
+  /// Current companion's contacts, for the repeater layer. Held so rebuilds
+  /// don't resubscribe.
+  Stream<List<ContactData>>? _contactsStream;
 
   LatLng? _navTarget;
   String _navTargetName = '';
@@ -649,6 +654,78 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
               const SizedBox(height: 8),
             ],
           ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showRepeaterActions(ContactData repeater) {
+    final l10n = AppLocalizations.of(context)!;
+    final name = (repeater.name != null && repeater.name!.trim().isNotEmpty)
+        ? repeater.name!.trim()
+        : repeater.publicKey
+            .take(4)
+            .map((b) => b.toRadixString(16).padLeft(2, '0'))
+            .join();
+    final point = LatLng(repeater.latitude!, repeater.longitude!);
+    final reach = repeater.hopCount == 0
+        ? l10n.directConnection
+        : repeater.hopCount > 0
+            ? l10n.hopCount(repeater.hopCount)
+            : null;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.cell_tower),
+                  title: Text(
+                    name,
+                    style: Theme.of(sheetContext).textTheme.titleMedium,
+                  ),
+                  subtitle: Text(
+                    [
+                      reach == null ? l10n.repeater : '${l10n.repeater} · $reach',
+                      l10n.locationCoordinates(
+                        point.latitude.toStringAsFixed(5),
+                        point.longitude.toStringAsFixed(5),
+                      ),
+                    ].join('\n'),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.navigation_outlined),
+                  title: Text(l10n.navigateTo),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _startNavigation(point, name);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.visibility_off_outlined),
+                  title: Text(l10n.hideFromMap),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await context
+                        .read<ContactRepository>()
+                        .setHideOnMap(repeater.publicKey, true);
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.repeaterHiddenFromMap)),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         );
       },
@@ -1336,6 +1413,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _mbtilesRegistry = context.read<MbtilesRegistry>();
+    _contactsStream ??= context.read<ContactRepository>().getAllContacts();
   }
 
   @override
@@ -1762,6 +1840,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
         settingsService.settings.mapShowTrackedUserNames;
     final showWaypointNames = settingsService.settings.mapShowWaypointNames;
     final showContactPaths = settingsService.settings.mapShowContactPaths;
+    final showRepeaters = settingsService.settings.mapShowRepeaters;
 
     final wantsCompanion =
         settingsService.settings.locationSource == LocationSource.companion;
@@ -1876,6 +1955,9 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                     }
                   });
                   break;
+                case 'toggle_repeaters':
+                  await settingsService.setMapShowRepeaters(!showRepeaters);
+                  break;
                 case 'download_map_area':
                   _openDownloadMapAreaDialog(provider: tileConfig);
                   break;
@@ -1981,6 +2063,22 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                       Icon(
                         _contactPathsVisible.isNotEmpty ||
                                 _pendingPathsSelectAll
+                            ? Icons.check
+                            : Icons.check_box_outline_blank,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'toggle_repeaters',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(l10n.showRepeaters),
+                      ),
+                      Icon(
+                        showRepeaters
                             ? Icons.check
                             : Icons.check_box_outline_blank,
                         size: 18,
@@ -2102,6 +2200,37 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
               if (_cachedOverlayImages.isNotEmpty)
                 OverlayImageLayer(
                   overlayImages: _cachedOverlayImages,
+                ),
+              // Repeaters in the radio's contact list — below team members so
+              // those draw on top and win taps.
+              if (showRepeaters && _contactsStream != null)
+                StreamBuilder<List<ContactData>>(
+                  stream: _contactsStream,
+                  builder: (context, snapshot) {
+                    final repeaters = (snapshot.data ?? const <ContactData>[])
+                        .where((c) =>
+                            c.isRepeater &&
+                            !c.hideOnMap &&
+                            c.latitude != null &&
+                            c.longitude != null)
+                        .toList();
+                    if (repeaters.isEmpty) return const SizedBox.shrink();
+
+                    return MarkerLayer(
+                      markers: [
+                        for (final r in repeaters)
+                          Marker(
+                            point: LatLng(r.latitude!, r.longitude!),
+                            width: 32,
+                            height: 32,
+                            child: _RepeaterMarker(
+                              isDirect: r.hopCount == 0,
+                              onTap: () => _showRepeaterActions(r),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               StreamBuilder<List<ChannelData>>(
                 stream: db.select(db.channels).watch(),
@@ -3112,6 +3241,52 @@ class _ContactMarker extends StatelessWidget {
       onTap: onTap,
       onDoubleTap: onDoubleTap,
       child: marker,
+    );
+  }
+}
+
+/// A repeater on the map. Square, so it reads differently from the round
+/// team-member markers; green border when the radio hears it directly.
+class _RepeaterMarker extends StatelessWidget {
+  final bool isDirect;
+  final VoidCallback? onTap;
+
+  const _RepeaterMarker({required this.isDirect, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isNighttime = context.watch<SettingsService>().settings.appTheme ==
+        AppThemeMode.nighttime;
+    final color = isNighttime
+        ? (isDirect ? NightColors.onSurface : NightColors.dim)
+        : (isDirect ? Colors.green : Colors.blueGrey);
+
+    // Counter-rotate so the icon stays upright when the map rotates.
+    final mapRotationDegrees = MapCamera.of(context).rotation;
+    final counterRotationRad = (-mapRotationDegrees) * (math.pi / 180.0);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Transform.rotate(
+        angle: counterRotationRad,
+        child: Center(
+          child: Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: isNighttime ? NightColors.surfaceHigh : scheme.surface,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: color, width: 2),
+            ),
+            child: Icon(
+              Icons.cell_tower,
+              color: isNighttime ? NightColors.onSurface : color,
+              size: 16,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

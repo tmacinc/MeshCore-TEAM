@@ -77,7 +77,7 @@ class AppDatabase extends _$AppDatabase {
   // Jumps 9 -> 12: the Team Link branch (D0sockets) already uses 10 and 11,
   // so dev skips them to keep the two branches mergeable. See
   // docs/alias-peer-identity-plan.md §3.5.
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -212,6 +212,13 @@ class AppDatabase extends _$AppDatabase {
             // ChannelRepository.markTrackingChannelAsTeam() at startup, which
             // is where the setting lives.
             print('[Migration] v13->v14: channels isTeam, firmwareConfirmed');
+          }
+
+          // Migration to schema version 15: repeaters can be hidden from the
+          // map's repeater layer one at a time.
+          if (from <= 14 && to >= 15) {
+            await _addColumnIfMissing(m, contacts, contacts.hideOnMap);
+            print('[Migration] v14->v15: contacts hideOnMap');
           }
         },
       );

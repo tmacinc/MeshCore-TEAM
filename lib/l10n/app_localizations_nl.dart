@@ -499,6 +499,16 @@ class AppLocalizationsNl extends AppLocalizations {
   String get showContactPaths => 'Contactroutes tonen';
 
   @override
+  String get showRepeaters => 'Repeaters tonen';
+
+  @override
+  String get hideFromMap => 'Verbergen op kaart';
+
+  @override
+  String get repeaterHiddenFromMap =>
+      'Verborgen op de kaart. Toon het opnieuw via de opties in Contacten.';
+
+  @override
   String get showTrackedUserNames => 'Namen van gevolgde gebruikers tonen';
 
   @override

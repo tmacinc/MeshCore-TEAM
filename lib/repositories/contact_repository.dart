@@ -489,6 +489,10 @@ class ContactRepository {
     return _contactsDao.setFavorite(publicKey, isFavorite);
   }
 
+  Future<void> setHideOnMap(Uint8List publicKey, bool hideOnMap) {
+    return _contactsDao.setHideOnMap(publicKey, hideOnMap);
+  }
+
   /// Delete a single contact from the local DB and from the companion (if connected).
   /// A "not found" response from the companion is not an error.
   Future<void> deleteContact(ContactData contact) async {

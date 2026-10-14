@@ -33,6 +33,7 @@ class SettingsService extends ChangeNotifier {
       'map_show_tracked_user_names';
   static const String _keyMapShowWaypointNames = 'map_show_waypoint_names';
   static const String _keyMapShowContactPaths = 'map_show_contact_paths';
+  static const String _keyMapShowRepeaters = 'map_show_repeaters';
   static const String _keyDistanceRingsEnabled = 'distance_rings_enabled';
   static const String _keyDistanceRingInterval = 'distance_ring_interval';
   static const String _keyLastConnectedDevice = 'last_connected_device';
@@ -173,6 +174,7 @@ class SettingsService extends ChangeNotifier {
           _prefs.getBool(_keyMapShowTrackedUserNames) ?? true,
       mapShowWaypointNames: _prefs.getBool(_keyMapShowWaypointNames) ?? true,
       mapShowContactPaths: _prefs.getBool(_keyMapShowContactPaths) ?? false,
+      mapShowRepeaters: _prefs.getBool(_keyMapShowRepeaters) ?? false,
       distanceRingsEnabled: _prefs.getBool(_keyDistanceRingsEnabled) ?? false,
       distanceRingInterval:
           _prefs.getString(_keyDistanceRingInterval) ?? '500m',
@@ -376,6 +378,13 @@ class SettingsService extends ChangeNotifier {
   Future<void> setMapShowContactPaths(bool enabled) async {
     await _prefs.setBool(_keyMapShowContactPaths, enabled);
     _settings = _settings.copyWith(mapShowContactPaths: enabled);
+    notifyListeners();
+  }
+
+  /// Set the repeater layer's visibility on the map.
+  Future<void> setMapShowRepeaters(bool enabled) async {
+    await _prefs.setBool(_keyMapShowRepeaters, enabled);
+    _settings = _settings.copyWith(mapShowRepeaters: enabled);
     notifyListeners();
   }
 

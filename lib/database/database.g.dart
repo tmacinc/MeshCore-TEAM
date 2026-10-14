@@ -225,6 +225,21 @@ class $ContactsTable extends Contacts
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _hideOnMapMeta = const VerificationMeta(
+    'hideOnMap',
+  );
+  @override
+  late final GeneratedColumn<bool> hideOnMap = GeneratedColumn<bool>(
+    'hide_on_map',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("hide_on_map" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     publicKey,
@@ -245,6 +260,7 @@ class $ContactsTable extends Contacts
     isAutonomousDevice,
     companionDeviceKey,
     isFavorite,
+    hideOnMap,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -396,6 +412,12 @@ class $ContactsTable extends Contacts
         isFavorite.isAcceptableOrUnknown(data['is_favorite']!, _isFavoriteMeta),
       );
     }
+    if (data.containsKey('hide_on_map')) {
+      context.handle(
+        _hideOnMapMeta,
+        hideOnMap.isAcceptableOrUnknown(data['hide_on_map']!, _hideOnMapMeta),
+      );
+    }
     return context;
   }
 
@@ -487,6 +509,11 @@ class $ContactsTable extends Contacts
             DriftSqlType.bool,
             data['${effectivePrefix}is_favorite'],
           )!,
+      hideOnMap:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.bool,
+            data['${effectivePrefix}hide_on_map'],
+          )!,
     );
   }
 
@@ -515,6 +542,10 @@ class ContactData extends DataClass implements Insertable<ContactData> {
   final bool isAutonomousDevice;
   final String? companionDeviceKey;
   final bool isFavorite;
+
+  /// Keeps a repeater off the map's repeater layer. Sync never writes it, so
+  /// the choice survives the contact being re-synced from the radio.
+  final bool hideOnMap;
   const ContactData({
     required this.publicKey,
     required this.hash,
@@ -534,6 +565,7 @@ class ContactData extends DataClass implements Insertable<ContactData> {
     required this.isAutonomousDevice,
     this.companionDeviceKey,
     required this.isFavorite,
+    required this.hideOnMap,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -576,6 +608,7 @@ class ContactData extends DataClass implements Insertable<ContactData> {
       map['companion_device_key'] = Variable<String>(companionDeviceKey);
     }
     map['is_favorite'] = Variable<bool>(isFavorite);
+    map['hide_on_map'] = Variable<bool>(hideOnMap);
     return map;
   }
 
@@ -620,6 +653,7 @@ class ContactData extends DataClass implements Insertable<ContactData> {
               ? const Value.absent()
               : Value(companionDeviceKey),
       isFavorite: Value(isFavorite),
+      hideOnMap: Value(hideOnMap),
     );
   }
 
@@ -657,6 +691,7 @@ class ContactData extends DataClass implements Insertable<ContactData> {
         json['companionDeviceKey'],
       ),
       isFavorite: serializer.fromJson<bool>(json['isFavorite']),
+      hideOnMap: serializer.fromJson<bool>(json['hideOnMap']),
     );
   }
   @override
@@ -685,6 +720,7 @@ class ContactData extends DataClass implements Insertable<ContactData> {
       'isAutonomousDevice': serializer.toJson<bool>(isAutonomousDevice),
       'companionDeviceKey': serializer.toJson<String?>(companionDeviceKey),
       'isFavorite': serializer.toJson<bool>(isFavorite),
+      'hideOnMap': serializer.toJson<bool>(hideOnMap),
     };
   }
 
@@ -707,6 +743,7 @@ class ContactData extends DataClass implements Insertable<ContactData> {
     bool? isAutonomousDevice,
     Value<String?> companionDeviceKey = const Value.absent(),
     bool? isFavorite,
+    bool? hideOnMap,
   }) => ContactData(
     publicKey: publicKey ?? this.publicKey,
     hash: hash ?? this.hash,
@@ -741,6 +778,7 @@ class ContactData extends DataClass implements Insertable<ContactData> {
             ? companionDeviceKey.value
             : this.companionDeviceKey,
     isFavorite: isFavorite ?? this.isFavorite,
+    hideOnMap: hideOnMap ?? this.hideOnMap,
   );
   ContactData copyWithCompanion(ContactsCompanion data) {
     return ContactData(
@@ -788,6 +826,7 @@ class ContactData extends DataClass implements Insertable<ContactData> {
               : this.companionDeviceKey,
       isFavorite:
           data.isFavorite.present ? data.isFavorite.value : this.isFavorite,
+      hideOnMap: data.hideOnMap.present ? data.hideOnMap.value : this.hideOnMap,
     );
   }
 
@@ -811,7 +850,8 @@ class ContactData extends DataClass implements Insertable<ContactData> {
           ..write('isOutOfRange: $isOutOfRange, ')
           ..write('isAutonomousDevice: $isAutonomousDevice, ')
           ..write('companionDeviceKey: $companionDeviceKey, ')
-          ..write('isFavorite: $isFavorite')
+          ..write('isFavorite: $isFavorite, ')
+          ..write('hideOnMap: $hideOnMap')
           ..write(')'))
         .toString();
   }
@@ -836,6 +876,7 @@ class ContactData extends DataClass implements Insertable<ContactData> {
     isAutonomousDevice,
     companionDeviceKey,
     isFavorite,
+    hideOnMap,
   );
   @override
   bool operator ==(Object other) =>
@@ -858,7 +899,8 @@ class ContactData extends DataClass implements Insertable<ContactData> {
           other.isOutOfRange == this.isOutOfRange &&
           other.isAutonomousDevice == this.isAutonomousDevice &&
           other.companionDeviceKey == this.companionDeviceKey &&
-          other.isFavorite == this.isFavorite);
+          other.isFavorite == this.isFavorite &&
+          other.hideOnMap == this.hideOnMap);
 }
 
 class ContactsCompanion extends UpdateCompanion<ContactData> {
@@ -880,6 +922,7 @@ class ContactsCompanion extends UpdateCompanion<ContactData> {
   final Value<bool> isAutonomousDevice;
   final Value<String?> companionDeviceKey;
   final Value<bool> isFavorite;
+  final Value<bool> hideOnMap;
   final Value<int> rowid;
   const ContactsCompanion({
     this.publicKey = const Value.absent(),
@@ -900,6 +943,7 @@ class ContactsCompanion extends UpdateCompanion<ContactData> {
     this.isAutonomousDevice = const Value.absent(),
     this.companionDeviceKey = const Value.absent(),
     this.isFavorite = const Value.absent(),
+    this.hideOnMap = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ContactsCompanion.insert({
@@ -921,6 +965,7 @@ class ContactsCompanion extends UpdateCompanion<ContactData> {
     this.isAutonomousDevice = const Value.absent(),
     this.companionDeviceKey = const Value.absent(),
     this.isFavorite = const Value.absent(),
+    this.hideOnMap = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : publicKey = Value(publicKey),
        hash = Value(hash),
@@ -944,6 +989,7 @@ class ContactsCompanion extends UpdateCompanion<ContactData> {
     Expression<bool>? isAutonomousDevice,
     Expression<String>? companionDeviceKey,
     Expression<bool>? isFavorite,
+    Expression<bool>? hideOnMap,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -971,6 +1017,7 @@ class ContactsCompanion extends UpdateCompanion<ContactData> {
       if (companionDeviceKey != null)
         'companion_device_key': companionDeviceKey,
       if (isFavorite != null) 'is_favorite': isFavorite,
+      if (hideOnMap != null) 'hide_on_map': hideOnMap,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -994,6 +1041,7 @@ class ContactsCompanion extends UpdateCompanion<ContactData> {
     Value<bool>? isAutonomousDevice,
     Value<String?>? companionDeviceKey,
     Value<bool>? isFavorite,
+    Value<bool>? hideOnMap,
     Value<int>? rowid,
   }) {
     return ContactsCompanion(
@@ -1019,6 +1067,7 @@ class ContactsCompanion extends UpdateCompanion<ContactData> {
       isAutonomousDevice: isAutonomousDevice ?? this.isAutonomousDevice,
       companionDeviceKey: companionDeviceKey ?? this.companionDeviceKey,
       isFavorite: isFavorite ?? this.isFavorite,
+      hideOnMap: hideOnMap ?? this.hideOnMap,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1088,6 +1137,9 @@ class ContactsCompanion extends UpdateCompanion<ContactData> {
     if (isFavorite.present) {
       map['is_favorite'] = Variable<bool>(isFavorite.value);
     }
+    if (hideOnMap.present) {
+      map['hide_on_map'] = Variable<bool>(hideOnMap.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1115,6 +1167,7 @@ class ContactsCompanion extends UpdateCompanion<ContactData> {
           ..write('isAutonomousDevice: $isAutonomousDevice, ')
           ..write('companionDeviceKey: $companionDeviceKey, ')
           ..write('isFavorite: $isFavorite, ')
+          ..write('hideOnMap: $hideOnMap, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8697,6 +8750,7 @@ typedef $$ContactsTableCreateCompanionBuilder =
       Value<bool> isAutonomousDevice,
       Value<String?> companionDeviceKey,
       Value<bool> isFavorite,
+      Value<bool> hideOnMap,
       Value<int> rowid,
     });
 typedef $$ContactsTableUpdateCompanionBuilder =
@@ -8719,6 +8773,7 @@ typedef $$ContactsTableUpdateCompanionBuilder =
       Value<bool> isAutonomousDevice,
       Value<String?> companionDeviceKey,
       Value<bool> isFavorite,
+      Value<bool> hideOnMap,
       Value<int> rowid,
     });
 
@@ -8818,6 +8873,11 @@ class $$ContactsTableFilterComposer
 
   ColumnFilters<bool> get isFavorite => $composableBuilder(
     column: $table.isFavorite,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hideOnMap => $composableBuilder(
+    column: $table.hideOnMap,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -8920,6 +8980,11 @@ class $$ContactsTableOrderingComposer
     column: $table.isFavorite,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get hideOnMap => $composableBuilder(
+    column: $table.hideOnMap,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ContactsTableAnnotationComposer
@@ -9004,6 +9069,9 @@ class $$ContactsTableAnnotationComposer
     column: $table.isFavorite,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get hideOnMap =>
+      $composableBuilder(column: $table.hideOnMap, builder: (column) => column);
 }
 
 class $$ContactsTableTableManager
@@ -9055,6 +9123,7 @@ class $$ContactsTableTableManager
                 Value<bool> isAutonomousDevice = const Value.absent(),
                 Value<String?> companionDeviceKey = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
+                Value<bool> hideOnMap = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ContactsCompanion(
                 publicKey: publicKey,
@@ -9075,6 +9144,7 @@ class $$ContactsTableTableManager
                 isAutonomousDevice: isAutonomousDevice,
                 companionDeviceKey: companionDeviceKey,
                 isFavorite: isFavorite,
+                hideOnMap: hideOnMap,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9097,6 +9167,7 @@ class $$ContactsTableTableManager
                 Value<bool> isAutonomousDevice = const Value.absent(),
                 Value<String?> companionDeviceKey = const Value.absent(),
                 Value<bool> isFavorite = const Value.absent(),
+                Value<bool> hideOnMap = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ContactsCompanion.insert(
                 publicKey: publicKey,
@@ -9117,6 +9188,7 @@ class $$ContactsTableTableManager
                 isAutonomousDevice: isAutonomousDevice,
                 companionDeviceKey: companionDeviceKey,
                 isFavorite: isFavorite,
+                hideOnMap: hideOnMap,
                 rowid: rowid,
               ),
           withReferenceMapper:

@@ -57,6 +57,7 @@ class AppSettings {
   final bool mapShowTrackedUserNames;
   final bool mapShowWaypointNames;
   final bool mapShowContactPaths;
+  final bool mapShowRepeaters;
   final bool distanceRingsEnabled;
   final String distanceRingInterval; // '500m', '1km', '2km'
 
@@ -105,6 +106,7 @@ class AppSettings {
     this.mapShowTrackedUserNames = true,
     this.mapShowWaypointNames = true,
     this.mapShowContactPaths = false,
+    this.mapShowRepeaters = false,
     this.distanceRingsEnabled = false,
     this.distanceRingInterval = '500m',
     this.lastConnectedDevice,
@@ -145,6 +147,7 @@ class AppSettings {
     bool? mapShowTrackedUserNames,
     bool? mapShowWaypointNames,
     bool? mapShowContactPaths,
+    bool? mapShowRepeaters,
     bool? distanceRingsEnabled,
     String? distanceRingInterval,
     String? lastConnectedDevice,
@@ -189,6 +192,7 @@ class AppSettings {
           mapShowTrackedUserNames ?? this.mapShowTrackedUserNames,
       mapShowWaypointNames: mapShowWaypointNames ?? this.mapShowWaypointNames,
       mapShowContactPaths: mapShowContactPaths ?? this.mapShowContactPaths,
+      mapShowRepeaters: mapShowRepeaters ?? this.mapShowRepeaters,
       distanceRingsEnabled: distanceRingsEnabled ?? this.distanceRingsEnabled,
       distanceRingInterval: distanceRingInterval ?? this.distanceRingInterval,
       lastConnectedDevice: lastConnectedDevice ?? this.lastConnectedDevice,
