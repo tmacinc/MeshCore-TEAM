@@ -99,6 +99,10 @@ class MainActivity : FlutterActivity() {
 							result.error("bad_args", "Missing latitude/longitude", null)
 						}
 					}
+					"clearCompanionLocation" -> {
+						MeshBleService.clearCompanionLocation(this)
+						result.success(true)
+					}
 					"startScan" -> {
 						val timeoutMs = (call.argument<Number>("timeoutMs")?.toLong() ?: 10_000L)
 						MeshBleService.startScan(this, timeoutMs)

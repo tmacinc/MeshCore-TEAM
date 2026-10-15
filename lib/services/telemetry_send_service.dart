@@ -17,6 +17,7 @@ import 'package:meshcore_team/models/network_topology.dart';
 import 'package:meshcore_team/services/neighbor_tracker.dart';
 import 'package:meshcore_team/services/phone_battery_service.dart';
 import 'package:meshcore_team/models/app_settings.dart';
+import 'package:meshcore_team/services/companion_location_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
 import 'package:meshcore_team/services/forwarding_policy_service.dart';
 import 'package:meshcore_team/utils/location_settings.dart';
@@ -33,6 +34,10 @@ import 'package:meshcore_team/viewmodels/connection_viewmodel.dart';
 /// - DISTANCE trigger: immediate send when moved >= threshold
 ///
 /// Includes a 15s minimum send interval rate limiter to avoid GPS jitter.
+///
+/// Position follows [CompanionLocationService]: the companion's fix while it
+/// has a fresh one, otherwise the phone. In companion mode phone GPS is only
+/// switched on while the companion has no fix.
 class TelemetrySendService extends ChangeNotifier {
   static const Duration _minSendInterval = Duration(seconds: 15);
   static const Duration _phoneBatteryCacheTtl = Duration(seconds: 60);
@@ -43,6 +48,7 @@ class TelemetrySendService extends ChangeNotifier {
   final BleService _bleService;
   final ChannelsDao _channelsDao;
   final ConnectionViewModel _connectionViewModel;
+  final CompanionLocationService _companionLocation;
   final PhoneBatteryService _phoneBatteryService;
   final NetworkTopology _networkTopology;
   final NeighborTracker _neighborTracker;
@@ -51,8 +57,12 @@ class TelemetrySendService extends ChangeNotifier {
   StreamSubscription<Position>? _positionSub;
   Timer? _periodicTimer;
 
-  double? _lastLatitude;
-  double? _lastLongitude;
+  double? _phoneLatitude;
+  double? _phoneLongitude;
+
+  /// Android: whether the native sender currently holds a companion position
+  /// we gave it, so the clear is only sent once per fallback.
+  bool _nativeHasCompanionLocation = false;
 
   int? _lastCompanionBatteryMv;
   int? _lastPhoneBatteryMv;
@@ -62,7 +72,6 @@ class TelemetrySendService extends ChangeNotifier {
   (double, double)? _lastSentLocation;
 
   int _telemetryIntervalSeconds = 60;
-  String _currentLocationSource = LocationSource.phone;
 
   bool _started = false;
   bool _syncWasComplete = false;
@@ -72,6 +81,7 @@ class TelemetrySendService extends ChangeNotifier {
     required BleService bleService,
     required ChannelsDao channelsDao,
     required ConnectionViewModel connectionViewModel,
+    required CompanionLocationService companionLocation,
     PhoneBatteryService? phoneBatteryService,
     NetworkTopology? networkTopology,
     NeighborTracker? neighborTracker,
@@ -80,6 +90,7 @@ class TelemetrySendService extends ChangeNotifier {
         _bleService = bleService,
         _channelsDao = channelsDao,
         _connectionViewModel = connectionViewModel,
+        _companionLocation = companionLocation,
         _phoneBatteryService = phoneBatteryService ?? PhoneBatteryService(),
         _networkTopology = networkTopology ?? NetworkTopology(),
         _neighborTracker = neighborTracker ?? NeighborTracker(),
@@ -92,6 +103,7 @@ class TelemetrySendService extends ChangeNotifier {
     _settings.addListener(_onSettingsChanged);
     _bleService.addListener(_onConnectionChanged);
     _connectionViewModel.addListener(_onBatteryChanged);
+    _companionLocation.addListener(_onCompanionLocationChanged);
     _forwardingPolicy?.addListener(_onForwardingPolicyChanged);
 
     _watchTrackingChannel();
@@ -167,66 +179,54 @@ class TelemetrySendService extends ChangeNotifier {
         }
       }
     }
+  }
 
-    // Push companion GPS coordinates to Android native telemetry layer.
+  /// Runs on every companion position update and on every companion ↔ phone
+  /// switch.
+  void _onCompanionLocationChanged() {
     if (!kIsWeb && Platform.isAndroid) {
-      _pushCompanionLocationIfNeeded();
+      _syncCompanionLocationToNative();
       return;
     }
 
-    // iOS/other: cache companion coordinates in Dart for the Dart sender.
-    if (_currentLocationSource == LocationSource.companion) {
-      final lat = _connectionViewModel.companionLatitude;
-      final lon = _connectionViewModel.companionLongitude;
-      if (lat != null && lon != null) {
-        final prevLat = _lastLatitude;
-        final prevLon = _lastLongitude;
-        _lastLatitude = lat;
-        _lastLongitude = lon;
-
-        // Check distance trigger for companion position changes.
-        final minDistanceMeters = _settings.settings.telemetryMinDistanceMeters;
-        if (minDistanceMeters > 0 && prevLat != null && prevLon != null) {
-          final distance = Geolocator.distanceBetween(
-            prevLat,
-            prevLon,
-            lat,
-            lon,
-          );
-          if (distance >= minDistanceMeters) {
-            debugPrint('[TelemetrySend] 📍 DISTANCE trigger (companion): '
-                'moved ${distance.toInt()}m');
-            unawaited(_trySendTelemetry(
-              latitude: lat,
-              longitude: lon,
-              reason: 'DISTANCE',
-              resetPeriodicTimer: true,
-            ));
-          }
-        }
-      }
+    // iOS/other: the Dart sender reads the companion position at send time.
+    _updatePhoneStream();
+    final lat = _companionLocation.latitude;
+    final lon = _companionLocation.longitude;
+    if (lat != null && lon != null) {
+      _maybeSendForDistance(lat, lon, source: 'companion');
     }
   }
 
-  /// Push companion GPS coordinates to the Android native telemetry layer so
-  /// it can send telemetry using the companion's position when the user has
-  /// selected "companion" as their location source.
+  /// Keeps the Android native sender's companion position in step with
+  /// [CompanionLocationService].
   ///
-  /// Always pushes (even when coordinates haven't changed) so the native
-  /// timestamp stays fresh and the staleness guard doesn't discard the fix.
-  void _pushCompanionLocationIfNeeded() {
-    if (kIsWeb || !Platform.isAndroid) return;
-    if (_settings.settings.locationSource != LocationSource.companion) return;
+  /// While the companion is in use, pushes on every update (even when the
+  /// coordinates haven't changed) so the native timestamp stays fresh. When
+  /// it isn't, clears the native copy so native switches to the phone
+  /// straight away instead of waiting for the companion copy to age out.
+  void _syncCompanionLocationToNative() {
+    final lat = _companionLocation.latitude;
+    final lon = _companionLocation.longitude;
 
-    final lat = _connectionViewModel.companionLatitude;
-    final lon = _connectionViewModel.companionLongitude;
-    if (lat == null || lon == null) return;
+    if (lat != null && lon != null) {
+      _nativeHasCompanionLocation = true;
+      unawaited(
+          _nativeTelemetryChannel.invokeMethod('updateCompanionLocation', {
+        'latitude': lat,
+        'longitude': lon,
+      }).catchError((Object e) {
+        debugPrint('[TelemetrySend] ⚠️ updateCompanionLocation failed: $e');
+      }));
+      return;
+    }
 
-    unawaited(_nativeTelemetryChannel.invokeMethod('updateCompanionLocation', {
-      'latitude': lat,
-      'longitude': lon,
-    }).catchError((Object e) {
-      debugPrint('[TelemetrySend] ⚠️ updateCompanionLocation failed: $e');
+    if (!_nativeHasCompanionLocation) return;
+    _nativeHasCompanionLocation = false;
+    unawaited(_nativeTelemetryChannel
+        .invokeMethod('clearCompanionLocation')
+        .catchError((Object e) {
+      debugPrint('[TelemetrySend] ⚠️ clearCompanionLocation failed: $e');
     }));
   }
 
@@ -260,16 +260,8 @@ class TelemetrySendService extends ChangeNotifier {
       return;
     }
 
-    final sourceChanged = _currentLocationSource != s.locationSource;
-    _currentLocationSource = s.locationSource;
-
-    if (sourceChanged) {
-      _stopInternal();
-      _startInternal();
-      return;
-    }
-
-    // Not yet running — start up.
+    // Not yet running — start up. A location-source change needs no restart:
+    // the phone stream runs in both modes and the source is chosen per send.
     final isRunning = _positionSub != null || _periodicTimer != null;
     if (!isRunning) {
       _startInternal();
@@ -363,35 +355,64 @@ class TelemetrySendService extends ChangeNotifier {
 
   Future<void> _startInternal() async {
     debugPrint('[TelemetrySend] ▶️ Starting telemetry sender'
-        ' (locationSource=$_currentLocationSource)');
-
-    if (_currentLocationSource == LocationSource.companion) {
-      // Seed from companion's last known position.
-      _seedCompanionPosition();
-    } else if (Platform.isAndroid || Platform.isIOS) {
-      // Phone GPS mode — subscribe to the platform location stream.
-      unawaited(_seedCurrentPosition());
-
-      final locationSettings = buildAppLocationSettings(distanceFilter: 5);
-
-      _positionSub =
-          Geolocator.getPositionStream(locationSettings: locationSettings)
-              .listen(_handlePosition, onError: (Object error) {
-        debugPrint('[TelemetrySend] ⚠️ Location stream error: $error');
-      });
-    }
+        ' (locationSource=${_settings.settings.locationSource})');
 
     _restartPeriodicTimer();
+    _updatePhoneStream();
   }
 
-  /// Populate cached lat/lon from the companion device's last GPS fix.
-  void _seedCompanionPosition() {
-    final lat = _connectionViewModel.companionLatitude;
-    final lon = _connectionViewModel.companionLongitude;
-    if (lat != null && lon != null) {
-      _lastLatitude = lat;
-      _lastLongitude = lon;
+  /// Phone GPS runs only while it is needed: always with location source =
+  /// phone, and with source = companion only while the companion has no fresh
+  /// fix (the fallback).
+  void _updatePhoneStream() {
+    final senderRunning = _periodicTimer != null;
+    if (senderRunning && !_companionLocation.usingCompanion) {
+      _startPhoneStream();
+    } else {
+      _stopPhoneStream();
     }
+  }
+
+  void _startPhoneStream() {
+    if (_positionSub != null) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+
+    debugPrint('[TelemetrySend] 📍 Phone GPS on');
+    final locationSettings = buildAppLocationSettings(distanceFilter: 5);
+    _positionSub =
+        Geolocator.getPositionStream(locationSettings: locationSettings)
+            .listen(_handlePosition, onError: (Object error) {
+      debugPrint('[TelemetrySend] ⚠️ Location stream error: $error');
+    });
+    unawaited(_seedCurrentPosition());
+  }
+
+  void _stopPhoneStream() {
+    if (_positionSub == null) return;
+
+    debugPrint('[TelemetrySend] 📍 Phone GPS off');
+    _positionSub?.cancel();
+    _positionSub = null;
+    // Would be stale by the time the next fallback needs it.
+    _phoneLatitude = null;
+    _phoneLongitude = null;
+  }
+
+  /// The position to send right now: the companion's while it has a fresh
+  /// fix, otherwise the phone's.
+  (double, double, String)? _currentLocation() {
+    final companionLat = _companionLocation.latitude;
+    final companionLon = _companionLocation.longitude;
+    if (companionLat != null && companionLon != null) {
+      return (companionLat, companionLon, 'companion');
+    }
+
+    final phoneLat = _phoneLatitude;
+    final phoneLon = _phoneLongitude;
+    if (phoneLat != null && phoneLon != null) {
+      return (phoneLat, phoneLon, 'phone');
+    }
+    return null;
   }
 
   Future<void> _seedCurrentPosition() async {
@@ -419,32 +440,34 @@ class TelemetrySendService extends ChangeNotifier {
     // Re-schedule first, to emulate a loop even if send takes time.
     _restartPeriodicTimer();
 
-    // In companion mode, pull the latest coordinates from the view model each
-    // tick so we pick up fresh GPS pushes from the mesh device.
-    if (_currentLocationSource == LocationSource.companion) {
-      _seedCompanionPosition();
-    }
-
-    final lat = _lastLatitude;
-    final lon = _lastLongitude;
-    if (lat == null || lon == null) {
-      debugPrint('[TelemetrySend] ⚠️ No cached location for periodic send');
+    final location = _currentLocation();
+    if (location == null) {
+      debugPrint('[TelemetrySend] ⚠️ No location for periodic send');
       return;
     }
 
-    debugPrint('[TelemetrySend] 📡 PERIODIC send (TIME trigger)');
+    debugPrint(
+        '[TelemetrySend] 📡 PERIODIC send (TIME trigger, source=${location.$3})');
     await _trySendTelemetry(
-      latitude: lat,
-      longitude: lon,
+      latitude: location.$1,
+      longitude: location.$2,
       reason: 'PERIODIC',
       resetPeriodicTimer: false,
     );
   }
 
   void _handlePosition(Position position) {
-    _lastLatitude = position.latitude;
-    _lastLongitude = position.longitude;
+    // A seed that resolves after the stream was stopped is no longer wanted.
+    if (_positionSub == null) return;
 
+    _phoneLatitude = position.latitude;
+    _phoneLongitude = position.longitude;
+    _maybeSendForDistance(position.latitude, position.longitude,
+        source: 'phone');
+  }
+
+  void _maybeSendForDistance(double latitude, double longitude,
+      {required String source}) {
     final minDistanceMeters = _settings.settings.telemetryMinDistanceMeters;
     if (minDistanceMeters <= 0) return;
 
@@ -454,16 +477,16 @@ class TelemetrySendService extends ChangeNotifier {
     final distance = Geolocator.distanceBetween(
       lastSent.$1,
       lastSent.$2,
-      position.latitude,
-      position.longitude,
+      latitude,
+      longitude,
     );
 
     if (distance >= minDistanceMeters) {
       debugPrint(
-          '[TelemetrySend] 📍 DISTANCE trigger: moved ${distance.toInt()}m (threshold: ${minDistanceMeters}m)');
+          '[TelemetrySend] 📍 DISTANCE trigger ($source): moved ${distance.toInt()}m (threshold: ${minDistanceMeters}m)');
       unawaited(_trySendTelemetry(
-        latitude: position.latitude,
-        longitude: position.longitude,
+        latitude: latitude,
+        longitude: longitude,
         reason: 'DISTANCE',
         resetPeriodicTimer: true,
       ));
@@ -626,6 +649,7 @@ class TelemetrySendService extends ChangeNotifier {
       _settings.removeListener(_onSettingsChanged);
       _bleService.removeListener(_onConnectionChanged);
       _connectionViewModel.removeListener(_onBatteryChanged);
+      _companionLocation.removeListener(_onCompanionLocationChanged);
       _forwardingPolicy?.removeListener(_onForwardingPolicyChanged);
     }
 

@@ -23,6 +23,7 @@
 - Tap a repeater to see its details, navigate to it, or hide it from the map. Hidden repeaters can be shown again from their options on the Contacts tab.
 
 ## Fixes
+- With **Location source** set to companion GPS, location tracking now switches to the phone's GPS whenever the radio has no GPS fix, as the map already did. Previously, on Android tracking stopped sending about 20 seconds after the radio lost its fix, and stopped altogether after the app was swiped away. On iOS it kept sending the radio's last position indefinitely. Tracking switches back to the radio as soon as it has a fix again. Custom firmware companion-v1.16.0.4 to v1.17.1.5 doesn't report losing its fix; update to v1.17.1.6 or later.
 - Android: reopening the app after swiping it away while still connected no longer leaves it stuck on the connection screen, showing the radio as connected but idle with a spinner and receiving no chat or teammate locations until you disconnected and reconnected. Messages the radio held while the app was closed are now pulled in when it opens.
 - Incoming messages no longer sit on the radio waiting for the next one to arrive when they land during a sync, or when the radio is briefly slow to answer.
 - The first-run permissions screen now spells out, before any system prompt, what location data the app collects, what it is used for, that it is also collected in the background, and that it only goes to your team over the radio.

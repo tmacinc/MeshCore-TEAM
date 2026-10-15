@@ -40,6 +40,7 @@ import 'repositories/message_repository.dart';
 import 'models/network_topology.dart';
 import 'services/neighbor_tracker.dart';
 import 'viewmodels/connection_viewmodel.dart';
+import 'services/companion_location_service.dart';
 import 'services/telemetry_send_service.dart';
 import 'services/forwarding_policy_service.dart';
 import 'services/peer_directory.dart';
@@ -299,12 +300,20 @@ Future<void> _runAppStartup() async {
       networkTopology: networkTopology,
     )..start();
 
+    // Companion vs phone position for the whole app (map + telemetry). Must
+    // exist before TelemetrySendService, which follows its decision.
+    final companionLocationService = CompanionLocationService(
+      settings: settingsService,
+      connectionViewModel: connectionViewModel,
+    )..start();
+
     // Initialize Telemetry sender (settings-driven, TEAM-compatible #T:)
     final telemetrySendService = TelemetrySendService(
       settings: settingsService,
       bleService: bleService,
       channelsDao: database.channelsDao,
       connectionViewModel: connectionViewModel,
+      companionLocation: companionLocationService,
       networkTopology: networkTopology,
       neighborTracker: neighborTracker,
       forwardingPolicy: forwardingPolicyService,
@@ -365,6 +374,7 @@ Future<void> _runAppStartup() async {
         meshConnectionService: meshConnectionService,
         reconnectionManager: reconnectionManager,
         mapTileCacheService: mapTileCacheService,
+        companionLocationService: companionLocationService,
         telemetrySendService: telemetrySendService,
         forwardingPolicyService: forwardingPolicyService,
         peerDirectory: peerDirectory,
@@ -480,6 +490,7 @@ class TeamFlutterApp extends StatelessWidget {
   final MeshConnectionService meshConnectionService;
   final ReconnectionManager reconnectionManager;
   final MapTileCacheService mapTileCacheService;
+  final CompanionLocationService companionLocationService;
   final TelemetrySendService telemetrySendService;
   final ForwardingPolicyService forwardingPolicyService;
   final PeerDirectory peerDirectory;
@@ -499,6 +510,7 @@ class TeamFlutterApp extends StatelessWidget {
     required this.meshConnectionService,
     required this.reconnectionManager,
     required this.mapTileCacheService,
+    required this.companionLocationService,
     required this.telemetrySendService,
     required this.forwardingPolicyService,
     required this.peerDirectory,
@@ -549,6 +561,11 @@ class TeamFlutterApp extends StatelessWidget {
           value: meshConnectionService),
         ChangeNotifierProvider<ReconnectionManager>.value(
           value: reconnectionManager),
+
+        // Companion vs phone position (no UI; drives map + telemetry)
+        ChangeNotifierProvider<CompanionLocationService>.value(
+          value: companionLocationService,
+        ),
 
         // Telemetry sender (no UI; driven by settings)
         ChangeNotifierProvider<TelemetrySendService>.value(
