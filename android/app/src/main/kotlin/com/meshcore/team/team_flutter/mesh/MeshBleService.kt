@@ -136,6 +136,7 @@ class MeshBleService : Service() {
         private const val actionConfigureNativeTelemetry = "com.meshcore.team.mesh.CONFIGURE_NATIVE_TELEMETRY"
         private const val actionStopNativeTelemetry = "com.meshcore.team.mesh.STOP_NATIVE_TELEMETRY"
         private const val actionUpdateCompanionLocation = "com.meshcore.team.mesh.UPDATE_COMPANION_LOCATION"
+        private const val actionClearCompanionLocation = "com.meshcore.team.mesh.CLEAR_COMPANION_LOCATION"
 
         private const val extraTimeoutMs = "timeoutMs"
         private const val extraAddress = "address"
@@ -275,6 +276,13 @@ class MeshBleService : Service() {
             context.startService(intent)
         }
 
+        /** Companion has no usable fix: drop its position so telemetry uses the phone. */
+        fun clearCompanionLocation(context: Context) {
+            val intent = Intent(context, MeshBleService::class.java)
+                .setAction(actionClearCompanionLocation)
+            context.startService(intent)
+        }
+
         fun stopNativeTelemetry(context: Context) {
             val intent = Intent(context, MeshBleService::class.java)
                 .setAction(actionStopNativeTelemetry)
@@ -384,6 +392,10 @@ class MeshBleService : Service() {
     private val nativeTelemetryTickMs = 5000L
     private val minTelemetrySendIntervalMs = 15_000L
     private val maxTelemetryLocationAgeMs = 20_000L
+    // Matches CompanionLocationService.maxFixAge on the Dart side. Dart pushes
+    // every ~2 s while the companion has a fix; once pushes stop (fix lost, or
+    // Dart not running after a swipe-away) the phone takes over after this.
+    private val companionLocationMaxAgeMs = 10_000L
     private val nativeTelemetryWarnThrottleMs = 60_000L
 
     private var nativeTelemetryEnabled = false
@@ -395,6 +407,7 @@ class MeshBleService : Service() {
     private var nativeTelemetryCompanionLat: Double? = null
     private var nativeTelemetryCompanionLon: Double? = null
     private var nativeTelemetryCompanionLocationAtMs = 0L
+    private var nativeTelemetryResolvedSource: String? = null
     private var nativeTelemetryNeedsForwarding = false
     private var nativeTelemetryMaxPathObserved = 0
     private var nativeTelemetryStrategyMode = "forwardingV1"
@@ -637,7 +650,15 @@ class MeshBleService : Service() {
                     nativeTelemetryCompanionLon = lon
                     nativeTelemetryCompanionLocationAtMs = System.currentTimeMillis()
                     telemetryLogI("updateCompanionLocation", mapOf("lat" to lat, "lon" to lon))
+                    updateNativeLocationUpdates("companion_fix")
                 }
+            }
+            actionClearCompanionLocation -> {
+                nativeTelemetryCompanionLat = null
+                nativeTelemetryCompanionLon = null
+                nativeTelemetryCompanionLocationAtMs = 0L
+                telemetryLogI("clearCompanionLocation")
+                updateNativeLocationUpdates("companion_no_fix")
             }
             actionStopNativeTelemetry -> {
                 nativeTelemetryEnabled = false
@@ -1574,14 +1595,9 @@ class MeshBleService : Service() {
         val connected = MeshBleState.state == "connected" && rxChar != null
         if (nativeTelemetryEnabled && connected) {
             startNativeTelemetryLoop(reason)
-            // Manage phone location updates based on source. This runs on every
-            // config change (not just initial start) so switching between phone
-            // and companion correctly starts/stops the FusedLocationProviderClient.
-            if (nativeTelemetryLocationSource == "companion") {
-                stopNativeLocationUpdates("companion_source")
-            } else {
-                startNativeLocationUpdates(reason)
-            }
+            // Runs on every config change (not just initial start) so switching
+            // between phone and companion starts/stops phone GPS straight away.
+            updateNativeLocationUpdates(reason)
         } else {
             stopNativeTelemetryLoop(reason)
         }
@@ -1615,10 +1631,6 @@ class MeshBleService : Service() {
             nativeTelemetryNextPeriodicDueMs = System.currentTimeMillis() + (nativeTelemetryIntervalSeconds * 1000L)
         }
 
-        if (nativeTelemetryLocationSource != "companion") {
-            startNativeLocationUpdates(reason)
-        }
-
         nativeTelemetryRunnable = object : Runnable {
             override fun run() {
                 if (!nativeTelemetryEnabled || MeshBleState.state != "connected") {
@@ -1626,6 +1638,9 @@ class MeshBleService : Service() {
                     return
                 }
 
+                // Catches the companion position ageing out when no clear
+                // arrives, e.g. Dart not running after a swipe-away.
+                updateNativeLocationUpdates("tick")
                 evaluateAndSendTelemetryFromLatest()
                 mainHandler.postDelayed(this, nativeTelemetryTickMs)
             }
@@ -1645,6 +1660,20 @@ class MeshBleService : Service() {
             telemetryLogI("telemetry wake lock released", emptyMap())
         }
         stopNativeLocationUpdates(reason)
+    }
+
+    /**
+     * Phone GPS runs only while it is needed: always with source = phone, and
+     * with source = companion only while there is no fresh companion position
+     * (the fallback).
+     */
+    private fun updateNativeLocationUpdates(reason: String) {
+        if (nativeTelemetryRunnable == null) return
+        if (freshCompanionLocation() != null) {
+            stopNativeLocationUpdates("companion_fix")
+        } else {
+            startNativeLocationUpdates(reason)
+        }
     }
 
     private fun startNativeLocationUpdates(reason: String) {
@@ -1719,26 +1748,39 @@ class MeshBleService : Service() {
 
     /**
      * Resolves the best available location based on the configured source.
-     * When source is "companion", builds a Location from the pushed companion
-     * coordinates. Falls back to phone GPS if companion coords are unavailable.
+     * When source is "companion", uses the pushed companion coordinates while
+     * they are fresh. Otherwise (phone source, companion fix lost or cleared,
+     * or no pushes because Dart isn't running) uses phone GPS.
      */
     private fun resolveCurrentLocation(): Location? {
-        if (nativeTelemetryLocationSource == "companion") {
-            val lat = nativeTelemetryCompanionLat
-            val lon = nativeTelemetryCompanionLon
-            val atMs = nativeTelemetryCompanionLocationAtMs
-            if (lat != null && lon != null && atMs > 0) {
-                return Location("companion").apply {
-                    latitude = lat
-                    longitude = lon
-                    time = atMs
-                }
-            }
-            // Companion coords not available yet — fall through to phone GPS
+        val companion = freshCompanionLocation()
+        val resolved = companion ?: nativeTelemetryLatestLocation?.let {
+            Location(it).apply { time = nativeTelemetryLatestLocationAtMs }
         }
 
-        val loc = nativeTelemetryLatestLocation ?: return null
-        return Location(loc).apply { time = nativeTelemetryLatestLocationAtMs }
+        val source = when {
+            companion != null -> "companion"
+            resolved != null -> "phone"
+            else -> null
+        }
+        if (nativeTelemetryLocationSource == "companion" && source != nativeTelemetryResolvedSource) {
+            telemetryLogI("telemetry location source", mapOf("using" to (source ?: "none")))
+        }
+        nativeTelemetryResolvedSource = source
+        return resolved
+    }
+
+    private fun freshCompanionLocation(): Location? {
+        if (nativeTelemetryLocationSource != "companion") return null
+        val lat = nativeTelemetryCompanionLat ?: return null
+        val lon = nativeTelemetryCompanionLon ?: return null
+        val atMs = nativeTelemetryCompanionLocationAtMs
+        if (atMs <= 0 || System.currentTimeMillis() - atMs > companionLocationMaxAgeMs) return null
+        return Location("companion").apply {
+            latitude = lat
+            longitude = lon
+            time = atMs
+        }
     }
 
     private fun maybeLogNativeTelemetrySkip(

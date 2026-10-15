@@ -76,7 +76,7 @@ Core user-facing features that are already implemented:
 		- Offline map download + management
 		- KMZ overlay map import — render Garmin-style custom maps as georeferenced raster overlays
 - Location settings
-	- Location source: phone GPS vs companion radio GPS
+	- Location source: phone GPS vs companion radio GPS. With companion GPS selected, the app uses the radio's position only while it has a current fix. If the radio has no fix (no lock yet, lost lock, or no update for 10 seconds), the map and location tracking both switch to the phone's GPS, and switch back when the radio has a fix again.
 	- Location tracking ("telemetry") to a selected private channel
 - Companion radio settings (when supported by firmware)
 	- Frequency/BW/SF/CR/TX power presets + custom values

@@ -33,6 +33,7 @@ import 'package:meshcore_team/services/kmz_import_service.dart';
 import 'package:meshcore_team/services/mbtiles_registry.dart';
 import 'package:meshcore_team/services/mbtiles_source.dart';
 import 'package:meshcore_team/database/daos/imported_overlay_maps_dao.dart';
+import 'package:meshcore_team/services/companion_location_service.dart';
 import 'package:meshcore_team/services/map_tile_cache_service.dart';
 import 'package:meshcore_team/services/mesh_connection_service.dart';
 import 'package:meshcore_team/services/settings_service.dart';
@@ -75,11 +76,9 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
 
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<CompassXEvent>? _compassSub;
-  Timer? _companionTelemetryTimer;
   Timer? _contactMarkerRefreshTimer;
   Timer? _phoneLocationPollingTimer;
   bool _locationPollInProgress = false;
-  bool? _lastShouldUseCompanion;
 
   bool _isFollowingUser = false;
   bool _isHeadingUp = false;
@@ -1433,9 +1432,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     // Apply location/track-up policy after first build when providers exist.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final settingsService = context.read<SettingsService>();
-      final connectionVM = context.read<ConnectionViewModel>();
-      _applyLocationPolicy(settingsService, connectionVM);
+      _applyLocationPolicy(context.read<CompanionLocationService>());
 
       // Subscribe to imported KMZ overlay maps
       final db = context.read<AppDatabase>();
@@ -1461,10 +1458,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
       _isBackgrounded = false;
       // Restart phone GPS if the policy still wants it.
       if (!mounted) return;
-      _applyLocationPolicy(
-        context.read<SettingsService>(),
-        context.read<ConnectionViewModel>(),
-      );
+      _applyLocationPolicy(context.read<CompanionLocationService>());
       return;
     }
 
@@ -1500,8 +1494,6 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     _positionSub = null;
     _compassSub?.cancel();
     _compassSub = null;
-    _companionTelemetryTimer?.cancel();
-    _companionTelemetryTimer = null;
     _contactMarkerRefreshTimer?.cancel();
     _contactMarkerRefreshTimer = null;
     _phoneLocationPollingTimer?.cancel();
@@ -1612,10 +1604,9 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _applyLocationPolicy(
-    SettingsService settingsService,
-    ConnectionViewModel connectionVM,
-  ) {
+  /// Shows the companion's position while [CompanionLocationService] says to
+  /// use it, and the phone's otherwise.
+  void _applyLocationPolicy(CompanionLocationService companionLocation) {
     // iOS: while backgrounded and idle (not connected AND the mesh service is
     // fully stopped), keep phone GPS off so the native background-location
     // session is released. Guarding here (not just in didChangeAppLifecycleState)
@@ -1627,56 +1618,10 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
       return;
     }
 
-    final wantsCompanion =
-        settingsService.settings.locationSource == LocationSource.companion;
-
-    final companionFixTime = connectionVM.companionGpsFixTime;
-    final hasRecentCompanionFix = connectionVM.hasCompanionGpsFix &&
-        companionFixTime != null &&
-        DateTime.now().difference(companionFixTime) <
-            const Duration(seconds: 10);
-
-    final shouldPollCompanionTelemetry =
-        wantsCompanion && connectionVM.isConnected;
-    if (shouldPollCompanionTelemetry && _companionTelemetryTimer == null) {
-      _companionTelemetryTimer =
-          Timer.periodic(const Duration(seconds: 2), (_) async {
-        if (!mounted) return;
-        final vm = context.read<ConnectionViewModel>();
-        // Only send the request. Policy is re-evaluated reactively via
-        // ConnectionViewModel.notifyListeners() → build → postFrameCallback.
-        await vm.requestCompanionTelemetry();
-      });
-
-      // Fire one request immediately.
-      connectionVM.requestCompanionTelemetry();
-    } else if (!shouldPollCompanionTelemetry &&
-        _companionTelemetryTimer != null) {
-      _companionTelemetryTimer?.cancel();
-      _companionTelemetryTimer = null;
-    }
-
-    final fixAgeMs = companionFixTime != null
-        ? DateTime.now().difference(companionFixTime).inMilliseconds
-        : null;
-    final shouldUseCompanion =
-        wantsCompanion && connectionVM.isConnected && hasRecentCompanionFix;
-
-    if (shouldUseCompanion != _lastShouldUseCompanion) {
-      debugPrint('[MapScreen] 📍 LocationPolicy: wantsCompanion=$wantsCompanion'
-          ' connected=${connectionVM.isConnected}'
-          ' hasGpsFix=${connectionVM.hasCompanionGpsFix}'
-          ' fixAgeMs=$fixAgeMs'
-          ' hasRecentFix=$hasRecentCompanionFix'
-          ' → shouldUseCompanion=$shouldUseCompanion'
-          ' phoneSub=${_positionSub != null}');
-      _lastShouldUseCompanion = shouldUseCompanion;
-    }
-
-    if (shouldUseCompanion) {
+    if (companionLocation.usingCompanion) {
       _stopPhoneLocationTracking();
-      final lat = connectionVM.companionLatitude;
-      final lon = connectionVM.companionLongitude;
+      final lat = companionLocation.latitude;
+      final lon = companionLocation.longitude;
       if (lat != null && lon != null) {
         // Only push a new location when the coordinates have actually changed.
         // Calling _handleNewLocation unconditionally triggers setState → rebuild
@@ -1828,7 +1773,6 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     final l10n = AppLocalizations.of(context)!;
     final settingsService = context.watch<SettingsService>();
     final isNighttime = settingsService.settings.appTheme == AppThemeMode.nighttime;
-    final connectionVM = context.watch<ConnectionViewModel>();
     final tileCache = context.read<MapTileCacheService>();
     final db = context.read<AppDatabase>();
     final tileConfig = tileProviderForId(settingsService.settings.mapProvider);
@@ -1842,15 +1786,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     final showContactPaths = settingsService.settings.mapShowContactPaths;
     final showRepeaters = settingsService.settings.mapShowRepeaters;
 
-    final wantsCompanion =
-        settingsService.settings.locationSource == LocationSource.companion;
-    final companionFixTime = connectionVM.companionGpsFixTime;
-    final hasRecentCompanionFix = connectionVM.hasCompanionGpsFix &&
-        companionFixTime != null &&
-        DateTime.now().difference(companionFixTime) <
-            const Duration(seconds: 10);
-    final usingCompanionGps =
-        wantsCompanion && connectionVM.isConnected && hasRecentCompanionFix;
+    final companionLocation = context.watch<CompanionLocationService>();
+    final usingCompanionGps = companionLocation.usingCompanion;
 
     final hasPhoneFix = _userLocation != null;
 
@@ -1870,7 +1807,7 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
           _applyMapRotationForTrackUp();
         }
       }
-      _applyLocationPolicy(settingsService, connectionVM);
+      _applyLocationPolicy(companionLocation);
     });
 
     return Scaffold(
