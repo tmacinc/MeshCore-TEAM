@@ -77,7 +77,7 @@ class AppDatabase extends _$AppDatabase {
   // Jumps 9 -> 12: the Team Link branch (D0sockets) already uses 10 and 11,
   // so dev skips them to keep the two branches mergeable. See
   // docs/alias-peer-identity-plan.md §3.5.
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -101,127 +101,153 @@ class AppDatabase extends _$AppDatabase {
           );
         },
         onUpgrade: (Migrator m, int from, int to) async {
-          // Migration from schema version 1 to 2: Add isRead column to Messages table
-          if (from == 1 && to >= 2) {
-            await m.addColumn(messages, messages.isRead);
-          }
-
-          // Migration from schema version 2 to 3: Fix isPrivate flag for channel messages
-          if (from <= 2 && to >= 3) {
-            // Get all channel hashes
-            final channelHashes =
-                await (select(channels)).map((c) => c.hash).get();
-
-            // Update messages that belong to channels to have isPrivate=false
-            for (final channelHash in channelHashes) {
-              await (update(messages)
-                    ..where((t) => t.channelHash.equals(channelHash)))
-                  .write(MessagesCompanion(
-                isPrivate: const Value(false),
-              ));
-            }
-
-            print(
-                '[Migration] Fixed isPrivate flag for ${channelHashes.length} channels');
-          }
-
-          // Migration from schema version 3 to 4: Add companionDeviceKey to AckRecords table
-          if (from <= 3 && to >= 4) {
-            await m.addColumn(ackRecords, ackRecords.companionDeviceKey);
-            print('[Migration] Added companionDeviceKey to ack_records table');
-          }
-
-          // Migration from schema version 4 to 5: Add offline_map_areas table
-          if (from <= 4 && to >= 5) {
-            await m.createTable(offlineMapAreas);
-            print('[Migration] Created offline_map_areas table');
-          }
-
-          // Migration from schema version 5 to 6: Add isAutonomousDevice to contacts
-          if (from <= 5 && to >= 6) {
-            await m.addColumn(contacts, contacts.isAutonomousDevice);
-            print('[Migration] Added isAutonomousDevice to contacts table');
-          }
-
-          // Schema version 6 to 7 added is_autonomous_device to
-          // contact_display_states. That table is replaced in v12 (below), and
-          // the v12 copy doesn't read the column, so there is nothing to do.
-
-          // Migration from schema version 7 to 8: new tables, favorites, channel notification mode
-          if (from <= 7 && to >= 8) {
-            await m.createTable(importedOverlayMaps);
-            await m.addColumn(contacts, contacts.isFavorite);
-            await customStatement(
-              "ALTER TABLE channels ADD COLUMN notification_mode TEXT NOT NULL DEFAULT 'normal'",
-            );
-            await customStatement(
-              'ALTER TABLE channels ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0',
-            );
-            print('[Migration] v7->v8: importedOverlayMaps, favorites, channel notification mode');
-          }
-
-          // Migration from schema version 8 to 9: imported overlay maps gain a
-          // layer-type discriminator so MBTiles and geospatial PDF imports can
-          // share the table with the original KMZ rows. Existing rows keep the
-          // 'kmz' default, so no data rewrite is needed.
-          if (from <= 8 && to >= 9) {
-            await m.addColumn(importedOverlayMaps, importedOverlayMaps.layerType);
-            await m.addColumn(importedOverlayMaps, importedOverlayMaps.minZoom);
-            await m.addColumn(importedOverlayMaps, importedOverlayMaps.maxZoom);
-            await m.addColumn(importedOverlayMaps, importedOverlayMaps.opacity);
-            await m.addColumn(importedOverlayMaps, importedOverlayMaps.sizeBytes);
-            print('[Migration] v8->v9: imported_overlay_maps layer_type/zoom/opacity/size_bytes');
-          }
-
-          // Versions 10 and 11 belong to the Team Link branch (D0sockets); dev
-          // never used them. Their additive changes are covered by
-          // _reconcileSchema when that branch merges.
-
-          // Migration to schema version 12: peer identity. Replaces the
-          // per-radio contact_display_states / contact_position_histories with
-          // radio-independent peer tables. Last known positions are copied
-          // over; the short position trail is dropped.
-          if (from <= 11 && to >= 12) {
-            await m.createTable(peers);
-            await m.createTable(peerLocations);
-            await m.createTable(peerPositionHistory);
-            await _addColumnIfMissing(m, messages, messages.senderPeerId);
-            final copied = await _copyLegacyDisplayStates();
-            await customStatement(
-                'DROP TABLE IF EXISTS contact_position_histories');
-            await customStatement('DROP TABLE IF EXISTS contact_display_states');
-            print(
-                '[Migration] v11->v12: peers created, $copied last known positions kept');
-          }
-
-          // Migration to schema version 13: adverts the radio declined to
-          // store, listed for the user instead of being dropped.
-          if (from <= 12 && to >= 13) {
-            await m.createTable(heardAdverts);
-            print('[Migration] v12->v13: heard_adverts');
-          }
-
-          // Migration to schema version 14: team channels are owned by the
-          // phone, so they survive a radio switch and can be absent from the
-          // radio's slots.
-          if (from <= 13 && to >= 14) {
-            await _addColumnIfMissing(m, channels, channels.isTeam);
-            await _addColumnIfMissing(m, channels, channels.firmwareConfirmed);
-
-            // The tracking channel is marked as a team channel by
-            // ChannelRepository.markTrackingChannelAsTeam() at startup, which
-            // is where the setting lives.
-            print('[Migration] v13->v14: channels isTeam, firmwareConfirmed');
-          }
-
-          // Migration to schema version 15: repeaters can be hidden from the
-          // map's repeater layer one at a time.
-          if (from <= 14 && to >= 15) {
-            await _addColumnIfMissing(m, contacts, contacts.hideOnMap);
-            print('[Migration] v14->v15: contacts hideOnMap');
-          }
+          // One transaction for every step: a step that throws leaves the
+          // database at its old version, as it was, instead of half-migrated
+          // and failing the same way on every launch.
+          //
+          // Steps use raw SQL for data. A typed query (select(contacts)...)
+          // reads every column of the *current* schema, including ones a
+          // later step hasn't added yet, and throws on an older database.
+          await transaction(() => _upgrade(m, from, to));
         },
       );
+
+  Future<void> _upgrade(Migrator m, int from, int to) async {
+    // Migration from schema version 1 to 2: Add isRead column to Messages table
+    if (from == 1 && to >= 2) {
+      await m.addColumn(messages, messages.isRead);
+    }
+
+    // Migration from schema version 2 to 3: Fix isPrivate flag for channel messages
+    if (from <= 2 && to >= 3) {
+      await customStatement(
+        'UPDATE messages SET is_private = 0 '
+        'WHERE channel_hash IN (SELECT hash FROM channels)',
+      );
+      print('[Migration] Fixed isPrivate flag for channel messages');
+    }
+
+    // Migration from schema version 3 to 4: Add companionDeviceKey to AckRecords table
+    if (from <= 3 && to >= 4) {
+      await m.addColumn(ackRecords, ackRecords.companionDeviceKey);
+      print('[Migration] Added companionDeviceKey to ack_records table');
+    }
+
+    // Migration from schema version 4 to 5: Add offline_map_areas table
+    if (from <= 4 && to >= 5) {
+      await m.createTable(offlineMapAreas);
+      print('[Migration] Created offline_map_areas table');
+    }
+
+    // Migration from schema version 5 to 6: Add isAutonomousDevice to contacts
+    if (from <= 5 && to >= 6) {
+      await m.addColumn(contacts, contacts.isAutonomousDevice);
+      print('[Migration] Added isAutonomousDevice to contacts table');
+    }
+
+    // Schema version 6 to 7 added is_autonomous_device to
+    // contact_display_states. That table is dropped in v12 (below), so
+    // there is nothing to do.
+
+    // Migration from schema version 7 to 8: new tables, favorites, channel notification mode
+    if (from <= 7 && to >= 8) {
+      await m.createTable(importedOverlayMaps);
+      await m.addColumn(contacts, contacts.isFavorite);
+      await customStatement(
+        "ALTER TABLE channels ADD COLUMN notification_mode TEXT NOT NULL DEFAULT 'normal'",
+      );
+      await customStatement(
+        'ALTER TABLE channels ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0',
+      );
+      print('[Migration] v7->v8: importedOverlayMaps, favorites, channel notification mode');
+    }
+
+    // Migration from schema version 8 to 9: imported overlay maps gain a
+    // layer-type discriminator so MBTiles and geospatial PDF imports can
+    // share the table with the original KMZ rows. Existing rows keep the
+    // 'kmz' default, so no data rewrite is needed.
+    if (from <= 8 && to >= 9) {
+      await m.addColumn(importedOverlayMaps, importedOverlayMaps.layerType);
+      await m.addColumn(importedOverlayMaps, importedOverlayMaps.minZoom);
+      await m.addColumn(importedOverlayMaps, importedOverlayMaps.maxZoom);
+      await m.addColumn(importedOverlayMaps, importedOverlayMaps.opacity);
+      await m.addColumn(importedOverlayMaps, importedOverlayMaps.sizeBytes);
+      print('[Migration] v8->v9: imported_overlay_maps layer_type/zoom/opacity/size_bytes');
+    }
+
+    // Versions 10 and 11 belong to the Team Link branch (D0sockets); dev
+    // never used them. Their additive changes are covered by
+    // _reconcileSchema when that branch merges.
+
+    // Migration to schema version 12: peer identity. Replaces the
+    // per-radio contact_display_states / contact_position_histories with
+    // radio-independent peer tables. Nothing is carried over: v16 starts
+    // the peer tables empty.
+    if (from <= 11 && to >= 12) {
+      await m.createTable(peers);
+      await m.createTable(peerLocations);
+      await m.createTable(peerPositionHistory);
+      await _addColumnIfMissing(m, messages, messages.senderPeerId);
+      await customStatement(
+          'DROP TABLE IF EXISTS contact_position_histories');
+      await customStatement('DROP TABLE IF EXISTS contact_display_states');
+      print('[Migration] v11->v12: peers created');
+    }
+
+    // Migration to schema version 13: adverts the radio declined to
+    // store, listed for the user instead of being dropped.
+    if (from <= 12 && to >= 13) {
+      await m.createTable(heardAdverts);
+      print('[Migration] v12->v13: heard_adverts');
+    }
+
+    // Migration to schema version 14: team channels are owned by the
+    // phone, so they survive a radio switch and can be absent from the
+    // radio's slots.
+    if (from <= 13 && to >= 14) {
+      await _addColumnIfMissing(m, channels, channels.isTeam);
+      await _addColumnIfMissing(m, channels, channels.firmwareConfirmed);
+
+      // The tracking channel is marked as a team channel by
+      // ChannelRepository.markTrackingChannelAsTeam() at startup, which
+      // is where the setting lives.
+      print('[Migration] v13->v14: channels isTeam, firmwareConfirmed');
+    }
+
+    // Migration to schema version 15: repeaters can be hidden from the
+    // map's repeater layer one at a time.
+    if (from <= 14 && to >= 15) {
+      await _addColumnIfMissing(m, contacts, contacts.hideOnMap);
+      print('[Migration] v14->v15: contacts hideOnMap');
+    }
+
+    // Migration to schema version 16: a clean start for 1.2. What the
+    // phone knows about radios and teammates is cleared, and comes back
+    // from the radio on the next connection and from live traffic.
+    // Data from 1.1.x or earlier 1.2 betas could otherwise hide
+    // teammates: companion_devices lists every radio this phone has
+    // used, which PeerDirectory treats as its own, and channel rows are
+    // looked up by radio and slot. The user's own data (messages,
+    // waypoints, offline areas, overlays) is kept.
+    //
+    // SettingsService clears the matching contact sync cursors, or the
+    // next sync would only fetch contacts changed since the last one.
+    if (from <= 15 && to >= 16) {
+      for (final table in const [
+        'peer_position_history',
+        'peer_locations',
+        'peers',
+        'heard_adverts',
+        'contacts',
+        'channels',
+        'companion_devices',
+      ]) {
+        await customStatement('DELETE FROM $table');
+      }
+      await customStatement('UPDATE messages SET sender_peer_id = NULL');
+      print('[Migration] v15->v16: radio and peer data cleared');
+    }
+  }
 
   /// Adds a column unless the table already has it. A duplicate-column error
   /// aborts the whole migration, and the same column can legitimately already
@@ -240,101 +266,6 @@ class AppDatabase extends _$AppDatabase {
         .toSet();
     if (existing.contains(column.name)) return;
     await m.addColumn(table, column);
-  }
-
-  /// Copies each legacy contact_display_states row into a peer plus its last
-  /// known location. Returns the number of rows copied.
-  Future<int> _copyLegacyDisplayStates() async {
-    final tables = await customSelect(
-      "SELECT name FROM sqlite_master WHERE type = 'table' "
-      "AND name = 'contact_display_states'",
-    ).get();
-    if (tables.isEmpty) return 0;
-
-    final rows = await customSelect(
-      'SELECT s.public_key_hex, s.last_seen, s.last_latitude, '
-      's.last_longitude, s.last_path_len, s.is_manually_hidden, s.hidden_at, '
-      's.name, s.first_seen, s.total_telemetry_received, '
-      '(SELECT c.hash FROM channels c '
-      ' WHERE c.channel_index = s.last_channel_idx '
-      ' AND c.companion_device_key = s.companion_device_key LIMIT 1) '
-      'AS channel_hash '
-      'FROM contact_display_states s',
-    ).get();
-
-    var copied = 0;
-    for (final row in rows) {
-      final keyHex = row.read<String>('public_key_hex');
-      final lastSeen = row.read<int>('last_seen');
-      final firstSeen = row.read<int>('first_seen');
-
-      // Team Link builds store radio-less peers under synthetic CLOUD: keys.
-      Uint8List? radioKey;
-      String? appId;
-      if (RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(keyHex)) {
-        radioKey = _hexToBytes(keyHex);
-      } else if (keyHex.startsWith('CLOUD:U:')) {
-        appId = keyHex.substring('CLOUD:U:'.length).toLowerCase();
-      }
-
-      if (radioKey != null) {
-        final key = radioKey;
-        final existing = await (select(peers)
-              ..where((t) => t.radioPublicKey.equals(key)))
-            .getSingleOrNull();
-        if (existing != null) continue;
-      }
-
-      final channelHash = row.readNullable<int>('channel_hash');
-      final peerId = await into(peers).insert(PeersCompanion.insert(
-        radioPublicKey: Value(radioKey),
-        radioKeyPrefix:
-            Value(radioKey == null ? null : keyHex.substring(0, 12).toLowerCase()),
-        appIdentityId: Value(appId),
-        radioName: Value(row.readNullable<String>('name')),
-        isTeamMember: const Value(true),
-        lastTeamChannelHash: Value(channelHash),
-        firstSeen: firstSeen,
-        lastSeen: lastSeen,
-      ));
-
-      ContactData? contact;
-      if (radioKey != null) {
-        final key = radioKey;
-        contact = await (select(contacts)
-              ..where((t) => t.publicKey.equals(key))
-              ..limit(1))
-            .getSingleOrNull();
-      }
-
-      await into(peerLocations).insert(PeerLocationsCompanion.insert(
-        peerId: Value(peerId),
-        lastSeen: lastSeen,
-        lastLatitude: Value(row.readNullable<double>('last_latitude')),
-        lastLongitude: Value(row.readNullable<double>('last_longitude')),
-        // 0 when the channel is gone: kept on record, not shown on the map.
-        lastChannelHash: channelHash ?? 0,
-        lastPathLen: row.read<int>('last_path_len'),
-        companionBatteryMilliVolts: Value(contact?.companionBatteryMilliVolts),
-        phoneBatteryMilliVolts: Value(contact?.phoneBatteryMilliVolts),
-        isAutonomousDevice: Value(contact?.isAutonomousDevice ?? false),
-        isManuallyHidden: Value(row.read<int>('is_manually_hidden') != 0),
-        hiddenAt: Value(row.readNullable<int>('hidden_at')),
-        firstSeen: firstSeen,
-        totalTelemetryReceived:
-            Value(row.read<int>('total_telemetry_received')),
-      ));
-      copied++;
-    }
-    return copied;
-  }
-
-  static Uint8List _hexToBytes(String hex) {
-    final bytes = Uint8List(hex.length ~/ 2);
-    for (var i = 0; i < bytes.length; i++) {
-      bytes[i] = int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16);
-    }
-    return bytes;
   }
 
   /// Brings the live database up to the schema drift expects, regardless of

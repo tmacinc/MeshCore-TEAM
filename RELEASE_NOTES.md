@@ -1,5 +1,8 @@
 # Release Notes — unreleased
 
+## Updating from 1.1
+- The first start after updating clears your contacts, channels and the list of radios you have used, and reloads them from your radio when you connect. Teammates reappear on the map as their locations come in. Your messages, waypoints, offline maps and map overlays are kept.
+
 ## Your name on the team
 - You can now set **your name**: an in-app name only members of your team channel can see, so your radio name can stay anonymous on the mesh. You're asked for one when the app first starts; skipping it keeps today's behaviour of showing your radio name.
 - Team members appear under the name they chose on the map, in contacts, in chat and in notifications, with their radio name kept underneath. Replies and @mentions still use radio names, so your chosen name never reaches a public channel.

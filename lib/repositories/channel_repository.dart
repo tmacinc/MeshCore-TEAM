@@ -877,6 +877,11 @@ class ChannelRepository {
       debugPrint(
           '[ChannelSync] 💾 Replaced all channels (${fetchedChannels.length} saved)');
 
+      // The tracking channel can arrive here as a new row (after the v16
+      // clean start emptied the table, or from a newly paired radio), and is
+      // a team channel either way.
+      await markTrackingChannelAsTeam();
+
       // Mark sync as complete
       _updateProgress(ChannelSyncProgress(
         currentCount: fetchedChannels.length,

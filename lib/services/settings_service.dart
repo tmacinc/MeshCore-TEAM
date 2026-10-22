@@ -57,6 +57,7 @@ class SettingsService extends ChangeNotifier {
   static const String _keyLanguageChosen = 'language_chosen';
   static const String _keyCollapsedSettingsSections =
       'collapsed_settings_sections';
+  static const String _keyCleanStartV16 = 'clean_start_v16';
 
   final SharedPreferences _prefs;
   AppSettings _settings = const AppSettings();
@@ -67,7 +68,22 @@ class SettingsService extends ChangeNotifier {
       StreamController<String?>.broadcast();
 
   SettingsService(this._prefs) {
+    _clearContactSyncCursorsOnce();
     _loadSettings();
+  }
+
+  /// The database's v16 clean start empties the contacts table. The contact
+  /// sync cursors have to go with it, or the next sync only fetches contacts
+  /// the radio changed since the last one. Runs once per install; a fresh
+  /// install has none to clear.
+  void _clearContactSyncCursorsOnce() {
+    if (_prefs.getBool(_keyCleanStartV16) ?? false) return;
+    for (final key in _prefs.getKeys()) {
+      if (key.startsWith('${_keyContactLastmod}_')) {
+        unawaited(_prefs.remove(key));
+      }
+    }
+    unawaited(_prefs.setBool(_keyCleanStartV16, true));
   }
 
   String _telemetryChannelHashKeyForCompanion(String companionPublicKeyHex) {
