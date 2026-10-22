@@ -2194,4 +2194,48 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get trackingNeedsPrivateChannel =>
       'Créez d\'abord un canal privé. Votre position n\'est partagée que sur un canal privé.';
+
+  @override
+  String get whatsNewIntroTitle => 'Nouveau : l\'identité d\'équipe';
+
+  @override
+  String get whatsNewIntroBody =>
+      'TEAM reconnaît désormais les personnes de votre groupe à leur téléphone, et non à la radio qu\'elles portent. Les groupes peuvent partager des radios plus facilement, et vous pouvez rester anonyme sur le réseau. Voici ce que cela change pour vous.';
+
+  @override
+  String get whatsNewNameTitle => 'Un nom que seule votre équipe voit';
+
+  @override
+  String get whatsNewNameBody =>
+      'Choisissez un nom pour votre équipe. Seules les personnes de votre canal d\'équipe peuvent le voir, ainsi le nom de votre radio peut rester anonyme pour le reste du réseau.';
+
+  @override
+  String get whatsNewRadioTitle => 'Changez de radio, restez vous-même';
+
+  @override
+  String get whatsNewRadioBody =>
+      'Prenez une autre radio ou échangez-la avec quelqu\'un de votre groupe : votre équipe vous voit toujours comme vous. Votre nom et votre place sur la carte vous suivent, pas la radio.';
+
+  @override
+  String get whatsNewChannelsTitle =>
+      'Les canaux d\'équipe restent sur votre téléphone';
+
+  @override
+  String get whatsNewChannelsBody =>
+      'Le canal sur lequel vous partagez votre position et vos autres canaux d\'équipe restent sur votre téléphone, avec leur historique, quand vous changez de radio. Sur une nouvelle radio, ajoutez-les à nouveau d\'un seul geste.';
+
+  @override
+  String get whatsNewExpectTitle => 'Laissez-lui un instant';
+
+  @override
+  String get whatsNewExpectBody =>
+      'Après une mise à jour ou un changement de radio, tout prend un moment à se remettre en place. Les contacts et les canaux se rechargent depuis votre radio à la connexion, et il faut quelques mises à jour de position pour que votre groupe sache qui est qui. Vos coéquipiers apparaissent sur la carte au fur et à mesure que leurs positions arrivent.';
+
+  @override
+  String get whatsNewNext => 'Suivant';
+
+  @override
+  String whatsNewVersion(String version) {
+    return 'Version $version';
+  }
 }

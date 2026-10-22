@@ -592,5 +592,17 @@
   "hideNonTeam": "Mostrar solo canales y contactos del equipo",
   "deleteChannelNeedsRadio": "Este canal está guardado en tu radio. Conéctate a la radio para eliminarlo.",
   "trackingChannelPrompt": "Compartir tu ubicación en",
-  "trackingNeedsPrivateChannel": "Crea primero un canal privado. Tu ubicación solo se comparte en un canal privado."
+  "trackingNeedsPrivateChannel": "Crea primero un canal privado. Tu ubicación solo se comparte en un canal privado.",
+  "whatsNewIntroTitle": "Presentamos la identidad de equipo",
+  "whatsNewIntroBody": "TEAM ahora reconoce a las personas de tu grupo por su teléfono, no por la radio que llevan. Los grupos pueden compartir radios más fácilmente y puedes seguir siendo anónimo en la malla. Esto es lo que significa para ti.",
+  "whatsNewNameTitle": "Un nombre que solo ve tu equipo",
+  "whatsNewNameBody": "Elige un nombre para tu equipo. Solo quienes están en tu canal de equipo pueden verlo, así el nombre de tu radio puede seguir siendo anónimo para el resto de la malla.",
+  "whatsNewRadioTitle": "Cambia de radio, sigue siendo tú",
+  "whatsNewRadioBody": "Usa otra radio o intercámbiala con alguien de tu grupo, y tu equipo te seguirá viendo a ti. Tu nombre y tu lugar en el mapa te siguen a ti, no a la radio.",
+  "whatsNewChannelsTitle": "Los canales de equipo se quedan en tu teléfono",
+  "whatsNewChannelsBody": "El canal en el que compartes tu ubicación y tus otros canales de equipo se quedan en tu teléfono, con su historial, cuando cambias de radio. En una radio nueva, vuelve a añadirlos con un toque.",
+  "whatsNewExpectTitle": "Dale un momento",
+  "whatsNewExpectBody": "Después de actualizar o cambiar de radio, todo tarda un poco en ajustarse. Los contactos y canales se vuelven a cargar desde tu radio al conectarte, y hacen falta un par de actualizaciones de ubicación para que tu grupo sepa quién es quién. Tus compañeros aparecen en el mapa a medida que llegan sus ubicaciones.",
+  "whatsNewNext": "Siguiente",
+  "whatsNewVersion": "Versión {version}"
 }

@@ -3665,6 +3665,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create a private channel first. Your location is only shared on a private channel.'**
   String get trackingNeedsPrivateChannel;
+
+  /// No description provided for @whatsNewIntroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Introducing team identity'**
+  String get whatsNewIntroTitle;
+
+  /// No description provided for @whatsNewIntroBody.
+  ///
+  /// In en, this message translates to:
+  /// **'TEAM now knows the people in your group by their phone, not by the radio they carry. Groups can share radios more easily, and you can stay anonymous on the mesh. Here\'s what that means for you.'**
+  String get whatsNewIntroBody;
+
+  /// No description provided for @whatsNewNameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A name only your team sees'**
+  String get whatsNewNameTitle;
+
+  /// No description provided for @whatsNewNameBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a name for your team. Only people on your team channel can see it, so your radio name can stay anonymous to everyone else on the mesh.'**
+  String get whatsNewNameBody;
+
+  /// No description provided for @whatsNewRadioTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change radios, stay yourself'**
+  String get whatsNewRadioTitle;
+
+  /// No description provided for @whatsNewRadioBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick up a different radio, or swap with someone in your group, and your team still sees you as you. Your name and your place on the map follow you, not the radio.'**
+  String get whatsNewRadioBody;
+
+  /// No description provided for @whatsNewChannelsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Team channels stay on your phone'**
+  String get whatsNewChannelsTitle;
+
+  /// No description provided for @whatsNewChannelsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The channel you share your location on, and your other team channels, stay on your phone with their history when you change radios. On a new radio, add them back with one tap.'**
+  String get whatsNewChannelsBody;
+
+  /// No description provided for @whatsNewExpectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Give it a moment'**
+  String get whatsNewExpectTitle;
+
+  /// No description provided for @whatsNewExpectBody.
+  ///
+  /// In en, this message translates to:
+  /// **'After you update or change radios, things take a moment to settle. Contacts and channels reload from your radio when you connect, and it takes a couple of location updates for your group to work out who is who. Teammates appear on the map as their locations come in.'**
+  String get whatsNewExpectBody;
+
+  /// No description provided for @whatsNewNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get whatsNewNext;
+
+  /// No description provided for @whatsNewVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String whatsNewVersion(String version);
 }
 
 class _AppLocalizationsDelegate

@@ -2185,4 +2185,47 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get trackingNeedsPrivateChannel =>
       'Maak eerst een privékanaal. Je locatie wordt alleen op een privékanaal gedeeld.';
+
+  @override
+  String get whatsNewIntroTitle => 'Nieuw: teamidentiteit';
+
+  @override
+  String get whatsNewIntroBody =>
+      'TEAM herkent de mensen in je groep nu aan hun telefoon, niet aan de radio die ze dragen. Groepen kunnen makkelijker radio\'s delen, en je kunt anoniem blijven op het mesh. Dit betekent het voor jou.';
+
+  @override
+  String get whatsNewNameTitle => 'Een naam die alleen je team ziet';
+
+  @override
+  String get whatsNewNameBody =>
+      'Kies een naam voor je team. Alleen mensen in je teamkanaal kunnen hem zien, zodat je radionaam anoniem kan blijven voor de rest van het mesh.';
+
+  @override
+  String get whatsNewRadioTitle => 'Wissel van radio, blijf jezelf';
+
+  @override
+  String get whatsNewRadioBody =>
+      'Pak een andere radio of ruil met iemand uit je groep, en je team ziet jou nog steeds als jou. Je naam en je plek op de kaart volgen jou, niet de radio.';
+
+  @override
+  String get whatsNewChannelsTitle => 'Teamkanalen blijven op je telefoon';
+
+  @override
+  String get whatsNewChannelsBody =>
+      'Het kanaal waarop je je locatie deelt en je andere teamkanalen blijven met hun geschiedenis op je telefoon als je van radio wisselt. Op een nieuwe radio voeg je ze met één tik weer toe.';
+
+  @override
+  String get whatsNewExpectTitle => 'Geef het even de tijd';
+
+  @override
+  String get whatsNewExpectBody =>
+      'Na een update of radiowissel heeft alles even tijd nodig. Contacten en kanalen worden opnieuw van je radio geladen als je verbinding maakt, en het duurt een paar locatie-updates voordat je groep weet wie wie is. Teamgenoten verschijnen op de kaart zodra hun locaties binnenkomen.';
+
+  @override
+  String get whatsNewNext => 'Volgende';
+
+  @override
+  String whatsNewVersion(String version) {
+    return 'Versie $version';
+  }
 }

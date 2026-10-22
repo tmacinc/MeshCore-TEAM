@@ -592,5 +592,17 @@
   "hideNonTeam": "Alleen teamkanalen en -contacten tonen",
   "deleteChannelNeedsRadio": "Dit kanaal staat op je radio. Maak verbinding met de radio om het te verwijderen.",
   "trackingChannelPrompt": "Je locatie delen op",
-  "trackingNeedsPrivateChannel": "Maak eerst een privékanaal. Je locatie wordt alleen op een privékanaal gedeeld."
+  "trackingNeedsPrivateChannel": "Maak eerst een privékanaal. Je locatie wordt alleen op een privékanaal gedeeld.",
+  "whatsNewIntroTitle": "Nieuw: teamidentiteit",
+  "whatsNewIntroBody": "TEAM herkent de mensen in je groep nu aan hun telefoon, niet aan de radio die ze dragen. Groepen kunnen makkelijker radio's delen, en je kunt anoniem blijven op het mesh. Dit betekent het voor jou.",
+  "whatsNewNameTitle": "Een naam die alleen je team ziet",
+  "whatsNewNameBody": "Kies een naam voor je team. Alleen mensen in je teamkanaal kunnen hem zien, zodat je radionaam anoniem kan blijven voor de rest van het mesh.",
+  "whatsNewRadioTitle": "Wissel van radio, blijf jezelf",
+  "whatsNewRadioBody": "Pak een andere radio of ruil met iemand uit je groep, en je team ziet jou nog steeds als jou. Je naam en je plek op de kaart volgen jou, niet de radio.",
+  "whatsNewChannelsTitle": "Teamkanalen blijven op je telefoon",
+  "whatsNewChannelsBody": "Het kanaal waarop je je locatie deelt en je andere teamkanalen blijven met hun geschiedenis op je telefoon als je van radio wisselt. Op een nieuwe radio voeg je ze met één tik weer toe.",
+  "whatsNewExpectTitle": "Geef het even de tijd",
+  "whatsNewExpectBody": "Na een update of radiowissel heeft alles even tijd nodig. Contacten en kanalen worden opnieuw van je radio geladen als je verbinding maakt, en het duurt een paar locatie-updates voordat je groep weet wie wie is. Teamgenoten verschijnen op de kaart zodra hun locaties binnenkomen.",
+  "whatsNewNext": "Volgende",
+  "whatsNewVersion": "Versie {version}"
 }

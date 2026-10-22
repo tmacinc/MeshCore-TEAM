@@ -1,6 +1,7 @@
 # Release Notes — unreleased
 
 ## Updating from 1.1
+- A short tour on first start, after installing or updating, introduces team identity: your name for the team, changing radios, and team channels that stay on your phone.
 - The first start after updating clears your contacts, channels and the list of radios you have used, and reloads them from your radio when you connect. Teammates reappear on the map as their locations come in. Your messages, waypoints, offline maps and map overlays are kept.
 
 ## Your name on the team

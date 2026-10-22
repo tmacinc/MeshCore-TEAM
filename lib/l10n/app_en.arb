@@ -1442,5 +1442,24 @@
   "hideNonTeam": "Hide all but team channels and contacts",
   "deleteChannelNeedsRadio": "This channel is stored on your radio. Connect to the radio to delete it.",
   "trackingChannelPrompt": "Share your location on",
-  "trackingNeedsPrivateChannel": "Create a private channel first. Your location is only shared on a private channel."
+  "trackingNeedsPrivateChannel": "Create a private channel first. Your location is only shared on a private channel.",
+  "whatsNewIntroTitle": "Introducing team identity",
+  "whatsNewIntroBody": "TEAM now knows the people in your group by their phone, not by the radio they carry. Groups can share radios more easily, and you can stay anonymous on the mesh. Here's what that means for you.",
+  "whatsNewNameTitle": "A name only your team sees",
+  "whatsNewNameBody": "Choose a name for your team. Only people on your team channel can see it, so your radio name can stay anonymous to everyone else on the mesh.",
+  "whatsNewRadioTitle": "Change radios, stay yourself",
+  "whatsNewRadioBody": "Pick up a different radio, or swap with someone in your group, and your team still sees you as you. Your name and your place on the map follow you, not the radio.",
+  "whatsNewChannelsTitle": "Team channels stay on your phone",
+  "whatsNewChannelsBody": "The channel you share your location on, and your other team channels, stay on your phone with their history when you change radios. On a new radio, add them back with one tap.",
+  "whatsNewExpectTitle": "Give it a moment",
+  "whatsNewExpectBody": "After you update or change radios, things take a moment to settle. Contacts and channels reload from your radio when you connect, and it takes a couple of location updates for your group to work out who is who. Teammates appear on the map as their locations come in.",
+  "whatsNewNext": "Next",
+  "whatsNewVersion": "Version {version}",
+  "@whatsNewVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -2195,4 +2195,48 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get trackingNeedsPrivateChannel =>
       'Crea primero un canal privado. Tu ubicación solo se comparte en un canal privado.';
+
+  @override
+  String get whatsNewIntroTitle => 'Presentamos la identidad de equipo';
+
+  @override
+  String get whatsNewIntroBody =>
+      'TEAM ahora reconoce a las personas de tu grupo por su teléfono, no por la radio que llevan. Los grupos pueden compartir radios más fácilmente y puedes seguir siendo anónimo en la malla. Esto es lo que significa para ti.';
+
+  @override
+  String get whatsNewNameTitle => 'Un nombre que solo ve tu equipo';
+
+  @override
+  String get whatsNewNameBody =>
+      'Elige un nombre para tu equipo. Solo quienes están en tu canal de equipo pueden verlo, así el nombre de tu radio puede seguir siendo anónimo para el resto de la malla.';
+
+  @override
+  String get whatsNewRadioTitle => 'Cambia de radio, sigue siendo tú';
+
+  @override
+  String get whatsNewRadioBody =>
+      'Usa otra radio o intercámbiala con alguien de tu grupo, y tu equipo te seguirá viendo a ti. Tu nombre y tu lugar en el mapa te siguen a ti, no a la radio.';
+
+  @override
+  String get whatsNewChannelsTitle =>
+      'Los canales de equipo se quedan en tu teléfono';
+
+  @override
+  String get whatsNewChannelsBody =>
+      'El canal en el que compartes tu ubicación y tus otros canales de equipo se quedan en tu teléfono, con su historial, cuando cambias de radio. En una radio nueva, vuelve a añadirlos con un toque.';
+
+  @override
+  String get whatsNewExpectTitle => 'Dale un momento';
+
+  @override
+  String get whatsNewExpectBody =>
+      'Después de actualizar o cambiar de radio, todo tarda un poco en ajustarse. Los contactos y canales se vuelven a cargar desde tu radio al conectarte, y hacen falta un par de actualizaciones de ubicación para que tu grupo sepa quién es quién. Tus compañeros aparecen en el mapa a medida que llegan sus ubicaciones.';
+
+  @override
+  String get whatsNewNext => 'Siguiente';
+
+  @override
+  String whatsNewVersion(String version) {
+    return 'Versión $version';
+  }
 }

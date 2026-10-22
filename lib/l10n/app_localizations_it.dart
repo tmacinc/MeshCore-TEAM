@@ -2186,4 +2186,48 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get trackingNeedsPrivateChannel =>
       'Crea prima un canale privato. La tua posizione viene condivisa solo su un canale privato.';
+
+  @override
+  String get whatsNewIntroTitle => 'Arriva l\'identità del team';
+
+  @override
+  String get whatsNewIntroBody =>
+      'TEAM ora riconosce le persone del tuo gruppo dal telefono, non dalla radio che portano. I gruppi possono condividere le radio più facilmente e puoi restare anonimo sulla mesh. Ecco cosa cambia per te.';
+
+  @override
+  String get whatsNewNameTitle => 'Un nome che vede solo il tuo team';
+
+  @override
+  String get whatsNewNameBody =>
+      'Scegli un nome per il tuo team. Solo chi è nel canale del team può vederlo, così il nome della radio può restare anonimo per tutti gli altri sulla mesh.';
+
+  @override
+  String get whatsNewRadioTitle => 'Cambia radio, resta te stesso';
+
+  @override
+  String get whatsNewRadioBody =>
+      'Usa un\'altra radio o scambiala con qualcuno del gruppo, e il tuo team continua a vedere te. Il tuo nome e la tua posizione sulla mappa seguono te, non la radio.';
+
+  @override
+  String get whatsNewChannelsTitle =>
+      'I canali del team restano sul tuo telefono';
+
+  @override
+  String get whatsNewChannelsBody =>
+      'Il canale su cui condividi la posizione e gli altri canali del team restano sul tuo telefono, con la cronologia, quando cambi radio. Su una nuova radio, aggiungili di nuovo con un tocco.';
+
+  @override
+  String get whatsNewExpectTitle => 'Dagli un momento';
+
+  @override
+  String get whatsNewExpectBody =>
+      'Dopo un aggiornamento o un cambio di radio, serve un momento perché tutto si sistemi. Contatti e canali vengono ricaricati dalla radio quando ti connetti, e servono un paio di aggiornamenti di posizione perché il gruppo capisca chi è chi. I compagni compaiono sulla mappa man mano che arrivano le loro posizioni.';
+
+  @override
+  String get whatsNewNext => 'Avanti';
+
+  @override
+  String whatsNewVersion(String version) {
+    return 'Versione $version';
+  }
 }

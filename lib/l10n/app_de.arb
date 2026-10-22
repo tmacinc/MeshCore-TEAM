@@ -1044,5 +1044,17 @@
   "hideNonTeam": "Nur Team-Kanäle und -Kontakte anzeigen",
   "deleteChannelNeedsRadio": "Dieser Kanal ist auf deinem Funkgerät gespeichert. Verbinde dich mit dem Funkgerät, um ihn zu löschen.",
   "trackingChannelPrompt": "Standort teilen in",
-  "trackingNeedsPrivateChannel": "Erstelle zuerst einen privaten Kanal. Dein Standort wird nur in einem privaten Kanal geteilt."
+  "trackingNeedsPrivateChannel": "Erstelle zuerst einen privaten Kanal. Dein Standort wird nur in einem privaten Kanal geteilt.",
+  "whatsNewIntroTitle": "Neu: Team-Identität",
+  "whatsNewIntroBody": "TEAM erkennt die Personen in deiner Gruppe jetzt an ihrem Telefon, nicht an dem Funkgerät, das sie tragen. Gruppen können Funkgeräte leichter teilen, und du kannst im Mesh anonym bleiben. Das bedeutet das für dich.",
+  "whatsNewNameTitle": "Ein Name nur für dein Team",
+  "whatsNewNameBody": "Wähle einen Namen für dein Team. Nur Personen in deinem Teamkanal können ihn sehen, so kann dein Funkgerätname für alle anderen im Mesh anonym bleiben.",
+  "whatsNewRadioTitle": "Funkgerät wechseln, du bleibst du",
+  "whatsNewRadioBody": "Nimm ein anderes Funkgerät oder tausche mit jemandem aus deiner Gruppe, und dein Team erkennt dich trotzdem. Dein Name und dein Platz auf der Karte folgen dir, nicht dem Funkgerät.",
+  "whatsNewChannelsTitle": "Team-Kanäle bleiben auf deinem Telefon",
+  "whatsNewChannelsBody": "Der Kanal, in dem du deinen Standort teilst, und deine anderen Team-Kanäle bleiben mit ihrem Verlauf auf deinem Telefon, wenn du das Funkgerät wechselst. Auf einem neuen Funkgerät fügst du sie mit einem Tippen wieder hinzu.",
+  "whatsNewExpectTitle": "Einen Moment Geduld",
+  "whatsNewExpectBody": "Nach einem Update oder Funkgerätwechsel braucht alles einen Moment. Kontakte und Kanäle werden beim Verbinden neu vom Funkgerät geladen, und es dauert ein paar Standort-Updates, bis deine Gruppe weiß, wer wer ist. Teammitglieder erscheinen auf der Karte, sobald ihre Standorte eintreffen.",
+  "whatsNewNext": "Weiter",
+  "whatsNewVersion": "Version {version}"
 }

@@ -52,6 +52,7 @@ import 'screens/main_navigation_screen.dart';
 import 'screens/direct_message_screen.dart';
 import 'screens/channel_chat_screen.dart';
 import 'screens/permissions_screen.dart';
+import 'screens/whats_new_screen.dart';
 import 'screens/language_screen.dart';
 import 'utils/notification_payload.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -944,6 +945,15 @@ class _PermissionGateState extends State<_PermissionGate>
       return PermissionsScreen(
         onPermissionsGranted: _onPermissionsGranted,
         );
+    }
+
+    // What's New comes before the team name prompt, which it introduces.
+    final settings = context.read<SettingsService>();
+    if (settings.whatsNewSeen != WhatsNewScreen.release) {
+      return WhatsNewScreen(onDone: () async {
+        await settings.setWhatsNewSeen(WhatsNewScreen.release);
+        if (mounted) setState(() {});
+      });
     }
 
     // Show main app if permissions granted

@@ -58,6 +58,7 @@ class SettingsService extends ChangeNotifier {
   static const String _keyCollapsedSettingsSections =
       'collapsed_settings_sections';
   static const String _keyCleanStartV16 = 'clean_start_v16';
+  static const String _keyWhatsNewSeen = 'whats_new_seen';
 
   final SharedPreferences _prefs;
   AppSettings _settings = const AppSettings();
@@ -293,6 +294,12 @@ class SettingsService extends ChangeNotifier {
     _settings = _settings.copyWith(teamAliasPrompted: prompted);
     notifyListeners();
   }
+
+  /// The release whose What's New pages were last shown, or null if never.
+  String? get whatsNewSeen => _prefs.getString(_keyWhatsNewSeen);
+
+  Future<void> setWhatsNewSeen(String release) =>
+      _prefs.setString(_keyWhatsNewSeen, release);
 
   Future<void> setTelemetryChannelName(String? name) async {
     final companionKey = _settings.currentCompanionPublicKey;

@@ -592,5 +592,17 @@
   "hideNonTeam": "Mostrar apenas canais e contactos da equipa",
   "deleteChannelNeedsRadio": "Este canal está guardado no teu rádio. Liga-te ao rádio para o apagar.",
   "trackingChannelPrompt": "Partilhar a tua localização em",
-  "trackingNeedsPrivateChannel": "Cria primeiro um canal privado. A tua localização só é partilhada num canal privado."
+  "trackingNeedsPrivateChannel": "Cria primeiro um canal privado. A tua localização só é partilhada num canal privado.",
+  "whatsNewIntroTitle": "Apresentamos a identidade de equipa",
+  "whatsNewIntroBody": "O TEAM reconhece agora as pessoas do teu grupo pelo telemóvel, não pelo rádio que levam. Os grupos podem partilhar rádios com mais facilidade e podes continuar anónimo na malha. Eis o que isso significa para ti.",
+  "whatsNewNameTitle": "Um nome que só a tua equipa vê",
+  "whatsNewNameBody": "Escolhe um nome para a tua equipa. Só quem está no teu canal de equipa o consegue ver, por isso o nome do teu rádio pode continuar anónimo para o resto da malha.",
+  "whatsNewRadioTitle": "Muda de rádio, continua a ser tu",
+  "whatsNewRadioBody": "Usa outro rádio ou troca com alguém do teu grupo, e a tua equipa continua a ver-te a ti. O teu nome e o teu lugar no mapa seguem-te a ti, não ao rádio.",
+  "whatsNewChannelsTitle": "Os canais de equipa ficam no teu telemóvel",
+  "whatsNewChannelsBody": "O canal onde partilhas a tua localização e os teus outros canais de equipa ficam no teu telemóvel, com o histórico, quando mudas de rádio. Num rádio novo, volta a adicioná-los com um toque.",
+  "whatsNewExpectTitle": "Dá-lhe um momento",
+  "whatsNewExpectBody": "Depois de atualizar ou mudar de rádio, tudo demora um pouco a assentar. Os contactos e canais voltam a ser carregados do rádio quando te ligas, e são precisas algumas atualizações de localização até o teu grupo saber quem é quem. Os colegas aparecem no mapa à medida que chegam as suas localizações.",
+  "whatsNewNext": "Seguinte",
+  "whatsNewVersion": "Versão {version}"
 }

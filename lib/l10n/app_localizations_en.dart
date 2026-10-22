@@ -2164,4 +2164,47 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get trackingNeedsPrivateChannel =>
       'Create a private channel first. Your location is only shared on a private channel.';
+
+  @override
+  String get whatsNewIntroTitle => 'Introducing team identity';
+
+  @override
+  String get whatsNewIntroBody =>
+      'TEAM now knows the people in your group by their phone, not by the radio they carry. Groups can share radios more easily, and you can stay anonymous on the mesh. Here\'s what that means for you.';
+
+  @override
+  String get whatsNewNameTitle => 'A name only your team sees';
+
+  @override
+  String get whatsNewNameBody =>
+      'Choose a name for your team. Only people on your team channel can see it, so your radio name can stay anonymous to everyone else on the mesh.';
+
+  @override
+  String get whatsNewRadioTitle => 'Change radios, stay yourself';
+
+  @override
+  String get whatsNewRadioBody =>
+      'Pick up a different radio, or swap with someone in your group, and your team still sees you as you. Your name and your place on the map follow you, not the radio.';
+
+  @override
+  String get whatsNewChannelsTitle => 'Team channels stay on your phone';
+
+  @override
+  String get whatsNewChannelsBody =>
+      'The channel you share your location on, and your other team channels, stay on your phone with their history when you change radios. On a new radio, add them back with one tap.';
+
+  @override
+  String get whatsNewExpectTitle => 'Give it a moment';
+
+  @override
+  String get whatsNewExpectBody =>
+      'After you update or change radios, things take a moment to settle. Contacts and channels reload from your radio when you connect, and it takes a couple of location updates for your group to work out who is who. Teammates appear on the map as their locations come in.';
+
+  @override
+  String get whatsNewNext => 'Next';
+
+  @override
+  String whatsNewVersion(String version) {
+    return 'Version $version';
+  }
 }

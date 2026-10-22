@@ -2167,4 +2167,47 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get trackingNeedsPrivateChannel =>
       'Erstelle zuerst einen privaten Kanal. Dein Standort wird nur in einem privaten Kanal geteilt.';
+
+  @override
+  String get whatsNewIntroTitle => 'Neu: Team-Identität';
+
+  @override
+  String get whatsNewIntroBody =>
+      'TEAM erkennt die Personen in deiner Gruppe jetzt an ihrem Telefon, nicht an dem Funkgerät, das sie tragen. Gruppen können Funkgeräte leichter teilen, und du kannst im Mesh anonym bleiben. Das bedeutet das für dich.';
+
+  @override
+  String get whatsNewNameTitle => 'Ein Name nur für dein Team';
+
+  @override
+  String get whatsNewNameBody =>
+      'Wähle einen Namen für dein Team. Nur Personen in deinem Teamkanal können ihn sehen, so kann dein Funkgerätname für alle anderen im Mesh anonym bleiben.';
+
+  @override
+  String get whatsNewRadioTitle => 'Funkgerät wechseln, du bleibst du';
+
+  @override
+  String get whatsNewRadioBody =>
+      'Nimm ein anderes Funkgerät oder tausche mit jemandem aus deiner Gruppe, und dein Team erkennt dich trotzdem. Dein Name und dein Platz auf der Karte folgen dir, nicht dem Funkgerät.';
+
+  @override
+  String get whatsNewChannelsTitle => 'Team-Kanäle bleiben auf deinem Telefon';
+
+  @override
+  String get whatsNewChannelsBody =>
+      'Der Kanal, in dem du deinen Standort teilst, und deine anderen Team-Kanäle bleiben mit ihrem Verlauf auf deinem Telefon, wenn du das Funkgerät wechselst. Auf einem neuen Funkgerät fügst du sie mit einem Tippen wieder hinzu.';
+
+  @override
+  String get whatsNewExpectTitle => 'Einen Moment Geduld';
+
+  @override
+  String get whatsNewExpectBody =>
+      'Nach einem Update oder Funkgerätwechsel braucht alles einen Moment. Kontakte und Kanäle werden beim Verbinden neu vom Funkgerät geladen, und es dauert ein paar Standort-Updates, bis deine Gruppe weiß, wer wer ist. Teammitglieder erscheinen auf der Karte, sobald ihre Standorte eintreffen.';
+
+  @override
+  String get whatsNewNext => 'Weiter';
+
+  @override
+  String whatsNewVersion(String version) {
+    return 'Version $version';
+  }
 }
